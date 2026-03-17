@@ -1,6 +1,7 @@
 # Kanban Planner — Prioritized Execution Plan
 
 ## Completed Work
+
 - [x] `CardId`, `BucketId` ULID newtypes — `src/domain/id.rs` (`PartialOrd`/`Ord` derived)
 - [x] `Bucket` entity — `src/domain/bucket.rs`
 - [x] `Card` entity (2 constructors, private fields, controlled mutators) — `src/domain/card.rs`
@@ -29,25 +30,18 @@
 
 ---
 
-## P1.5 — Harden Registry Correctness Gaps
-*These gaps exist in the current P1 implementation and must be fixed before P2 begins.*
+## P1.5 — Harden Registry Correctness Gaps ✅ COMPLETE
 
-- [ ] **Same-parent reparent is a no-op:** `reparent_card(id, current_parent_id)` currently runs
-  the full reparent path, double-appending the child ID and resetting the bucket to Unassigned.
-  Add an early-return guard: if `card.parent_id() == Some(new_parent_id)`, return `Ok(())` immediately.
-- [ ] **Regression test for same-parent no-op:** `test_reparent_to_same_parent_is_noop` —
-  verify child count is unchanged, child ordering is unchanged, and bucket assignment is unchanged.
-- [ ] **Fail loudly in `get_children`:** Remove the `if let Some(child)` silent-skip.
-  Replace with a hard `self.get_card(*child_id)?` that returns `DomainError::CardNotFound`.
-- [ ] **Fail loudly in `board_projection`:** Remove the Unassigned fallback for unknown bucket IDs.
-  Return `DomainError::BucketNotFound` if a child's `bucket_id` is absent from the parent's buckets.
-- [ ] **Regression tests for read-path corruption:** Add tests that manually construct a broken
-  state (via `pub(crate)` helpers) and assert that `get_children` / `board_projection` return
-  the expected errors instead of silently degrading.
+- [x] **Same-parent reparent is a no-op:** Added early-return guard in `reparent_card`.
+- [x] **Regression test for same-parent no-op:** `test_reparent_to_same_parent_is_noop` added.
+- [x] **Fail loudly in `get_children`:** Replaced soft guards with hard `DomainError::CardNotFound`.
+- [x] **Fail loudly in `board_projection`:** Replaced silent fallback with `DomainError::BucketNotFound`.
+- [x] **Regression tests for read-path corruption:** `test_get_children_fails_on_missing_child` and `test_board_projection_fails_on_unknown_bucket` added.
 
 ---
 
 ## P2 — Application Commands
+
 - [ ] `src/application/mod.rs` — `Command` enum + `execute` dispatcher
   - Variants: `CreateRootCard`, `CreateChildCard`, `RenameCard`, `DeleteCard { strategy }`,
     `MoveCardToBucket`, `ReparentCard`, `AddBucket`, `RemoveBucket`, `RenameBucket`,
@@ -61,6 +55,7 @@
 ---
 
 ## P3 — Persistence / Infrastructure
+
 - [ ] `Serialize`/`Deserialize` derives added to domain types (gate: verify they compile for WASM)
 - [ ] `src/infrastructure/mod.rs`
 - [ ] `JsonRepository`: `serialize_registry` / `deserialize_registry` using `serde_json`
@@ -71,6 +66,7 @@
 ---
 
 ## P4 — Dioxus Interface
+
 - [ ] Routes: `/` and `/board/:card_id` via `dioxus_router`
 - [ ] `Signal<CardRegistry>` at root; provided via Dioxus context to all child components
 - [ ] `RootList` component — lists root cards; empty state CTA
@@ -85,6 +81,7 @@
 ---
 
 ## P5 — Release & Docs
+
 - [ ] Reviewer pass: zero `.unwrap()` in non-test code
 - [ ] Readability pass: all public items have `///` doc-comments with `# Examples`
 - [ ] Optimizer pass: unnecessary clones, redundant allocations

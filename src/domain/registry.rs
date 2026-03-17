@@ -63,17 +63,21 @@ impl CardRegistry {
         let parent = self.get_card(parent_id)?;
         let mut children = Vec::with_capacity(parent.children_ids().len());
         for child_id in parent.children_ids() {
-            // Unwrapping is safe here because of registry invariants
-            if let Some(child) = self.store.get(child_id) {
-                children.push(child);
-            }
+            let child = self.get_card(*child_id)?;
+            children.push(child);
         }
         Ok(children)
     }
 
     /// Returns the children of a card grouped by their assigned buckets.
-    /// If a child inexplicably points to a bucket that doesn't exist, it falls back
-    /// to the Unassigned bucket ID for stability.
+    ///
+    /// # Errors
+    /// - `DomainError::CardNotFound` if the parent card does not exist.
+    /// - `DomainError::CardNotFound` if any child ID in the parent's `children_ids` list
+    ///   is not present in the registry (corrupt state — should never occur via normal mutations).
+    /// - `DomainError::InvalidOperation` if a child card has no `bucket_id` (root-like child).
+    /// - `DomainError::BucketNotFound` if a child's `bucket_id` does not exist on the parent's
+    ///   board (corrupt state — should never occur via normal mutations).
     pub fn board_projection(
         &self,
         card_id: CardId,
@@ -86,23 +90,19 @@ impl CardRegistry {
             projection.insert(bucket.id(), Vec::new());
         }
 
-        // Find the unassigned bucket ID as fallback
-        let unassigned_bucket_id = parent
-            .buckets()
-            .iter()
-            .find(|b| b.name() == UNASSIGNED_BUCKET_NAME)
-            .map(|b| b.id())
-            .unwrap(); // Valid by Card creation invariant
-
         // Group children
         for child_id in parent.children_ids() {
-            if let Some(child) = self.store.get(child_id) {
-                // Determine the correct bucket, validating it against the parent's actual buckets
-                let target_bucket_id = match child.bucket_id() {
-                    Some(id) if projection.contains_key(&id) => id,
-                    _ => unassigned_bucket_id,
-                };
-                projection.get_mut(&target_bucket_id).unwrap().push(child);
+            let child = self.get_card(*child_id)?;
+            let b_id = child.bucket_id().ok_or_else(|| {
+                DomainError::InvalidOperation(format!(
+                    "Child card {child_id} is a child but has no bucket_id"
+                ))
+            })?;
+
+            if let Some(cards) = projection.get_mut(&b_id) {
+                cards.push(child);
+            } else {
+                return Err(DomainError::BucketNotFound(b_id));
             }
         }
 
@@ -159,12 +159,30 @@ impl CardRegistry {
         self.get_card_mut(card_id)?.add_bucket(name)
     }
 
+    pub fn rename_bucket(
+        &mut self,
+        card_id: CardId,
+        bucket_id: BucketId,
+        new_name: String,
+    ) -> Result<(), DomainError> {
+        self.get_card_mut(card_id)?
+            .rename_bucket(bucket_id, new_name)
+    }
+
     pub fn reorder_buckets(
         &mut self,
         card_id: CardId,
         ordered_ids: Vec<BucketId>,
     ) -> Result<(), DomainError> {
         self.get_card_mut(card_id)?.reorder_buckets(ordered_ids)
+    }
+
+    pub fn reorder_children(
+        &mut self,
+        card_id: CardId,
+        ordered_ids: Vec<CardId>,
+    ) -> Result<(), DomainError> {
+        self.get_card_mut(card_id)?.reorder_children(ordered_ids)
     }
 
     // -------------------------------------------------------------------------
@@ -247,6 +265,12 @@ impl CardRegistry {
 
         // Verify card to move exists, and pull state
         let card = self.get_card(card_id)?;
+
+        // Early return if new_parent_id is the current parent (no-op)
+        if card.parent_id() == Some(new_parent_id) {
+            return Ok(());
+        }
+
         let old_parent_id = card.parent_id();
 
         // Update the new parent first (which acts as existence check)
@@ -449,6 +473,78 @@ mod tests {
         assert!(matches!(
             reg.remove_bucket(root_id, new_bucket),
             Err(DomainError::BucketNotEmpty)
+        ));
+    }
+
+    #[test]
+    fn test_reparent_to_same_parent_is_noop() {
+        let mut reg = CardRegistry::new();
+        let root_id = reg.create_root_card("Root".into()).unwrap();
+        let b_unassigned = reg.get_card(root_id).unwrap().buckets()[0].id();
+
+        // Add a child
+        let child_id = reg
+            .create_child_card("Child".into(), root_id, b_unassigned)
+            .unwrap();
+
+        // Move it to a new bucket so we can verify it doesn't reset to Unassigned
+        let b_progress = reg.add_bucket(root_id, "Progress".into()).unwrap();
+        reg.move_card_to_bucket(child_id, b_progress).unwrap();
+
+        // Reparent to same parent
+        reg.reparent_card(child_id, root_id).unwrap();
+
+        let child = reg.get_card(child_id).unwrap();
+        assert_eq!(child.parent_id(), Some(root_id));
+        assert_eq!(
+            child.bucket_id(),
+            Some(b_progress),
+            "Bucket should NOT have been reset to Unassigned"
+        );
+
+        let parent = reg.get_card(root_id).unwrap();
+        assert_eq!(
+            parent.children_ids().len(),
+            1,
+            "Child should still be present exactly once"
+        );
+        assert_eq!(parent.children_ids()[0], child_id);
+    }
+
+    #[test]
+    fn test_get_children_fails_on_missing_child() {
+        let mut reg = CardRegistry::new();
+        let root_id = reg.create_root_card("Root".into()).unwrap();
+
+        {
+            let root = reg.get_card_mut(root_id).unwrap();
+            root.add_child(CardId::new()); // Manually corrupt with non-existent child
+        }
+
+        assert!(matches!(
+            reg.get_children(root_id),
+            Err(DomainError::CardNotFound(_))
+        ));
+    }
+
+    #[test]
+    fn test_board_projection_fails_on_unknown_bucket() {
+        let mut reg = CardRegistry::new();
+        let root_id = reg.create_root_card("Root".into()).unwrap();
+        let b_unassigned = reg.get_card(root_id).unwrap().buckets()[0].id();
+
+        let child_id = reg
+            .create_child_card("Child".into(), root_id, b_unassigned)
+            .unwrap();
+
+        {
+            let child = reg.get_card_mut(child_id).unwrap();
+            child.assign_to_bucket(BucketId::new()); // Manually corrupt with non-existent bucket
+        }
+
+        assert!(matches!(
+            reg.board_projection(root_id),
+            Err(DomainError::BucketNotFound(_))
         ));
     }
 }

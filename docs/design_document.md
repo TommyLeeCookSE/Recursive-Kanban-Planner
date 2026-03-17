@@ -1,8 +1,11 @@
 # Recursive Kanban Planner — Design Document
 
 ## Core Philosophy: Cleanliness & Maintainability First
+
 **This project must first and foremost prioritize clean, maintainable code over any other metric.**
+
 We strictly enforce:
+
 - **Maximum Type Safety:** Leverage Rust's type system to make invalid states unrepresentable.
 - **Everything Explicit:** No magic, no hidden side-effects. Data flow and mutations must be crystal clear.
 - **Minimal Duplication (DRY):** De-duplicate logic where appropriate while keeping boundaries intact.
@@ -12,6 +15,7 @@ We strictly enforce:
 ---
 
 ## Project Overview
+
 A recursive, card-based planning system. Everything is a `Card`. No separate entity types for tasks, projects, users, or teams.
 
 **Stack:** Rust + Dioxus (WASM/desktop/mobile from one codebase). Local-first. No server. No auth.
@@ -19,11 +23,13 @@ A recursive, card-based planning system. Everything is a `Card`. No separate ent
 ---
 
 ## Current Implementation Status
+
 *Last reconciled: 2026-03-17. Update this section whenever a phase is completed.*
 
 ### ✅ Implemented and Verified
+
 | Item | File | Notes |
-|---|---|---|
+| :--- | :--- | :--- |
 | `CardId` newtype (ULID) | `src/domain/id.rs` | Full docstrings, unit tests, `PartialOrd`/`Ord` derived |
 | `BucketId` newtype (ULID) | `src/domain/id.rs` | Full docstrings, unit tests, `PartialOrd`/`Ord` derived |
 | `Bucket` entity | `src/domain/bucket.rs` | Private fields, `new()`, `rename()`, `id()`, `name()` |
@@ -33,15 +39,18 @@ A recursive, card-based planning system. Everything is a `Card`. No separate ent
 | `DomainError` enum | `src/domain/error.rs` | Full variant set; all `Result<_, String>` replaced |
 | `CardRegistry` | `src/domain/registry.rs` | Full implementation; see API contract below |
 | `DeleteStrategy` enum | `src/domain/registry.rs` | `Reject`, `CascadeDelete`, `ReparentToGrandparent` |
+| `Command` enum and `execute` | `src/application/mod.rs` | Full dispatcher for all registry mutations |
+| `BoardView` / `ColumnView` | `src/application/mod.rs` | Read-only projections for UI rendering |
 | Dioxus hello-world shell | `src/app.rs`, `src/main.rs` | Compiles, no real routing yet |
 
 ### 🔲 Not Yet Implemented
-- `src/application/` — Command enum and dispatch
+
 - `src/infrastructure/` — JSON serialization, localStorage adapter
 - Real Dioxus routing (`/`, `/board/:card_id`)
 - Any UI components beyond the hello-world shell
 
 ### ⚠️ Open Behavioral Decisions (spec gaps the next implementer must resolve in code)
+
 See "Unresolved Architectural Decisions" below. Two specific behaviors in `registry.rs` have been
 left in a tolerated-but-undocumented state and must be given explicit, tested contracts:
 
@@ -55,14 +64,17 @@ left in a tolerated-but-undocumented state and must be given explicit, tested co
 ---
 
 ## Core Concept: Everything is a Card
+
 Cards form a strict tree. Root cards have `parent_id: None`. All non-root cards have both a `parent_id` and a `bucket_id`. Depth is unlimited. Navigation = entering a card = viewing its board.
 
 ---
 
 ## Authoritative Domain Contract
+
 *This is the binding specification. Implementation must match this exactly.*
 
 ### `DomainError`
+
 ```rust
 // src/domain/error.rs  — IMPLEMENTED
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
@@ -97,6 +109,7 @@ pub enum DomainError {
 ```
 
 ### `DeleteStrategy`
+
 ```rust
 // src/domain/registry.rs  — IMPLEMENTED
 pub enum DeleteStrategy {
@@ -112,6 +125,7 @@ pub enum DeleteStrategy {
 ```
 
 ### `CardRegistry` — Authoritative API
+
 ```rust
 // src/domain/registry.rs  — IMPLEMENTED
 pub struct CardRegistry { /* HashMap<CardId, Card> — private */ }
@@ -150,16 +164,18 @@ impl CardRegistry {
 ## Invariant Ownership
 
 ### Invariants owned by `Card` (self-contained, no external lookup needed)
+
 | Invariant | Enforcement point |
-|---|---|
+| :--- | :--- |
 | Title is non-empty and non-blank | `Card::new_root`, `Card::new_child`, `Card::rename` — all enforced |
 | Bucket names are unique per card | `Card::add_bucket` |
 | Reorder list has no duplicates, no omissions, no unknown IDs | `Card::reorder_buckets` — all three enforced |
 | The "Unassigned" bucket is never removable | `Card::remove_bucket` |
 
 ### Invariants owned by `CardRegistry` (require cross-card lookup)
+
 | Invariant | Enforcement point |
-|---|---|
+| :--- | :--- |
 | Parent card must exist before creating a child | `CardRegistry::create_child_card` |
 | `bucket_id` must belong to the *parent's* bucket list | `CardRegistry::create_child_card`, `CardRegistry::move_card_to_bucket` |
 | No cycles in the hierarchy | `CardRegistry::reparent_card` (via `detect_cycle`) |
@@ -171,6 +187,7 @@ impl CardRegistry {
 ---
 
 ## Unresolved Architectural Decisions
+
 *These are open specs. Do not code them in without recording the decision here first.*
 
 ### 1. Same-Parent Reparenting Contract
@@ -180,11 +197,10 @@ already the card's current parent?
 
 **Decision (binding):**
 `reparent_card` MUST be a no-op when `new_parent_id == card.parent_id()`. It returns `Ok(())`
-immediately, preserving child ordering and bucket assignment unchanged. The current implementation
-does NOT implement this — it runs the full reparent path, which double-appends the child ID to
-the parent's child list and resets the bucket to Unassigned unnecessarily.
+immediately, preserving child ordering and bucket assignment unchanged.
 
 **Required change:** Add an early-return guard after existence validation:
+
 ```rust
 if card.parent_id() == Some(new_parent_id) {
     return Ok(());
@@ -216,6 +232,7 @@ the registry code, not a legitimate data state. The read path should surface it 
 **Required changes:**
 
 1. `get_children`: replace the `if let Some(child)` guard with a hard failure:
+
    ```rust
    // Instead of silently skipping:
    if let Some(child) = self.store.get(child_id) { ... }
@@ -224,6 +241,7 @@ the registry code, not a legitimate data state. The read path should surface it 
    ```
 
 2. `board_projection`: replace the Unassigned fallback for unknown bucket IDs with a hard failure:
+
    ```rust
    // Instead of falling back:
    let target_bucket_id = match child.bucket_id() {
@@ -246,7 +264,8 @@ anomalies in the UI, which are extremely hard to trace.
 ---
 
 ## Architecture Overview
-```
+
+```text
 src/
 ├── domain/          ← Pure logic. No I/O. No Dioxus. No serde yet.
 │   ├── id.rs        ← CardId, BucketId (ULID newtypes, PartialOrd/Ord derived)
@@ -267,6 +286,7 @@ src/
 ---
 
 ## Persistence Strategy
+
 - **Primary:** Browser `localStorage` / `IndexedDB`. Users warned that clearing cache deletes data.
 - **Export/Import:** Download full state as JSON; re-upload to restore.
 - **Future:** Google Drive / Dropbox optional sync.
@@ -278,6 +298,7 @@ an earlier pass — these are acceptable since ULID already depends on serde.)
 ---
 
 ## Bucket Validation Rules (Explicit)
+
 1. `add_bucket(name)` — rejects if any existing bucket name matches case-insensitively → `DuplicateBucketName`.
 2. `remove_bucket(id)` — `Card` rejects if it is the Unassigned bucket → `InvalidOperation`. `CardRegistry`
    additionally rejects if any child's `bucket_id` matches the target → `BucketNotEmpty`.
@@ -287,21 +308,24 @@ an earlier pass — these are acceptable since ULID already depends on serde.)
 ---
 
 ## Ordering Strategy
+
 - Bucket order = `Vec<Bucket>` position in the parent card. No separate field.
 - Child order = `Vec<CardId>` position in the parent card. No separate field.
 
 ---
 
 ## Future Features (Not in MVP)
+
 Labels, deadlines, recurrence, templates, notes, attachments, multi-user, permissions, analytics, AI planning, card cross-references/linking, cloud sync.
 
 ---
 
 ## Resolved Architecture Decisions
+
 All binding. Not subject to re-debate.
 
 | Decision | Resolution |
-|---|---|
+| :--- | :--- |
 | Identifiers | ULIDs wrapped in `CardId` / `BucketId` newtypes |
 | Bucket entity | `Bucket { id: BucketId, name: String }` — rename changes name only |
 | Root node | No special type. Cards with `parent_id: None` are root. |

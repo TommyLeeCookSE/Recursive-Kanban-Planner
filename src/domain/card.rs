@@ -216,6 +216,40 @@ impl Card {
         Ok(id)
     }
 
+    /// Renames a bucket.
+    /// Returns an error if the new name is "Unassigned" (reserved) or if another
+    /// bucket already has that name.
+    pub fn rename_bucket(&mut self, id: BucketId, new_name: String) -> Result<(), DomainError> {
+        if new_name == UNASSIGNED_BUCKET_NAME {
+            return Err(DomainError::InvalidOperation(
+                "Cannot rename a bucket to 'Unassigned'.".into(),
+            ));
+        }
+
+        if self
+            .buckets
+            .iter()
+            .any(|b| b.id() != id && b.name().eq_ignore_ascii_case(&new_name))
+        {
+            return Err(DomainError::DuplicateBucketName(new_name));
+        }
+
+        let bucket = self
+            .buckets
+            .iter_mut()
+            .find(|b| b.id() == id)
+            .ok_or(DomainError::BucketNotFound(id))?;
+
+        if bucket.name() == UNASSIGNED_BUCKET_NAME {
+            return Err(DomainError::InvalidOperation(
+                "The 'Unassigned' bucket cannot be renamed.".to_string(),
+            ));
+        }
+
+        bucket.rename(new_name);
+        Ok(())
+    }
+
     /// Removes a bucket from this card's board by its ID.
     /// The "Unassigned" bucket cannot be removed — it is always the fallback.
     /// Returns an error if the bucket is not found or is the Unassigned bucket.
@@ -262,6 +296,31 @@ impl Card {
         }
 
         self.buckets = reordered;
+        Ok(())
+    }
+
+    /// Reorders children by providing a new ordered list of `CardId`s.
+    /// All existing child IDs must be present — none may be added or dropped.
+    pub fn reorder_children(&mut self, ordered_ids: Vec<CardId>) -> Result<(), DomainError> {
+        if ordered_ids.len() != self.children_ids.len() {
+            return Err(DomainError::InvalidOperation(
+                "Reorder list length does not match existing children".to_string(),
+            ));
+        }
+
+        let mut seen = std::collections::HashSet::new();
+        for id in &ordered_ids {
+            if !seen.insert(*id) {
+                return Err(DomainError::InvalidOperation(format!(
+                    "Duplicate child ID in reorder list: {id}"
+                )));
+            }
+            if !self.children_ids.contains(id) {
+                return Err(DomainError::CardNotFound(*id));
+            }
+        }
+
+        self.children_ids = ordered_ids;
         Ok(())
     }
 
