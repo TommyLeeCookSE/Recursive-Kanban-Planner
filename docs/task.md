@@ -13,6 +13,8 @@ Recursive Kanban Planner (Rust Implementation). A recursive, card-based planning
 
 ## MVP Remaining Tasks
 ### 0. Foundation & Architecture Refactoring
+- [x] Establish Multi-Agent Architecture (Orchestrator, Planner, Implementer, Reviewers).
+- [x] Translate proposed Agent roles into physical `.agents/skills/` directories.
 - [ ] Enforce strict decoupling: Restructure `src/` into `domain/`, `application/`, `infrastructure/`, and `interface/`.
 - [ ] Remove or adapt existing MVP models (`src/models/card.rs`, `src/models/card_registry.rs`) into the new `domain/` layer.
 
