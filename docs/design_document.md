@@ -85,7 +85,7 @@ The system follows a clean, layered architecture:
 1. **Domain Layer**: `Card`, `CardId`, `Bucket`, invariants, domain errors. Pure logic. No I/O.
 2. **Application Layer**: command handlers, orchestration logic, board projections, navigation helpers. Uses domain objects but does not handle persistence directly.
 3. **Infrastructure Layer**: JSON serialization, browser storage adapters (`localStorage` / `IndexedDB`), export/import handlers.
-4. **Interface Layer**: Leptos CSR components, client-side routing, board rendering.
+4. **Interface Layer**: Dioxus components, client-side routing, board rendering. Compiles to web (WASM), desktop, and mobile from a single codebase.
 
 ## Persistence Strategy
 Initial goals: local-first, no external server, single-user, pure browser.
@@ -149,17 +149,18 @@ If this works cleanly and reliably, the architecture is validated. Everything el
 * **Board Loading:** Load only immediate children when navigating to a card's board. Deep tree loading is deferred until the user navigates deeper.
 
 ### 4. Infrastructure & Persistence ✅
-* **Deployment Model: Pure WASM Browser App.** No Axum server. No Tokio runtime. Leptos runs in CSR (Client-Side Rendering) mode only. The entire Rust application compiles to WebAssembly and runs directly in the user's browser.
+* **Deployment Model: Dioxus Cross-Platform App.** No Axum server. No Tokio runtime. Dioxus compiles to WASM for the browser, native desktop windows, and mobile apps — all from a single Rust codebase.
 * **Persistence Strategy:**
   * **Primary:** Browser `localStorage` / `IndexedDB` for session persistence. Users will be warned that clearing browser cache will delete their data.
   * **Export/Import:** Users can download their entire state as a JSON file and re-upload it to restore.
   * **Future:** Optional cloud sync via Google Drive / Dropbox API integration.
-* **Dependencies to REMOVE:** `axum`, `tokio`, `leptos_axum`, `tracing`, `tracing-subscriber`. These are server-side dependencies that are unnecessary in a pure WASM app.
-* **Dependencies to KEEP/ADD:** `leptos` (CSR features only), `serde`, `serde_json`, `ulid`, `thiserror` (for domain errors), `web-sys` / `wasm-bindgen` (for browser storage APIs).
+* **Dependencies to REMOVE:** `axum`, `tokio`, `leptos`, `leptos_axum`, `tracing`, `tracing-subscriber`. These are server-side or Leptos-specific dependencies.
+* **Dependencies to KEEP/ADD:** `dioxus` (web + desktop + router features), `serde`, `serde_json`, `ulid`, `thiserror` (for domain errors).
 
-### 5. Frontend & UI Architecture (Leptos) ✅
+### 5. Frontend & UI Architecture (Dioxus) ✅
 * **Routing:** `/board/:card_id` maps directly to "enter a card and view its board". Top-level route `/` shows the list of root cards (those with `parent_id: None`).
-* **State Management:** The entire card registry lives in a Leptos `RwSignal` in memory. Board views are computed projections from this signal. Mutations go through Commands which update the signal and trigger re-renders.
+* **State Management:** The entire card registry lives in a Dioxus `Signal` in memory. Board views are computed projections from this signal. Mutations go through Commands which update the signal and trigger re-renders.
+* **Cross-Platform:** Same codebase compiles to web (WASM), desktop (native window), and mobile (iOS/Android) via the Dioxus CLI (`dx`).
 
 ## Open Questions (Remaining)
 *All architectural questions have been resolved. No open blockers remain.*

@@ -1,6 +1,6 @@
 ---
 name: Implementer Agent
-description: The Coder responsible for writing the Rust and Leptos source code.
+description: The Coder responsible for writing the Rust and Dioxus source code.
 ---
 # Implementer Agent Instructions
 
