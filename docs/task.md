@@ -1,34 +1,70 @@
-# Kanban Planner Progress Tracker
+# Kanban Planner — Prioritized Execution Plan
 
-## Project Overview
-Recursive Kanban Planner (Rust + Dioxus). A recursive, card-based planning system built on the strict abstraction: everything is a card. Compiles to web (WASM), desktop, and mobile from a single Rust codebase.
+## Completed Work
+- [x] `CardId`, `BucketId` ULID newtypes — `src/domain/id.rs`
+- [x] `Bucket` entity — `src/domain/bucket.rs`
+- [x] `Card` entity (2 constructors, private fields, controlled mutators) — `src/domain/card.rs`
+- [x] Dioxus hello-world shell — `src/app.rs`, `src/main.rs`
+- [x] Architecture documented — `docs/design_document.md`
+- [x] Agent skills defined — `.agents/skills/`
+- [x] Micro-step workflow — `.agents/workflows/micro-step-flow.md`
+- [x] GitHub Issues created for all phases
 
-## Current Progress
-- [x] Documented core architecture and clean layered approach into `design_document.md`.
-- [x] Established Multi-Agent Architecture and Micro-Step Workflow.
-- [x] Greenfielded `src/` — removed legacy models, created `src/domain/` layer.
-- [x] Implemented `CardId` and `BucketId` (ULID Newtype wrappers) in `src/domain/id.rs`.
-- [x] Switched framework from Leptos to Dioxus for cross-platform support.
-- [x] Resolved all open architecture questions (Bucket struct, deletion rules, JSON persistence, Dioxus deployment).
+---
 
-## MVP Remaining Tasks
-### 1. Domain Layer (Pure Logic)
-- [ ] Implement `Bucket` entity (`BucketId`, `name`).
-- [ ] Implement `Card` entity with strict invariants.
-- [ ] Implement explicit domain errors (`CardNotFound`, `InvalidParent`, `CycleDetected`, etc.).
-- [ ] Implement `CardRegistry` with invariant enforcement (no cycles, valid buckets, single parent).
+## P0 — Stabilize Domain Invariants
+*Fix the gaps in existing code before building on top of it.*
 
-### 2. Application Layer (Commands & Projections)
-- [ ] Create atomic Command handlers (`CreateCard`, `MoveCardToBucket`, `ReparentCard`, `CreateBucket`, etc.).
-- [ ] Implement board projection logic (grouping child cards by bucket on demand).
+- [ ] `Card::new_root` and `Card::new_child` must reject blank/empty titles at construction time
+- [ ] `Card::reorder_buckets` must reject duplicate IDs in the input list
+- [ ] `Card::reorder_buckets` must reject unknown IDs in the input list
+- [ ] Create `src/domain/error.rs` — `DomainError` enum using `thiserror`
+- [ ] Migrate all `Result<_, String>` in `card.rs` to `Result<_, DomainError>`
+- [ ] `cargo clippy --all-targets -- -D warnings` passes with zero warnings
+- [ ] `cargo fmt -- --check` passes with zero diffs
 
-### 3. Infrastructure Layer (Persistence)
-- [ ] Define Repository Interface (load, save, fetch card).
-- [ ] Implement JSON export/import.
-- [ ] Implement browser `localStorage` / `IndexedDB` adapter.
+---
 
-### 4. Interface Layer (Dioxus UI)
-- [ ] Set up Dioxus app scaffold with routing (`/`, `/board/:card_id`).
-- [ ] Build hierarchical UI navigation (entering a card implies viewing its board).
-- [ ] Implement board rendering component (Kanban columns + cards).
-- [ ] Connect UI actions to Command handlers.
+## P1 — Build CardRegistry
+- [ ] `src/domain/registry.rs` — `CardRegistry { HashMap<CardId, Card> }`
+- [ ] `create_root_card`, `create_child_card`
+- [ ] `get_card`, `get_card_mut`, `get_root_cards`, `get_children`, `board_projection`
+- [ ] `rename_card`, `add_bucket`, `reorder_buckets` — delegation wrappers
+- [ ] `move_card_to_bucket` — validates bucket belongs to parent
+- [ ] `remove_bucket` — rejects if any child references that bucket
+- [ ] `detect_cycle` + `reparent_card`
+- [ ] `delete_card(id, DeleteStrategy)` — Reject / CascadeDelete / ReparentToGrandparent
+- [ ] Full test suite covering every error variant
+- [ ] Integration test: full lifecycle roundtrip
+
+---
+
+## P2 — Application Commands
+- [ ] `src/application/mod.rs` — `Command` enum + `execute` dispatcher
+- [ ] `BoardView` + `ColumnView` structs
+- [ ] `build_board_view` — Unassigned column omitted when empty
+
+---
+
+## P3 — Persistence / Infrastructure
+- [ ] `Serialize`/`Deserialize` derives added to domain types
+- [ ] `JsonRepository`: `serialize_registry` / `deserialize_registry`
+- [ ] Roundtrip integration test
+- [ ] `LocalStorageRepository` using `web-sys`
+
+---
+
+## P4 — Dioxus Interface
+- [ ] Routes: `/` and `/board/:card_id`
+- [ ] `Signal<CardRegistry>` at root via Dioxus context
+- [ ] `RootList`, `Board`, `BucketColumn`, `CardItem`, `Breadcrumb` components
+- [ ] Modals: create card, rename, delete confirmation
+- [ ] Persistence: load on startup, auto-save, export/import
+
+---
+
+## P5 — Release & Docs
+- [ ] Reviewer, Readability, Optimizer passes
+- [ ] Dioxus CLI install and `dx serve` verification (browser + desktop)
+- [ ] `README.md`
+- [ ] Tag `v0.1.0`

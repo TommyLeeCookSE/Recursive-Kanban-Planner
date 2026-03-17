@@ -1,169 +1,226 @@
-# Recursive Kanban Planner (Rust Implementation) - Design Document
+# Recursive Kanban Planner — Design Document
 
 ## Core Philosophy: Cleanliness & Maintainability First
-**This project must first and foremost prioritize clean, maintainable code over any other metric.** Extensibility, correctness, and developer experience are paramount. 
+**This project must first and foremost prioritize clean, maintainable code over any other metric.**
 We strictly enforce:
-- **Maximum Type Safety:** Leverage Rust's type system to make invalid states unrepresentable. 
-- **Everything Explicit:** No magic, no hidden side-effects. Data flow and mutations must be crystal clear and traceable.
+- **Maximum Type Safety:** Leverage Rust's type system to make invalid states unrepresentable.
+- **Everything Explicit:** No magic, no hidden side-effects. Data flow and mutations must be crystal clear.
 - **Minimal Duplication (DRY):** De-duplicate logic where appropriate while keeping boundaries intact.
-- **Extremely Human Readable:** Code is written for humans first. Variable names, system boundaries, and logic flows must be self-documenting.
-- **Decoupled Architecture:** Strict separation of concerns (Domain, Application, Infrastructure, Interface). Modules should communicate through clear interfaces.
+- **Extremely Human Readable:** Code is written for humans first. Names and logic flows must be self-documenting.
+- **Decoupled Architecture:** Strict separation of concerns (Domain → Application → Infrastructure → Interface).
+
+---
 
 ## Project Overview
-This project is a recursive, card-based planning system designed to unify task management across individuals, teams, households, and organizations into a single coherent model. The system is built around a strict abstraction: everything is a card. There are no separate entity types for tasks, projects, users, or teams. All of these are represented using the same structure and behavior.
+A recursive, card-based planning system. Everything is a `Card`. No separate entity types for tasks, projects, users, or teams.
 
-The system is being implemented directly in Rust, compiled to WebAssembly (WASM), with a strong emphasis on:
-- strict typing
-- explicit data flow
-- modular architecture
-- high performance
-- long-term maintainability
-- portability (WASM runs in any modern browser on desktop, mobile, or tablet)
+**Stack:** Rust + Dioxus (WASM/desktop/mobile from one codebase). Local-first. No server. No auth.
 
-The goal is to build a local-first, web-based application that runs in the browser, stores data locally, and remains fast and responsive with minimal frontend complexity.
+---
+
+## Current Implementation Status
+*Last reconciled: 2026-03-17. Update this section whenever a phase is completed.*
+
+### ✅ Implemented and Verified
+| Item | File | Notes |
+|---|---|---|
+| `CardId` newtype (ULID) | `src/domain/id.rs` | Full docstrings, unit tests passing |
+| `BucketId` newtype (ULID) | `src/domain/id.rs` | Full docstrings, unit tests passing |
+| `Bucket` entity | `src/domain/bucket.rs` | Private fields, `new()`, `rename()`, `id()`, `name()` |
+| `Card` entity | `src/domain/card.rs` | Two constructors, private fields, controlled mutators |
+| Dioxus hello-world shell | `src/app.rs`, `src/main.rs` | Compiles, no real routing yet |
+
+### ⚠️ Designed but Not Yet Enforced
+| Item | Gap |
+|---|---|
+| Non-empty title invariant | `Card::rename` validates, but `Card::new_root` / `Card::new_child` do **not** reject blank titles at construction time |
+| `bucket_id: None` only for root | Rule is documented; not enforced by the type system or constructor |
+| Bucket reorder validation | `reorder_buckets` checks count but does **not** reject duplicate IDs in the input list |
+| `DomainError` enum | Errors are currently `Result<_, String>` — no structured error type exists yet |
+
+### 🔲 Not Yet Implemented
+- `src/domain/error.rs` — `DomainError` enum
+- `src/domain/registry.rs` — `CardRegistry` (multi-card invariant enforcement)
+- `src/application/` — Command enum and dispatch
+- `src/infrastructure/` — JSON serialization, localStorage adapter
+- Real Dioxus routing (`/`, `/board/:card_id`)
+- Any UI components beyond the hello-world shell
+
+---
 
 ## Core Concept: Everything is a Card
+Cards form a strict tree. Root cards have `parent_id: None`. All non-root cards have both a `parent_id` and a `bucket_id`. Depth is unlimited. Navigation = entering a card = viewing its board.
 
-The system uses a single fundamental entity: the `Card`.
-A card can represent a task, a project, a sub-project, a user, a team, a department, an organization, a household, or any logical grouping. There are no special container types. Every node in the system is structurally identical.
+---
 
-### Recursive Hierarchy
-Cards form a tree structure. Each card has:
-- exactly one parent (except root)
-- zero or more children
+## Authoritative Domain Contract
+*This is the binding specification. Implementation must match this exactly.*
 
-Example hierarchy: Organization → Department → Team → User → Project → Task
-There is no limit to depth. This allows the same system to represent personal planning, team workflows, company structures, and nested project management.
-
-### Boards Exist Inside Cards
-Every card can act as a Kanban board. Each card defines its own list of buckets (columns) (e.g., Backlog, In Progress, Review, Done). The card’s children are grouped into these buckets.
-This means:
-- every card is both a node in the tree and a board
-- navigation = entering a card and viewing its board
-
-## Core Data Model
-### `Card` (Rust struct)
-The core entity will resemble:
+### `DomainError`
 ```rust
-struct Card {
-    id: CardId,               // unique ULID identifier
-    title: String,            // display name
-    parent_id: Option<CardId>,// parent reference (None = root/top-level card)
-    children_ids: Vec<CardId>,// ordered list of children
-    bucket: Option<BucketId>, // which bucket this card belongs to in its parent
-    buckets: Vec<Bucket>,     // ordered bucket definitions for this card's board
+// src/domain/error.rs
+#[derive(Debug, thiserror::Error)]
+pub enum DomainError {
+    #[error("Card not found: {0:?}")]
+    CardNotFound(CardId),
+
+    #[error("Bucket not found: {0:?}")]
+    BucketNotFound(BucketId),
+
+    #[error("Card title cannot be empty or blank")]
+    EmptyTitle,
+
+    #[error("A bucket named '{0}' already exists on this card")]
+    DuplicateBucketName(String),
+
+    #[error("Cannot delete a non-empty bucket; reassign or delete its cards first")]
+    BucketNotEmpty,
+
+    #[error("Cannot delete a card that still has children; choose a DeleteStrategy")]
+    CardHasChildren,
+
+    #[error("Reparenting would create a cycle in the card tree")]
+    CycleDetected,
 }
 ```
 
-## Core Rules and Invariants
-These must always hold:
-1. Each card has at most one parent
-2. No cycles in the hierarchy
-3. All children_ids must exist
-4. A child cannot reference itself
-5. A child’s bucket must exist in the parent’s buckets
-6. Bucket names are unique per card
-7. Ordering of children is preserved
-8. Ordering of buckets is preserved
-Invalid state is not allowed to exist in memory.
+### `DeleteStrategy`
+```rust
+// src/domain/registry.rs
+pub enum DeleteStrategy {
+    /// Reject the deletion if the card has any children.
+    Reject,
+    /// Recursively delete the card and all its descendants.
+    CascadeDelete,
+    /// Move all immediate children to the deleted card's parent before deletion.
+    ReparentToGrandparent,
+}
+```
 
-## Board Behavior & Navigation Model
-- Each card produces a board view: columns = buckets, items = child cards grouped by bucket.
-- Board rendering is a projection, not stored separately.
-- Navigation is hierarchical: open card → view its board, go to parent → move up, traverse children → move down.
-- There is no global flat task list. Everything is contextual.
+### `CardRegistry` — Authoritative API
+```rust
+// src/domain/registry.rs
+pub struct CardRegistry { /* HashMap<CardId, Card> — private */ }
 
-## Command-Based Architecture
-All mutations happen through explicit commands enforcing invariants:
-- `CreateCard`, `RenameCard`, `DeleteCard`
-- `MoveCardToBucket`, `ReparentCard`, `ReorderCardWithinBucket`
-- `CreateBucket`, `RenameBucket`, `DeleteBucket`, `ReorderBuckets`
-No direct mutation of structs from outside the domain layer.
+impl CardRegistry {
+    pub fn new() -> Self;
+
+    // --- Creation ---
+    pub fn create_root_card(&mut self, title: String) -> Result<CardId, DomainError>;
+    pub fn create_child_card(&mut self, title: String, parent_id: CardId, bucket_id: BucketId) -> Result<CardId, DomainError>;
+
+    // --- Reads ---
+    pub fn get_card(&self, id: CardId) -> Result<&Card, DomainError>;
+    pub fn get_root_cards(&self) -> Vec<&Card>;
+    pub fn get_children(&self, parent_id: CardId) -> Result<Vec<&Card>, DomainError>;
+    pub fn board_projection(&self, card_id: CardId) -> Result<HashMap<BucketId, Vec<&Card>>, DomainError>;
+
+    // --- Single-card mutations (delegate to Card) ---
+    pub fn rename_card(&mut self, id: CardId, title: String) -> Result<(), DomainError>;
+    pub fn add_bucket(&mut self, card_id: CardId, name: String) -> Result<BucketId, DomainError>;
+    pub fn reorder_buckets(&mut self, card_id: CardId, ordered_ids: Vec<BucketId>) -> Result<(), DomainError>;
+
+    // --- Cross-card mutations (registry enforces, then delegates) ---
+    pub fn move_card_to_bucket(&mut self, card_id: CardId, bucket_id: BucketId) -> Result<(), DomainError>;
+    pub fn remove_bucket(&mut self, card_id: CardId, bucket_id: BucketId) -> Result<(), DomainError>;
+    pub fn reparent_card(&mut self, card_id: CardId, new_parent_id: CardId) -> Result<(), DomainError>;
+    pub fn delete_card(&mut self, card_id: CardId, strategy: DeleteStrategy) -> Result<(), DomainError>;
+
+    // --- Internal ---
+    fn detect_cycle(&self, card_id: CardId, proposed_parent_id: CardId) -> Result<(), DomainError>;
+}
+```
+
+---
+
+## Invariant Ownership
+
+### Invariants owned by `Card` (self-contained, no external lookup needed)
+| Invariant | Enforcement point |
+|---|---|
+| Title is non-empty and non-blank | `Card::new_root`, `Card::new_child`, `Card::rename` — all must reject at call time |
+| Bucket names are unique per card | `Card::add_bucket` |
+| Reorder list has no duplicates, no omissions, no unknown IDs | `Card::reorder_buckets` — must check all three conditions |
+| The "Unassigned" bucket is never removable | `Card::remove_bucket` |
+
+### Invariants owned by `CardRegistry` (require cross-card lookup)
+| Invariant | Enforcement point |
+|---|---|
+| Parent card must exist before creating a child | `CardRegistry::create_child_card` |
+| `bucket_id` must belong to the *parent's* bucket list, not the child's | `CardRegistry::create_child_card`, `CardRegistry::move_card_to_bucket` |
+| No cycles in the hierarchy | `CardRegistry::reparent_card` (via `detect_cycle`) |
+| A bucket cannot be deleted while children reference it | `CardRegistry::remove_bucket` (scan children's `bucket_id`) |
+| A card cannot be deleted while it has children (unless strategy permits) | `CardRegistry::delete_card` |
+| After reparenting, the card is moved to the new parent's Unassigned bucket | `CardRegistry::reparent_card` |
+| Root cards (`parent_id: None`) must have `bucket_id: None` | `CardRegistry::create_root_card` (enforced structurally via `Card::new_root`) |
+
+### Known Gap to Fix (P0)
+`Card::reorder_buckets` currently validates only list length. It must also:
+1. Reject duplicate IDs in the input
+2. Reject IDs not present in `self.buckets`
+These are self-contained checks and belong on `Card`, not the Registry.
+
+---
 
 ## Architecture Overview
-The system follows a clean, layered architecture:
-1. **Domain Layer**: `Card`, `CardId`, `Bucket`, invariants, domain errors. Pure logic. No I/O.
-2. **Application Layer**: command handlers, orchestration logic, board projections, navigation helpers. Uses domain objects but does not handle persistence directly.
-3. **Infrastructure Layer**: JSON serialization, browser storage adapters (`localStorage` / `IndexedDB`), export/import handlers.
-4. **Interface Layer**: Dioxus components, client-side routing, board rendering. Compiles to web (WASM), desktop, and mobile from a single codebase.
+```
+src/
+├── domain/          ← Pure logic. No I/O. No Dioxus. No serde yet.
+│   ├── id.rs        ← CardId, BucketId (ULID newtypes)
+│   ├── bucket.rs    ← Bucket entity
+│   ├── card.rs      ← Card entity + pub(crate) escape hatches
+│   ├── error.rs     ← DomainError (NOT YET CREATED)
+│   ├── registry.rs  ← CardRegistry (NOT YET CREATED)
+│   └── mod.rs
+├── application/     ← NOT YET CREATED. Command enum + dispatch + BoardView projection.
+├── infrastructure/  ← NOT YET CREATED. JsonRepository + LocalStorageRepository.
+├── app.rs           ← Dioxus root component (hello-world shell only)
+├── components.rs    ← Empty placeholder
+├── routes.rs        ← Empty placeholder
+├── lib.rs
+└── main.rs
+```
+
+---
 
 ## Persistence Strategy
-Initial goals: local-first, no external server, single-user, pure browser.
-- **Primary**: Browser `localStorage` / `IndexedDB` for session persistence. Users are warned that clearing cache will delete data.
-- **Export/Import**: Users can download their entire state as a JSON file and re-upload it to restore.
-- **Future**: Optional cloud sync via Google Drive / Dropbox API integration.
-The persistence layer is abstracted behind a repository interface (`Repository Pattern`) that loads, saves, and fetches cards from browser storage.
+- **Primary:** Browser `localStorage` / `IndexedDB`. Users warned that clearing cache deletes data.
+- **Export/Import:** Download full state as JSON; re-upload to restore.
+- **Future:** Google Drive / Dropbox optional sync.
+
+Serde derives (`Serialize`, `Deserialize`) are **deferred** until the infrastructure layer is built. Do not add them to domain types prematurely.
+
+---
+
+## Bucket Validation Rules (Explicit)
+1. `add_bucket(name)` — rejects if any existing bucket name matches case-insensitively.
+2. `remove_bucket(id)` — `Card` rejects if it is the Unassigned bucket. `CardRegistry` additionally rejects if any child's `bucket_id` matches the target.
+3. `reorder_buckets(ids)` — must reject if: (a) count differs, (b) any ID is duplicated in input, (c) any ID is unknown. All three checks must produce a clear `DomainError::BucketNotFound` or a distinct structural error.
+
+---
 
 ## Ordering Strategy
-- **Bucket ordering**: defined by `Vec<Bucket>`, stable and explicit.
-- **Card ordering within bucket**: simple index-based ordering (initial), more advanced ordering later if needed. Must be deterministic and preserved.
+- Bucket order = `Vec<Bucket>` position in the parent card. No separate field.
+- Child order = `Vec<CardId>` position in the parent card. No separate field.
 
-## Error Handling
-Explicit domain errors: `CardNotFound`, `InvalidParent`, `CycleDetected`, `InvalidBucket`, `DuplicateBucket`, `InvalidOperation`. Errors are structured and handled at boundaries.
-
-## Local-First Design
-System is designed to work without a backend server, without authentication, without cloud sync. All data lives locally. Future expansion may include sync layer, collaboration, multi-device support.
-
-## Performance Model
-Assumptions: entire card registry can fit in memory, board views computed on demand, no premature caching, simple algorithms first, optimize later. Rust ensures predictable performance.
+---
 
 ## Future Features (Not in MVP)
-labels, deadlines, recurrence, templates, notes/pages, attachments, user assignments, multi-user collaboration, permissions, analytics, AI-assisted planning, card cross-references/linking, cloud sync (Google Drive/Dropbox).
+Labels, deadlines, recurrence, templates, notes, attachments, multi-user, permissions, analytics, AI planning, card cross-references/linking, cloud sync.
 
-## Design Philosophy
-This system prioritizes:
-- simplicity over feature sprawl
-- strict invariants over flexibility
-- explicit data flow over magic
-- composability over specialization
-- local-first over cloud dependency
-
-## MVP Goal
-The first working version must support:
-- create cards
-- define buckets
-- move cards between buckets
-- reparent cards
-- navigate hierarchy
-- persist and reload state
-If this works cleanly and reliably, the architecture is validated. Everything else is secondary.
+---
 
 ## Resolved Architecture Decisions
-*These decisions were finalized during the planning phase and are now binding for all implementation work.*
+All binding. Not subject to re-debate.
 
-### 1. Data Types & Core Domain ✅
-* **Identifiers:** `Ulid` (time-sortable). Wrapped in strict Newtype structs (`CardId`, `BucketId`) to prevent accidental mixing. **Implemented in `src/domain/id.rs`.**
-* **Bucket Entity:** Strict struct (`Bucket { id: BucketId, name: String }`). Renaming a bucket changes only the display name; all child card references use the stable `BucketId`. This guarantees referential integrity.
-* **The Root Node:** There is NO special "Workspace" type. Top-level cards are simply cards with `parent_id: None`. "Everything is a Card" — a card named "Home" or "Work" is structurally identical to a task card. Hierarchy is traversed from whichever root card is selected.
-* **Ordering:** `children_ids: Vec<CardId>` preserves insertion order implicitly. Reordering is handled by mutating the Vec directly.
-
-### 2. Domain Invariants & Rules ✅
-* **Orphaned Cards (Deletion):** **Option C with bypass.** By default, the system rejects deletion of a card that still has children. The user must explicitly choose to:
-  * (A) Cascade-delete all children recursively, OR
-  * (B) Reparent all children to the deleted card's parent.
-* **Bucket Deletion:** Same principle — reject deletion of a bucket that still has cards assigned to it. User must reassign or delete the cards first.
-* **Cycle Detection:** Must be enforced. Before any reparent operation, walk up the ancestor chain of the proposed new parent to ensure the card being moved is not an ancestor of the target. Since the entire registry fits in memory, this is a simple traversal.
-
-### 3. Application & Commands ✅
-* **Command Granularity:** Keep commands atomic and separate (e.g., `ReparentCard` and `MoveCardToBucket` are distinct). Composite operations are orchestrated at the Application layer, not baked into a single command.
-* **Board Loading:** Load only immediate children when navigating to a card's board. Deep tree loading is deferred until the user navigates deeper.
-
-### 4. Infrastructure & Persistence ✅
-* **Deployment Model: Dioxus Cross-Platform App.** No Axum server. No Tokio runtime. Dioxus compiles to WASM for the browser, native desktop windows, and mobile apps — all from a single Rust codebase.
-* **Persistence Strategy:**
-  * **Primary:** Browser `localStorage` / `IndexedDB` for session persistence. Users will be warned that clearing browser cache will delete their data.
-  * **Export/Import:** Users can download their entire state as a JSON file and re-upload it to restore.
-  * **Future:** Optional cloud sync via Google Drive / Dropbox API integration.
-* **Dependencies to REMOVE:** `axum`, `tokio`, `leptos`, `leptos_axum`, `tracing`, `tracing-subscriber`. These are server-side or Leptos-specific dependencies.
-* **Dependencies to KEEP/ADD:** `dioxus` (web + desktop + router features), `serde`, `serde_json`, `ulid`, `thiserror` (for domain errors).
-
-### 5. Frontend & UI Architecture (Dioxus) ✅
-* **Routing:** `/board/:card_id` maps directly to "enter a card and view its board". Top-level route `/` shows the list of root cards (those with `parent_id: None`).
-* **State Management:** The entire card registry lives in a Dioxus `Signal` in memory. Board views are computed projections from this signal. Mutations go through Commands which update the signal and trigger re-renders.
-* **Cross-Platform:** Same codebase compiles to web (WASM), desktop (native window), and mobile (iOS/Android) via the Dioxus CLI (`dx`).
-
-## Open Questions (Remaining)
-*All architectural questions have been resolved. No open blockers remain.*
-
-* **Card Linking (Cross-References):** Deferred to **Future**. Cards will be able to link/reference other cards outside the parent-child tree (e.g., shortcuts, bookmarks). Not part of MVP.
-
+| Decision | Resolution |
+|---|---|
+| Identifiers | ULIDs wrapped in `CardId` / `BucketId` newtypes |
+| Bucket entity | `Bucket { id: BucketId, name: String }` — rename changes name only |
+| Root node | No special type. Cards with `parent_id: None` are root. |
+| Ordering | Vec position = order. No separate field. |
+| Deletion | Default reject; explicit `DeleteStrategy` enum for cascade or reparent |
+| Deployment | Dioxus (WASM + desktop + mobile from one codebase). No server. |
+| Persistence | localStorage/IndexedDB primary; JSON export/import; future cloud |
+| Framework | Dioxus. Leptos is fully removed. |
+| Card linking | Deferred to post-MVP. |
