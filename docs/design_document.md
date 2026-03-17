@@ -12,13 +12,13 @@ We strictly enforce:
 ## Project Overview
 This project is a recursive, card-based planning system designed to unify task management across individuals, teams, households, and organizations into a single coherent model. The system is built around a strict abstraction: everything is a card. There are no separate entity types for tasks, projects, users, or teams. All of these are represented using the same structure and behavior.
 
-The system is being implemented directly in Rust, with a strong emphasis on:
+The system is being implemented directly in Rust, compiled to WebAssembly (WASM), with a strong emphasis on:
 - strict typing
 - explicit data flow
 - modular architecture
 - high performance
 - long-term maintainability
-- portability (including future WebAssembly support)
+- portability (WASM runs in any modern browser on desktop, mobile, or tablet)
 
 The goal is to build a local-first, web-based application that runs in the browser, stores data locally, and remains fast and responsive with minimal frontend complexity.
 
@@ -46,12 +46,12 @@ This means:
 The core entity will resemble:
 ```rust
 struct Card {
-    id: CardId,               // unique identifier (UUID/ULID)
+    id: CardId,               // unique ULID identifier
     title: String,            // display name
-    parent_id: Option<CardId>,// parent reference
+    parent_id: Option<CardId>,// parent reference (None = root/top-level card)
     children_ids: Vec<CardId>,// ordered list of children
     bucket: Option<BucketId>, // which bucket this card belongs to in its parent
-    buckets: Vec<Bucket>,     // ordered bucket definitions for this card’s board
+    buckets: Vec<Bucket>,     // ordered bucket definitions for this card's board
 }
 ```
 
@@ -84,15 +84,15 @@ No direct mutation of structs from outside the domain layer.
 The system follows a clean, layered architecture:
 1. **Domain Layer**: `Card`, `CardId`, `Bucket`, invariants, domain errors. Pure logic. No I/O.
 2. **Application Layer**: command handlers, orchestration logic, board projections, navigation helpers. Uses domain objects but does not handle persistence directly.
-3. **Infrastructure Layer**: persistence (SQLite, file, etc.), serialization, storage adapters.
-4. **Interface Layer (Future)**: web UI, API endpoints, WASM bindings.
+3. **Infrastructure Layer**: JSON serialization, browser storage adapters (`localStorage` / `IndexedDB`), export/import handlers.
+4. **Interface Layer**: Leptos CSR components, client-side routing, board rendering.
 
 ## Persistence Strategy
-Initial goals: local-first, no external server, single-user.
-- **Primary target**: SQLite
-- **Secondary**: JSON (for debugging/import/export)
-- **Future**: browser-based storage (SQLite compiled to WebAssembly, persisted via IndexedDB or OPFS).
-The persistence layer will be abstracted behind a repository interface (`Repository Pattern`) that loads, saves, fetches cards, and handles persistence mutations/transactions.
+Initial goals: local-first, no external server, single-user, pure browser.
+- **Primary**: Browser `localStorage` / `IndexedDB` for session persistence. Users are warned that clearing cache will delete data.
+- **Export/Import**: Users can download their entire state as a JSON file and re-upload it to restore.
+- **Future**: Optional cloud sync via Google Drive / Dropbox API integration.
+The persistence layer is abstracted behind a repository interface (`Repository Pattern`) that loads, saves, and fetches cards from browser storage.
 
 ## Ordering Strategy
 - **Bucket ordering**: defined by `Vec<Bucket>`, stable and explicit.
@@ -108,7 +108,7 @@ System is designed to work without a backend server, without authentication, wit
 Assumptions: entire card registry can fit in memory, board views computed on demand, no premature caching, simple algorithms first, optimize later. Rust ensures predictable performance.
 
 ## Future Features (Not in MVP)
-labels, deadlines, recurrence, templates, notes/pages, attachments, user assignments, multi-user collaboration, permissions, analytics, AI-assisted planning.
+labels, deadlines, recurrence, templates, notes/pages, attachments, user assignments, multi-user collaboration, permissions, analytics, AI-assisted planning, card cross-references/linking, cloud sync (Google Drive/Dropbox).
 
 ## Design Philosophy
 This system prioritizes:
