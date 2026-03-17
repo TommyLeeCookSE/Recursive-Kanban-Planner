@@ -16,6 +16,7 @@
 //! See `docs/rust-for-python-devs.md` for explanations of Rust patterns used here.
 
 use crate::domain::bucket::Bucket;
+use crate::domain::error::DomainError;
 use crate::domain::id::{BucketId, CardId};
 
 /// The name automatically given to the default bucket on every card's board.
@@ -32,7 +33,7 @@ pub const UNASSIGNED_BUCKET_NAME: &str = "Unassigned";
 /// ```
 /// use kanban_planner::domain::card::Card;
 ///
-/// let root = Card::new_root("My Projects".to_string());
+/// let root = Card::new_root("My Projects".to_string()).unwrap();
 /// assert!(root.parent_id().is_none());
 /// assert!(!root.buckets().is_empty(), "Root cards must have at least the Unassigned bucket");
 /// ```
@@ -57,19 +58,22 @@ impl Card {
     /// ```
     /// use kanban_planner::domain::card::Card;
     ///
-    /// let card = Card::new_root("Work Projects".to_string());
+    /// let card = Card::new_root("Work Projects".to_string()).unwrap();
     /// assert!(card.parent_id().is_none());
     /// assert!(card.bucket_id().is_none());
     /// ```
-    pub fn new_root(title: String) -> Self {
-        Self {
+    pub fn new_root(title: String) -> Result<Self, DomainError> {
+        if title.trim().is_empty() {
+            return Err(DomainError::EmptyTitle);
+        }
+        Ok(Self {
             id: CardId::new(),
             title,
             parent_id: None,
             children_ids: Vec::new(),
             bucket_id: None,
             buckets: vec![Bucket::new(UNASSIGNED_BUCKET_NAME.to_string())],
-        }
+        })
     }
 
     /// Creates a new child Card assigned to a specific parent and bucket.
@@ -85,22 +89,29 @@ impl Card {
     /// use kanban_planner::domain::card::Card;
     /// use kanban_planner::domain::id::{BucketId, CardId};
     ///
-    /// let parent = Card::new_root("Work".to_string());
+    /// let parent = Card::new_root("Work".to_string()).unwrap();
     /// let bucket_id = parent.buckets()[0].id();
-    /// let child = Card::new_child("Task Alpha".to_string(), parent.id(), bucket_id);
+    /// let child = Card::new_child("Task Alpha".to_string(), parent.id(), bucket_id).unwrap();
     ///
     /// assert_eq!(child.parent_id(), Some(parent.id()));
     /// assert_eq!(child.bucket_id(), Some(bucket_id));
     /// ```
-    pub fn new_child(title: String, parent_id: CardId, bucket_id: BucketId) -> Self {
-        Self {
+    pub fn new_child(
+        title: String,
+        parent_id: CardId,
+        bucket_id: BucketId,
+    ) -> Result<Self, DomainError> {
+        if title.trim().is_empty() {
+            return Err(DomainError::EmptyTitle);
+        }
+        Ok(Self {
             id: CardId::new(),
             title,
             parent_id: Some(parent_id),
             children_ids: Vec::new(),
             bucket_id: Some(bucket_id),
             buckets: vec![Bucket::new(UNASSIGNED_BUCKET_NAME.to_string())],
-        }
+        })
     }
 
     // -------------------------------------------------------------------------
@@ -149,15 +160,15 @@ impl Card {
     /// ```
     /// use kanban_planner::domain::card::Card;
     ///
-    /// let mut card = Card::new_root("Old".to_string());
+    /// let mut card = Card::new_root("Old".to_string()).unwrap();
     /// assert!(card.rename("New Title".to_string()).is_ok());
     /// assert_eq!(card.title(), "New Title");
     ///
     /// assert!(card.rename("  ".to_string()).is_err(), "Blank titles must be rejected");
     /// ```
-    pub fn rename(&mut self, new_title: String) -> Result<(), String> {
+    pub fn rename(&mut self, new_title: String) -> Result<(), DomainError> {
         if new_title.trim().is_empty() {
-            return Err("Card title cannot be empty or blank.".to_string());
+            return Err(DomainError::EmptyTitle);
         }
         self.title = new_title;
         Ok(())
@@ -187,13 +198,17 @@ impl Card {
     /// ```
     /// use kanban_planner::domain::card::Card;
     ///
-    /// let mut card = Card::new_root("Project".to_string());
+    /// let mut card = Card::new_root("Project".to_string()).unwrap();
     /// assert!(card.add_bucket("In Progress".to_string()).is_ok());
     /// assert!(card.add_bucket("In Progress".to_string()).is_err(), "Duplicate names must fail");
     /// ```
-    pub fn add_bucket(&mut self, name: String) -> Result<BucketId, String> {
-        if self.buckets.iter().any(|b| b.name().eq_ignore_ascii_case(&name)) {
-            return Err(format!("A bucket named '{}' already exists on this card.", name));
+    pub fn add_bucket(&mut self, name: String) -> Result<BucketId, DomainError> {
+        if self
+            .buckets
+            .iter()
+            .any(|b| b.name().eq_ignore_ascii_case(&name))
+        {
+            return Err(DomainError::DuplicateBucketName(name));
         }
         let bucket = Bucket::new(name);
         let id = bucket.id();
@@ -204,15 +219,17 @@ impl Card {
     /// Removes a bucket from this card's board by its ID.
     /// The "Unassigned" bucket cannot be removed — it is always the fallback.
     /// Returns an error if the bucket is not found or is the Unassigned bucket.
-    pub fn remove_bucket(&mut self, bucket_id: BucketId) -> Result<(), String> {
+    pub fn remove_bucket(&mut self, bucket_id: BucketId) -> Result<(), DomainError> {
         let pos = self
             .buckets
             .iter()
             .position(|b| b.id() == bucket_id)
-            .ok_or_else(|| "Bucket not found on this card.".to_string())?;
+            .ok_or(DomainError::BucketNotFound(bucket_id))?;
 
         if self.buckets[pos].name() == UNASSIGNED_BUCKET_NAME {
-            return Err("The 'Unassigned' bucket cannot be removed.".to_string());
+            return Err(DomainError::InvalidOperation(
+                "The 'Unassigned' bucket cannot be removed.".to_string(),
+            ));
         }
 
         self.buckets.remove(pos);
@@ -221,18 +238,25 @@ impl Card {
 
     /// Reorders the buckets by providing a new ordered list of `BucketId`s.
     /// All existing bucket IDs must be present — none may be added or dropped.
-    pub fn reorder_buckets(&mut self, ordered_ids: Vec<BucketId>) -> Result<(), String> {
+    pub fn reorder_buckets(&mut self, ordered_ids: Vec<BucketId>) -> Result<(), DomainError> {
         if ordered_ids.len() != self.buckets.len() {
-            return Err("Reorder list must contain exactly the same buckets.".to_string());
+            return Err(DomainError::InvalidOperation(
+                "Reorder list length does not match existing buckets".to_string(),
+            ));
         }
 
         let mut reordered = Vec::with_capacity(self.buckets.len());
-        for id in &ordered_ids {
+        let mut seen = std::collections::HashSet::new();
+
+        for id in ordered_ids {
+            if !seen.insert(id) {
+                return Err(DomainError::DuplicateBucketId(id));
+            }
             let bucket = self
                 .buckets
                 .iter()
-                .find(|b| b.id() == *id)
-                .ok_or_else(|| format!("Unknown bucket ID in reorder list."))?
+                .find(|b| b.id() == id)
+                .ok_or(DomainError::BucketNotFound(id))?
                 .clone();
             reordered.push(bucket);
         }
@@ -276,23 +300,23 @@ mod tests {
 
     #[test]
     fn test_new_root_has_no_parent_or_bucket() {
-        let card = Card::new_root("Root".to_string());
+        let card = Card::new_root("Root".to_string()).unwrap();
         assert!(card.parent_id().is_none());
         assert!(card.bucket_id().is_none());
     }
 
     #[test]
     fn test_new_root_has_unassigned_bucket() {
-        let card = Card::new_root("Root".to_string());
+        let card = Card::new_root("Root".to_string()).unwrap();
         assert_eq!(card.buckets().len(), 1);
         assert_eq!(card.buckets()[0].name(), UNASSIGNED_BUCKET_NAME);
     }
 
     #[test]
     fn test_new_child_has_parent_and_bucket() {
-        let parent = Card::new_root("Parent".to_string());
+        let parent = Card::new_root("Parent".to_string()).unwrap();
         let bucket_id = parent.buckets()[0].id();
-        let child = Card::new_child("Child".to_string(), parent.id(), bucket_id);
+        let child = Card::new_child("Child".to_string(), parent.id(), bucket_id).unwrap();
 
         assert_eq!(child.parent_id(), Some(parent.id()));
         assert_eq!(child.bucket_id(), Some(bucket_id));
@@ -300,36 +324,80 @@ mod tests {
 
     #[test]
     fn test_rename_rejects_blank_title() {
-        let mut card = Card::new_root("Title".to_string());
-        assert!(card.rename("  ".to_string()).is_err());
-        assert_eq!(card.title(), "Title", "Title must be unchanged after a failed rename");
+        let mut card = Card::new_root("Title".to_string()).unwrap();
+        assert!(matches!(
+            card.rename("  ".to_string()),
+            Err(DomainError::EmptyTitle)
+        ));
+        assert_eq!(
+            card.title(),
+            "Title",
+            "Title must be unchanged after a failed rename"
+        );
     }
 
     #[test]
     fn test_add_duplicate_bucket_fails() {
-        let mut card = Card::new_root("Project".to_string());
+        let mut card = Card::new_root("Project".to_string()).unwrap();
         assert!(card.add_bucket("In Progress".to_string()).is_ok());
-        assert!(card.add_bucket("In Progress".to_string()).is_err());
+        assert!(matches!(
+            card.add_bucket("In Progress".to_string()),
+            Err(DomainError::DuplicateBucketName(_))
+        ));
     }
 
     #[test]
     fn test_remove_unassigned_bucket_fails() {
-        let mut card = Card::new_root("Project".to_string());
+        let mut card = Card::new_root("Project".to_string()).unwrap();
         let unassigned_id = card.buckets()[0].id();
-        assert!(card.remove_bucket(unassigned_id).is_err());
+        assert!(matches!(
+            card.remove_bucket(unassigned_id),
+            Err(DomainError::InvalidOperation(_))
+        ));
     }
 
     #[test]
     fn test_reorder_buckets() {
-        let mut card = Card::new_root("Project".to_string());
+        let mut card = Card::new_root("Project".to_string()).unwrap();
         let id_a = card.add_bucket("Alpha".to_string()).unwrap();
         let id_b = card.add_bucket("Beta".to_string()).unwrap();
         let unassigned_id = card.buckets()[0].id();
 
         // Reorder: Beta, Unassigned, Alpha
-        assert!(card.reorder_buckets(vec![id_b, unassigned_id, id_a]).is_ok());
+        assert!(
+            card.reorder_buckets(vec![id_b, unassigned_id, id_a])
+                .is_ok()
+        );
         assert_eq!(card.buckets()[0].name(), "Beta");
         assert_eq!(card.buckets()[1].name(), UNASSIGNED_BUCKET_NAME);
         assert_eq!(card.buckets()[2].name(), "Alpha");
+    }
+
+    #[test]
+    fn test_reorder_buckets_fails_duplicates_and_unknowns() {
+        let mut card = Card::new_root("Project".to_string()).unwrap();
+        let id_a = card.add_bucket("Alpha".to_string()).unwrap();
+        let _id_b = card.add_bucket("Beta".to_string()).unwrap();
+        let unassigned_id = card.buckets()[0].id();
+
+        // Fails Duplicate
+        assert!(matches!(
+            card.reorder_buckets(vec![id_a, id_a, unassigned_id]),
+            Err(DomainError::DuplicateBucketId(_))
+        ));
+
+        // Fails Unknown
+        assert!(matches!(
+            card.reorder_buckets(vec![id_a, BucketId::new(), unassigned_id]),
+            Err(DomainError::BucketNotFound(_))
+        ));
+    }
+
+    #[test]
+    fn test_new_card_rejects_blank_title() {
+        assert!(matches!(
+            Card::new_root("   ".to_string()),
+            Err(DomainError::EmptyTitle)
+        ));
     }
 }

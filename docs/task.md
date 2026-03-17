@@ -15,27 +15,27 @@
 ## P0 — Stabilize Domain Invariants
 *Fix the gaps in existing code before building on top of it.*
 
-- [ ] `Card::new_root` and `Card::new_child` must reject blank/empty titles at construction time
-- [ ] `Card::reorder_buckets` must reject duplicate IDs in the input list
-- [ ] `Card::reorder_buckets` must reject unknown IDs in the input list
-- [ ] Create `src/domain/error.rs` — `DomainError` enum using `thiserror`
-- [ ] Migrate all `Result<_, String>` in `card.rs` to `Result<_, DomainError>`
-- [ ] `cargo clippy --all-targets -- -D warnings` passes with zero warnings
-- [ ] `cargo fmt -- --check` passes with zero diffs
+- [x] `Card::new_root` and `Card::new_child` must reject blank/empty titles at construction time
+- [x] `Card::reorder_buckets` must reject duplicate IDs in the input list
+- [x] `Card::reorder_buckets` must reject unknown IDs in the input list
+- [x] Create `src/domain/error.rs` — `DomainError` enum using `thiserror`
+- [x] Migrate all `Result<_, String>` in `card.rs` to `Result<_, DomainError>`
+- [x] `cargo clippy --all-targets -- -D warnings` passes with zero warnings
+- [x] `cargo fmt -- --check` passes with zero diffs
 
 ---
 
 ## P1 — Build CardRegistry
-- [ ] `src/domain/registry.rs` — `CardRegistry { HashMap<CardId, Card> }`
-- [ ] `create_root_card`, `create_child_card`
-- [ ] `get_card`, `get_card_mut`, `get_root_cards`, `get_children`, `board_projection`
-- [ ] `rename_card`, `add_bucket`, `reorder_buckets` — delegation wrappers
-- [ ] `move_card_to_bucket` — validates bucket belongs to parent
-- [ ] `remove_bucket` — rejects if any child references that bucket
-- [ ] `detect_cycle` + `reparent_card`
-- [ ] `delete_card(id, DeleteStrategy)` — Reject / CascadeDelete / ReparentToGrandparent
-- [ ] Full test suite covering every error variant
-- [ ] Integration test: full lifecycle roundtrip
+- [x] `src/domain/registry.rs` — `CardRegistry { HashMap<CardId, Card> }`
+- [x] `create_root_card`, `create_child_card`
+- [x] `get_card`, `get_card_mut`, `get_root_cards`, `get_children`, `board_projection`
+- [x] `rename_card`, `add_bucket`, `reorder_buckets` — delegation wrappers
+- [x] `move_card_to_bucket` — validates bucket belongs to parent
+- [x] `remove_bucket` — rejects if any child references that bucket
+- [x] `detect_cycle` + `reparent_card`
+- [x] `delete_card(id, DeleteStrategy)` — Reject / CascadeDelete / ReparentToGrandparent
+- [x] Full test suite covering every error variant
+- [x] Integration test: full lifecycle roundtrip
 
 ---
 
