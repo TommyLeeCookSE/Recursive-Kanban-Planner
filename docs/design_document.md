@@ -128,31 +128,41 @@ The first working version must support:
 - persist and reload state
 If this works cleanly and reliably, the architecture is validated. Everything else is secondary.
 
----
+## Resolved Architecture Decisions
+*These decisions were finalized during the planning phase and are now binding for all implementation work.*
 
-## Open Architecture Questions & Design Choices
-*We must resolve these questions before restructuring the application. We will document the reasoning for each choice here.*
+### 1. Data Types & Core Domain ✅
+* **Identifiers:** `Ulid` (time-sortable). Wrapped in strict Newtype structs (`CardId`, `BucketId`) to prevent accidental mixing. **Implemented in `src/domain/id.rs`.**
+* **Bucket Entity:** Strict struct (`Bucket { id: BucketId, name: String }`). Renaming a bucket changes only the display name; all child card references use the stable `BucketId`. This guarantees referential integrity.
+* **The Root Node:** There is NO special "Workspace" type. Top-level cards are simply cards with `parent_id: None`. "Everything is a Card" — a card named "Home" or "Work" is structurally identical to a task card. Hierarchy is traversed from whichever root card is selected.
+* **Ordering:** `children_ids: Vec<CardId>` preserves insertion order implicitly. Reordering is handled by mutating the Vec directly.
 
-### 1. Data Types & Core Domain
-* **Identifiers:** `Uuid` (v4) vs `Ulid` (time-sortable).
-* **Bucket Entity:** Should `Bucket` be a raw `String` or a strict struct (`BucketId`, `name`) so renaming doesn't break relationships?
-* **The Root Node:** Is there an implicit forest, or one singular "Root" workspace card that holds everything?
-* **Ordering:** Are we storing explicit indices, or simply relying on the order of `children_ids: Vec<CardId>`?
+### 2. Domain Invariants & Rules ✅
+* **Orphaned Cards (Deletion):** **Option C with bypass.** By default, the system rejects deletion of a card that still has children. The user must explicitly choose to:
+  * (A) Cascade-delete all children recursively, OR
+  * (B) Reparent all children to the deleted card's parent.
+* **Bucket Deletion:** Same principle — reject deletion of a bucket that still has cards assigned to it. User must reassign or delete the cards first.
+* **Cycle Detection:** Must be enforced. Before any reparent operation, walk up the ancestor chain of the proposed new parent to ensure the card being moved is not an ancestor of the target. Since the entire registry fits in memory, this is a simple traversal.
 
-### 2. Domain Invariants & Rules
-* **Orphaned Cards:** If a parent is deleted, are children cascade-deleted or moved to root?
-* **Bucket Deletion:** If a user deletes a Bucket, do we move cards to a default "Backlog" or reject the deletion?
-* **Cycle Detection:** How do we efficiently prevent a card from becoming a child of its own descendant?
+### 3. Application & Commands ✅
+* **Command Granularity:** Keep commands atomic and separate (e.g., `ReparentCard` and `MoveCardToBucket` are distinct). Composite operations are orchestrated at the Application layer, not baked into a single command.
+* **Board Loading:** Load only immediate children when navigating to a card's board. Deep tree loading is deferred until the user navigates deeper.
 
-### 3. Application & Commands
-* **Command Granularity:** Do we need atomic commands (e.g., `ReparentAndAssignBucket`) or keep them separate?
-* **Board Loading:** Does navigating to a board load *only* immediate children, or the whole tree recursively?
+### 4. Infrastructure & Persistence ✅
+* **Deployment Model: Pure WASM Browser App.** No Axum server. No Tokio runtime. Leptos runs in CSR (Client-Side Rendering) mode only. The entire Rust application compiles to WebAssembly and runs directly in the user's browser.
+* **Persistence Strategy:**
+  * **Primary:** Browser `localStorage` / `IndexedDB` for session persistence. Users will be warned that clearing browser cache will delete their data.
+  * **Export/Import:** Users can download their entire state as a JSON file and re-upload it to restore.
+  * **Future:** Optional cloud sync via Google Drive / Dropbox API integration.
+* **Dependencies to REMOVE:** `axum`, `tokio`, `leptos_axum`, `tracing`, `tracing-subscriber`. These are server-side dependencies that are unnecessary in a pure WASM app.
+* **Dependencies to KEEP/ADD:** `leptos` (CSR features only), `serde`, `serde_json`, `ulid`, `thiserror` (for domain errors), `web-sys` / `wasm-bindgen` (for browser storage APIs).
 
-### 4. Infrastructure & Persistence
-* **Deployment Model:** Are we using Axum + Server-side SQLite (local desktop app via browser), or compiling SQLite to WASM for a pure in-browser OPFS storage?
-* **Database Schema:** Do we store `children_ids` as JSON arrays, or strictly use Foreign Keys (`parent_id`, `sort_index`)?
-* **Dependencies:** `sqlx` vs `rusqlite`? Use `thiserror` for domain errors?
+### 5. Frontend & UI Architecture (Leptos) ✅
+* **Routing:** `/board/:card_id` maps directly to "enter a card and view its board". Top-level route `/` shows the list of root cards (those with `parent_id: None`).
+* **State Management:** The entire card registry lives in a Leptos `RwSignal` in memory. Board views are computed projections from this signal. Mutations go through Commands which update the signal and trigger re-renders.
 
-### 5. Frontend & UI Architecture (Leptos)
-* **Routing:** Should the route strictly be `/board/:card_id`?
-* **State Management:** How are we caching the board state locally in Leptos Signals without creating stale data?
+## Open Questions (Remaining)
+*All architectural questions have been resolved. No open blockers remain.*
+
+* **Card Linking (Cross-References):** Deferred to **Future**. Cards will be able to link/reference other cards outside the parent-child tree (e.g., shortcuts, bookmarks). Not part of MVP.
+
