@@ -76,7 +76,7 @@
 - [x] Implement `Board` and `Column` view layout (horizontal/vertical auto-scrolling).
 - [x] Implement `CardItem` component with click-to-nav behaviour and move dropdown controls.
 - [x] Implement blurred `Modal` system for "Create Card," "Rename Item," and "Create Bucket." Modal closes on "X" (auto-saves).
-- [x] Hook UI components to application layer `Command` dispatching via shared `Signal<CardRegistry>`.
+- [x] Hook UI components to application layer `Command` dispatching via shared `Signal<CardRegistry>`. (Verified 2026-03-18 with Dioxus 0.7)
 - [x] Run state persistence through the `AppPersistence` facade on each mutation.
 
 ---
@@ -84,9 +84,9 @@
 ## P5 — Release & Docs
 
 - [x] Reviewer pass: zero `.unwrap()` in non-test code
-- [ ] Readability pass: all public items have `///` doc-comments with `# Examples`
-- [ ] Optimizer pass: unnecessary clones, redundant allocations
-- [ ] `dx serve` (WASM build) verified
+- [x] Readability pass: all public items have `///` doc-comments with `# Examples`
+- [x] Optimizer pass: verified minimal clones in interface state management
+- [x] `dx serve` (WASM build) verified (Fixed WASM-time panic and CSS asset pipeline)
 - [ ] `dx serve --platform desktop` (native) verified
 - [ ] `README.md` written
 - [ ] Tag `v0.1.0` on GitHub

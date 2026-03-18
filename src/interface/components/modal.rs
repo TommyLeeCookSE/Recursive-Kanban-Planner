@@ -5,21 +5,31 @@ use crate::infrastructure::logging::record_diagnostic;
 use dioxus::prelude::*;
 use tracing::{Level, error, info};
 
+/// Defines the type of modal to be displayed and the data it requires.
 #[derive(Clone, Debug, PartialEq)]
 pub enum ModalType {
+    /// Modal for creating a new card (root or child).
     CreateCard {
+        /// The parent card ID, or None for root level.
         parent_id: Option<CardId>,
+        /// The bucket ID where the new card will be placed.
         bucket_id: Option<BucketId>,
     },
+    /// Modal for renaming an existing card.
     RenameCard {
+        /// ID of the card to rename.
         id: CardId,
+        /// Current title to pre-populate the field.
         current_title: String,
     },
+    /// Modal for adding a new bucket (column) to a board.
     CreateBucket {
+        /// ID of the card whose board receives the new bucket.
         card_id: CardId,
     },
 }
 
+/// A generic blurred modal wrapper that handles the overlay and center positioning.
 #[component]
 pub fn Modal(on_close: EventHandler<()>, title: String, children: Element) -> Element {
     rsx! {
@@ -48,6 +58,7 @@ pub fn Modal(on_close: EventHandler<()>, title: String, children: Element) -> El
     }
 }
 
+/// Modal component for creating a new task or board.
 #[component]
 pub fn CardModal(
     on_close: EventHandler<()>,
@@ -110,6 +121,7 @@ pub fn CardModal(
     }
 }
 
+/// Modal component for changing the title of a card.
 #[component]
 pub fn RenameCardModal(
     on_close: EventHandler<()>,
@@ -167,6 +179,7 @@ pub fn RenameCardModal(
     }
 }
 
+/// Modal component for adding a new column to a board.
 #[component]
 pub fn BucketModal(
     on_close: EventHandler<()>,

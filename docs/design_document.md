@@ -24,7 +24,7 @@ A recursive, card-based planning system. Everything is a `Card`. No separate ent
 
 ## Current Implementation Status
 
-*Last reconciled: 2026-03-17. Update this section whenever a phase is completed.*
+*Last reconciled: 2026-03-18. Update this section whenever a phase is completed.*
 
 **Current validation state:** The current worktree is **verification-clean**.
 `cargo test --all`, `cargo clippy --all-targets -- -D warnings`, and
@@ -51,16 +51,23 @@ A recursive, card-based planning system. Everything is a `Card`. No separate ent
 | `TopBar`, `CardItem`, rename/create modals | `src/interface/components/` | Reusable board header, interactive card controls, blurred modal flows |
 | `LocalStorageRepository` | `src/infrastructure/repository.rs` | Saves/loads registry to browser storage on `wasm32` |
 | `AppPersistence` facade | `src/infrastructure/repository.rs` | Platform-aware persistence boundary used by the interface layer |
+| `Modal` / `CardModal` / `BucketModal` | `src/interface/components/modal.rs` | Robust, blurred modal system for creating cards and columns |
+| `Signal` / `use_context_provider` | `src/interface/app.rs` | Context-based global state for regstry and active modals (Dioxus 0.7) |
+| `asset!` pipeline | `src/interface/app.rs`, `assets/app.css` | Pre-compiled CSS for high-performance WASM rendering |
 
 ### 🔲 Not Yet Implemented / Not Yet Verified
 
-- End-to-end `dx serve` verification for WASM and desktop
+- End-to-end `dx serve` verification for WASM (**Verified 2026-03-18**)
+- End-to-end `dx serve` verification for Desktop
 - Native desktop/mobile persistence backend beyond browser storage
 
 ### ✅ Recently Implemented Behavioral Decisions
 
 1. **Same-parent reparenting** — `reparent_card(id, current_parent)` is a **no-op** returning `Ok(())`. It preserves child ordering and bucket assignment.
 2. **Read-path corruption** — `get_children` and `board_projection` **fail loudly**. `CardNotFound` or `BucketNotFound` are returned if the registry's internal pointers refer to missing cards or buckets.
+3. **WASM Compatibility (Panic Safety)** — Standard library time/I/O functions like `SystemTime` can panic on `wasm32`. All such calls must be feature-gated or use safe fallbacks to prevent "Blank Screen" failures.
+4. **Pre-compiled Assets** — To maximize WASM performance and minimize CLI complexity, CSS is pre-compiled into `assets/app.css`. The Dioxus `asset!` macro is used for linking.
+5. **Empty Board Visibility** — On brand-new boards, the "Unassigned" column will be forced to display. It only hides when empty IF other columns are present.
 
 ---
 

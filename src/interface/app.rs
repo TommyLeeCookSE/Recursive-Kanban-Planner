@@ -6,6 +6,10 @@ use crate::interface::components::modal::{BucketModal, CardModal, ModalType, Ren
 use dioxus::prelude::*;
 use tracing::{Level, info, warn};
 
+/// The root application component.
+///
+/// Sets up the global state (Persistence, Registry, Theme, Active Modal)
+/// and provides them via the Context API to the rest of the component tree.
 pub fn App() -> Element {
     let persistence_warning = use_context_provider(|| Signal::new(None::<String>));
 
