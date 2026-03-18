@@ -9,5 +9,5 @@ pub mod components;
 pub mod error_templates;
 pub mod routes;
 
-// Re-export the root App component for convenience at the binary layer.
 pub use app::App;
+pub use routes::Route;

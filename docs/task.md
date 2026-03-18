@@ -67,16 +67,14 @@
 
 ## P4 — Dioxus Interface
 
-- [ ] Routes: `/` and `/board/:card_id` via `dioxus_router`
-- [ ] `Signal<CardRegistry>` at root; provided via Dioxus context to all child components
-- [ ] `RootList` component — lists root cards; empty state CTA
-- [ ] `Board` component — reads route param, calls `build_board_view`
-- [ ] `BucketColumn` component — Unassigned hides when empty; named columns shrink to name width
-- [ ] `CardItem` component — click navigates into card; context menu for rename/delete/move
-- [ ] `Breadcrumb` component — ancestor chain, each node clickable
-- [ ] Modals: create card, rename, delete confirmation (with `DeleteStrategy` choice)
-- [ ] Persistence integration: load on startup from localStorage, auto-save after every mutation,
-  JSON export/import buttons
+- [x] `tailwind.config.js`: Initialize Tailwind CSS, configure `darkMode: 'class'`, and setup Warm Orange brand colors.
+- [x] Dioxus Router setup (`/` vs `/board/:card_id`) in `app.rs`.
+- [ ] Implement `TopBar` component (Flexbox: Back Arrow/Previous Card Name, Current Card Name, +Create Bucket, Modifiers).
+- [x] Implement `Board` and `Column` view layout (horizontal/vertical auto-scrolling).
+- [ ] Implement `CardItem` component with click-to-nav behaviour and "Move" dropdown context menu.
+- [ ] Implement blurred `Modal` system for "Create Card," "Rename Item," and "Create Bucket." Modal closes on "X" (auto-saves).
+- [x] Hook UI components to application layer `Command` dispatching via shared `Signal<CardRegistry>`.
+- [x] Run state diffs against `LocalStorageRepository` on each mutation to persist data.
 
 ---
 

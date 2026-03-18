@@ -67,4 +67,5 @@ The Recursive Kanban Planner is developed using a structured multi-agent system.
 - **Identifiers:** ULID via the `ulid` crate
 - **Error types:** `thiserror`
 - **Serialization:** `serde` + `serde_json` (infrastructure layer only)
+- **Styling:** Tailwind CSS (Utility-first, configured via `tailwind.config.js`)
 - **No server:** No Axum, no Tokio, no Leptos. Fully client-side.

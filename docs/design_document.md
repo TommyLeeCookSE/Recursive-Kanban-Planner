@@ -44,24 +44,18 @@ A recursive, card-based planning system. Everything is a `Card`. No separate ent
 | Serde support | `src/domain/*.rs` | `Serialize`/`Deserialize` derives added to all domain types |
 | JsonRepository | `src/infrastructure/mod.rs` | Basic registry persistence |
 | Dioxus Interface | `src/interface/` | `app`, `components`, `routes`, `error_templates` |
+| `LocalStorageRepository` | `src/infrastructure/repository.rs` | Saves/Loads registry to browser storage |
 
 ### 🔲 Not Yet Implemented
 
 - Real Dioxus routing (`/`, `/board/:card_id`)
 - Any UI components beyond the hello-world shell
-- `LocalStorageRepository` for browser persistence
+- Full Tailwind CSS configuration logic
 
 ### ⚠️ Open Behavioral Decisions (spec gaps the next implementer must resolve in code)
 
-See "Unresolved Architectural Decisions" below. Two specific behaviors in `registry.rs` have been
-left in a tolerated-but-undocumented state and must be given explicit, tested contracts:
-
-1. **Same-parent reparenting** — `reparent_card(id, current_parent)` currently runs full logic
-   as if it were a real move (re-appending child, moving to Unassigned). The contract must specify:
-   no-op returning `Ok(())` OR a distinct short-circuit behavior.
-2. **Read-path corruption** — `get_children` and `board_projection` currently silently skip
-   missing children and fall back to Unassigned for unknown bucket IDs. The contract must be
-   explicit about whether this is fail-loud or tolerated.
+1. **Same-parent reparenting** — `reparent_card(id, current_parent)` is a **no-op** returning `Ok(())`. It preserves child ordering and bucket assignment.
+2. **Read-path corruption** — `get_children` and `board_projection` **fail loudly**. `CardNotFound` or `BucketNotFound` are returned if the registry's internal pointers refer to missing cards or buckets.
 
 ---
 
@@ -294,12 +288,12 @@ src/
 
 ## Persistence Strategy
 
-- **Primary:** Browser `localStorage` / `IndexedDB`. Users warned that clearing cache deletes data.
+- **Primary:** Browser `localStorage`. State is serialized to JSON via `JsonRepository` and stored via `LocalStorageRepository`.
 - **Export/Import:** Download full state as JSON; re-upload to restore.
 - **Future:** Google Drive / Dropbox optional sync.
 
-Serde derives (`Serialize`, `Deserialize`) are now **implemented** across all domain types.
-Verify WASM compatibility during the next infrastructure pass.
+Serde derives (`Serialize`, `Deserialize`) are **implemented** across all domain types.
+WASM compatibility has been verified (including `getrandom` JS feature gates).
 
 ---
 
@@ -343,3 +337,42 @@ All binding. Not subject to re-debate.
 | Card linking | Deferred to post-MVP. |
 | Same-parent reparent | No-op, returns `Ok(())`. Does not reset bucket or ordering. |
 | Read-path corruption | Fail loudly. `CardNotFound` / `BucketNotFound` are the error shapes. |
+
+---
+
+## Dioxus Interface UI/UX Specifications (Phase 4)
+
+**The dashboard built with Dioxus MUST follow these exact design parameters.**
+
+### Theme & Styling
+
+- **Technology:** Tailwind CSS (via Tailwind CLI watch process).
+  - *Why?* Tailwind provides utility classes that keep our UI tightly coupled, DRY (Don't Repeat Yourself), and easy to maintain as the application scales.
+- **Palette:** Dark Mode by default. Light Mode accessible via a toggle button. The primary accent color is a "Warm Orange" (like a sunrise), designed to yield a dynamic, rich, and premium feel.
+- **Implementation:** Use Tailwind's `class="dark"` toggling strategy on the global `<html>` or `<body>` tag. Define the custom warm orange colors in `tailwind.config.js`.
+
+### Navigation
+
+- "Drill down" mechanics only: Clicking on a card's target area immediately navigates to that card's board, fully replacing the screen.
+- Only forward/backward navigation is supported. The top-left of the screen features a back arrow alongside the *Previous Card Name* to jump up exactly one parent level.
+
+### Layout Details
+
+- **Top Navigation Bar (Flexbox):**
+  - **Left:** `[ < Previous Card Name ]` (Navigates up).
+  - **Center:** `[ Current Card Name ]` (Hero title).
+  - **Center-Right:** `[ + Create Bucket ]` button (Placed flexibly between the title and the right-side actions).
+  - **Right:** `[ Import ]`, `[ Export ]`, and `[ ☼/☾ Toggle ]`.
+- **Main Board Area:**
+  - Designed for infinite horizontal and vertical scrolling (`overflow-x: auto`, `overflow-y: auto`).
+  - Buckets are vertical columns. Cards auto-format into rows within those columns based on screen size constraints.
+
+### Mutating State
+
+- **Moving Cards:** No drag-and-drop for the MVP. A Context Menu handles movement. The user hovers over a "Move" button on the card, which reveals a dropdown of the parent’s available buckets. Cards *cannot* be moved to different parent cards in the MVP (only to different buckets within the same board).
+- **Buckets:** Buckets cannot be reorganized after creation. The user must delete and recreate them to reorder.
+  - *Rule:* Deleting a bucket executes the `RemoveBucket` command. The domain mandates that any cards inside are automatically dumped into the explicit "Unassigned" bucket via a fallback.
+  - *Rule:* The "Unassigned" bucket is hidden unless it contains cards or if it is the *only* bucket on the board.
+- **Modals:** Creating/Editing occurs in clean modal pop-ups.
+  - Modals must blur the background (`backdrop-filter: blur(5px)` or similar) to prevent accidental clicks.
+  - Clicking "X" closes the modal and auto-saves the state immediately. Deletion requires an explicit, separate "Delete" button.

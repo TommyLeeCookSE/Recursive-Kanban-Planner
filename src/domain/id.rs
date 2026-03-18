@@ -11,6 +11,7 @@
 
 use serde::{Deserialize, Serialize};
 use std::fmt;
+use std::str::FromStr;
 use ulid::Ulid;
 
 /// Unique identifier for a Card in the planner.
@@ -55,6 +56,14 @@ impl fmt::Display for CardId {
     }
 }
 
+impl FromStr for CardId {
+    type Err = ulid::DecodeError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Self(Ulid::from_str(s)?))
+    }
+}
+
 /// Unique identifier for a Bucket (column) in a Card's board.
 ///
 /// Wraps a ULID to ensure type safety.
@@ -94,6 +103,14 @@ impl Default for BucketId {
 impl fmt::Display for BucketId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0)
+    }
+}
+
+impl FromStr for BucketId {
+    type Err = ulid::DecodeError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Self(Ulid::from_str(s)?))
     }
 }
 
