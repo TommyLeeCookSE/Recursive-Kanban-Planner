@@ -3,11 +3,10 @@ name = "kanban_planner"
 default_platform = "web"
 
 [web.app]
-title = "kanban_planner"
+title = "Kanban Planner"
 
 [web.resource]
-
-[web.resource.dev]
+assets = "assets"
 
 [web.build]
 target = "web"
@@ -16,3 +15,10 @@ dist = "dist"
 [web.dev]
 port = 8080
 open = true
+
+[web.watcher]
+watch_path = ["src", "assets", "tailwind.config.js", "src/interface/tailwind.css"]
+
+[web.tailwindcss]
+input = "src/interface/tailwind.css"
+config = "tailwind.config.js"

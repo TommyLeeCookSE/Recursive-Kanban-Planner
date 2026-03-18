@@ -1,11 +1,13 @@
 use crate::application::{Command, build_board_view, execute};
 use crate::domain::id::CardId;
 use crate::domain::registry::CardRegistry;
+use crate::infrastructure::logging::record_diagnostic;
 use crate::interface::Route;
 use crate::interface::components::card::{CardItem, MoveTarget};
 use crate::interface::components::layout::TopBar;
 use crate::interface::components::modal::ModalType;
 use dioxus::prelude::*;
+use tracing::{Level, error};
 
 #[component]
 pub fn Board(card_id: CardId) -> Element {
@@ -66,7 +68,15 @@ pub fn Board(card_id: CardId) -> Element {
                     columns,
                 ))
             }
-            Err(_) => None,
+            Err(error_value) => {
+                error!(%card_id, error = %error_value, "Board view could not be built");
+                record_diagnostic(
+                    Level::ERROR,
+                    "board-route",
+                    format!("Board {card_id} failed to load: {error_value}"),
+                );
+                None
+            }
         }
     };
 
@@ -133,13 +143,27 @@ pub fn Board(card_id: CardId) -> Element {
                                         })),
                                         on_move: move |next_bucket_id| {
                                             let mut reg = registry.write();
-                                            let _ = execute(
+                                            if let Err(error_value) = execute(
                                                 Command::MoveCardToBucket {
                                                     card_id: child_id,
                                                     bucket_id: next_bucket_id,
                                                 },
                                                 &mut reg,
-                                            );
+                                            ) {
+                                                error!(
+                                                    card_id = %child_id,
+                                                    bucket_id = %next_bucket_id,
+                                                    error = %error_value,
+                                                    "Move card action failed from board route"
+                                                );
+                                                record_diagnostic(
+                                                    Level::ERROR,
+                                                    "board-route",
+                                                    format!(
+                                                        "Move card action failed for {child_id} into {next_bucket_id}: {error_value}"
+                                                    ),
+                                                );
+                                            }
                                         },
                                     }
                                 }

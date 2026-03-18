@@ -1,8 +1,10 @@
 use crate::domain::registry::CardRegistry;
+use crate::infrastructure::logging::record_diagnostic;
 use crate::infrastructure::repository::AppPersistence;
 use crate::interface::Route;
 use crate::interface::components::modal::{BucketModal, CardModal, ModalType, RenameCardModal};
 use dioxus::prelude::*;
+use tracing::{Level, info, warn};
 
 pub fn App() -> Element {
     let persistence_warning = use_context_provider(|| Signal::new(None::<String>));
@@ -12,9 +14,24 @@ pub fn App() -> Element {
     let mut load_warning = persistence_warning;
     let registry = use_context_provider(move || {
         let initial = match AppPersistence::load_registry() {
-            Ok(Some(registry)) => registry,
-            Ok(None) => CardRegistry::default(),
+            Ok(Some(registry)) => {
+                info!(
+                    root_count = registry.get_root_cards().len(),
+                    "Initialized registry from persistence"
+                );
+                registry
+            }
+            Ok(None) => {
+                info!("Initialized registry with an empty in-memory state");
+                CardRegistry::default()
+            }
             Err(error) => {
+                warn!(error = %error, "Falling back to in-memory registry after persistence load failure");
+                record_diagnostic(
+                    Level::WARN,
+                    "interface",
+                    format!("Persistence load warning shown to user: {error}"),
+                );
                 load_warning.set(Some(error.to_string()));
                 CardRegistry::default()
             }
@@ -32,6 +49,12 @@ pub fn App() -> Element {
     let mut save_warning = persistence_warning;
     use_effect(move || {
         if let Err(error) = AppPersistence::save_registry(&registry.read()) {
+            warn!(error = %error, "Persistence save failed while app state changed");
+            record_diagnostic(
+                Level::WARN,
+                "interface",
+                format!("Persistence save warning shown to user: {error}"),
+            );
             save_warning.set(Some(error.to_string()));
         }
     });
@@ -40,7 +63,7 @@ pub fn App() -> Element {
         // Root container with dark class toggle
         div { class: if is_dark() { "dark" } else { "" },
             div { class: "bg-gray-100 dark:bg-gray-900 min-h-screen text-gray-900 dark:text-gray-100 transition-colors duration-200",
-                style { {include_str!("tailwind.css")} }
+                link { rel: "stylesheet", href: asset!("/src/interface/tailwind.css") }
 
                 if let Some(message) = persistence_warning() {
                     div { class: "px-6 py-3 bg-amber-100 text-amber-900 border-b border-amber-300 dark:bg-amber-900/40 dark:text-amber-100 dark:border-amber-800",

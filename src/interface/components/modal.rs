@@ -1,7 +1,9 @@
 use crate::application::{Command, execute};
 use crate::domain::id::{BucketId, CardId};
 use crate::domain::registry::CardRegistry;
+use crate::infrastructure::logging::record_diagnostic;
 use dioxus::prelude::*;
+use tracing::{Level, error, info};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum ModalType {
@@ -89,7 +91,15 @@ pub fn CardModal(
                                     title: trimmed_title,
                                 },
                             };
-                            let _ = execute(cmd, &mut reg);
+                            info!(parent_id = ?parent_id, bucket_id = ?bucket_id, "Submitting create card modal");
+                            if let Err(error_value) = execute(cmd, &mut reg) {
+                                error!(error = %error_value, parent_id = ?parent_id, bucket_id = ?bucket_id, "Create card modal submission failed");
+                                record_diagnostic(
+                                    Level::ERROR,
+                                    "ui-modal",
+                                    format!("Create card modal failed: {error_value}"),
+                                );
+                            }
                             on_close.call(());
                         },
                         "Create Item"
@@ -132,13 +142,21 @@ pub fn RenameCardModal(
                         disabled: input_title().trim().is_empty(),
                         onclick: move |_| {
                             let mut reg = registry.write();
-                            let _ = execute(
+                            info!(card_id = %id, "Submitting rename card modal");
+                            if let Err(error_value) = execute(
                                 Command::RenameCard {
                                     id,
                                     title: input_title().trim().to_string(),
                                 },
                                 &mut reg,
-                            );
+                            ) {
+                                error!(card_id = %id, error = %error_value, "Rename card modal submission failed");
+                                record_diagnostic(
+                                    Level::ERROR,
+                                    "ui-modal",
+                                    format!("Rename card modal failed for {id}: {error_value}"),
+                                );
+                            }
                             on_close.call(());
                         },
                         "Save Changes"
@@ -180,13 +198,21 @@ pub fn BucketModal(
                         disabled: input_name().trim().is_empty(),
                         onclick: move |_| {
                             let mut reg = registry.write();
-                            let _ = execute(
+                            info!(card_id = %card_id, "Submitting create bucket modal");
+                            if let Err(error_value) = execute(
                                 Command::AddBucket {
                                     card_id,
                                     name: input_name().trim().to_string(),
                                 },
                                 &mut reg,
-                            );
+                            ) {
+                                error!(card_id = %card_id, error = %error_value, "Create bucket modal submission failed");
+                                record_diagnostic(
+                                    Level::ERROR,
+                                    "ui-modal",
+                                    format!("Create bucket modal failed for {card_id}: {error_value}"),
+                                );
+                            }
                             on_close.call(());
                         },
                         "Add Column"
