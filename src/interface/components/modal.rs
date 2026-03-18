@@ -7,6 +7,10 @@ use crate::domain::registry::CardRegistry;
 use crate::domain::rule::{RuleAction, RuleTrigger};
 use crate::infrastructure::logging::record_diagnostic;
 use crate::interface::actions::{dispatch_card_rule_event, report_result};
+use crate::interface::components::shared_forms::{
+    inline_error, toggle_id, user_message_for_command_error,
+};
+use crate::interface::components::visuals::render_label_chip;
 use dioxus::prelude::*;
 use tracing::{Level, warn};
 
@@ -657,7 +661,7 @@ pub fn ManageLabelsModal(on_close: EventHandler<()>, registry: Signal<CardRegist
                                 class: "app-danger-button px-3 py-2",
                                 onclick: move |_| {
                                     let mut reg = registry.write();
-                                    let _ = execute(Command::DeleteLabelDefinition { label_id: label.id() }, &mut reg);
+                                if execute(Command::DeleteLabelDefinition { label_id: label.id() }, &mut reg).is_err() {}
                                 },
                                 "Delete"
                             }
@@ -752,7 +756,7 @@ pub fn ManageRulesModal(on_close: EventHandler<()>, registry: Signal<CardRegistr
                                     class: "app-danger-button px-3 py-2",
                                     onclick: move |_| {
                                         let mut reg = registry.write();
-                                        let _ = execute(Command::DeleteRuleDefinition { rule_id: rule.id() }, &mut reg);
+                                        if execute(Command::DeleteRuleDefinition { rule_id: rule.id() }, &mut reg).is_err() {}
                                     },
                                     "Delete"
                                 }
@@ -789,10 +793,6 @@ fn build_create_card_command(
         }
         None => Ok(Command::CreateRootCard { title }),
     }
-}
-
-fn user_message_for_command_error(error: &DomainError) -> String {
-    error.to_string()
 }
 
 fn parse_label_color(raw: &str) -> LabelColor {
@@ -876,38 +876,6 @@ fn collect_bucket_choices_for_card(
             }
         }
     }
-}
-
-fn inline_error(message: String) -> Element {
-    rsx! {
-        p { class: "rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-200",
-            "{message}"
-        }
-    }
-}
-
-pub fn render_label_chip(name: String, color: LabelColor) -> Element {
-    let (background, text_color) = color.palette();
-    rsx! {
-        span {
-            class: "rounded-full px-3 py-1 text-xs font-black uppercase tracking-widest",
-            style: "background-color: {background}; color: {text_color};",
-            "{name}"
-        }
-    }
-}
-
-fn toggle_id<T>(signal: &mut Signal<Vec<T>>, id: T)
-where
-    T: Copy + Eq + 'static,
-{
-    let mut values = signal();
-    if values.contains(&id) {
-        values.retain(|value| *value != id);
-    } else {
-        values.push(id);
-    }
-    signal.set(values);
 }
 
 #[cfg(test)]

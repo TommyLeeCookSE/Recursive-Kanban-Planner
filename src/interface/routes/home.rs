@@ -4,12 +4,13 @@ use crate::domain::registry::CardRegistry;
 use crate::domain::registry::DeleteStrategy;
 use crate::infrastructure::logging::record_diagnostic;
 use crate::interface::Route;
-use crate::interface::app::IsDragging;
 use crate::interface::actions::{
     dragged_root_card_id, execute_command_with_feedback, prime_drag_session, prime_drop_target,
 };
+use crate::interface::app::IsDragging;
 use crate::interface::components::card_item::CardItem;
-use crate::interface::components::modal::{ModalType, render_label_chip};
+use crate::interface::components::modal::ModalType;
+use crate::interface::components::visuals::{DropZoneKind, build_card_display, drop_zone_classes};
 use dioxus::prelude::*;
 use tracing::{Level, info};
 
@@ -32,21 +33,12 @@ pub fn Home() -> Element {
 
     let root_cards = {
         let reg = registry.read();
+        let label_definitions = reg.label_definitions().to_vec();
         reg.get_root_cards()
             .iter()
-            .map(|card| {
-                (
-                    card.id(),
-                    card.title().to_string(),
-                    card.children_ids().len(),
-                    card.due_date().map(|due| due.to_string()),
-                    card.due_date().map(|due| due.is_overdue()).unwrap_or(false),
-                    card.label_ids().to_vec(),
-                )
-            })
+            .map(|card| build_card_display(card, &label_definitions))
             .collect::<Vec<_>>()
     };
-    let label_definitions = registry.read().label_definitions().to_vec();
 
     rsx! {
         div { class: "mx-auto min-h-full max-w-7xl px-6 py-12 lg:px-12",
@@ -92,18 +84,18 @@ pub fn Home() -> Element {
                 }
             } else {
                 div { class: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8",
-                    for (index, (id, title, count, due_date, is_overdue, label_ids)) in root_cards.iter().cloned().enumerate() {
-                        div { key: "{id}", class: "flex flex-col gap-3",
+                    for (index, card) in root_cards.iter().cloned().enumerate() {
+                        div { key: "{card.id}", class: "flex flex-col gap-3",
                             {render_root_drop_zone(index, root_drop_index, registry, warning_message, is_dragging)}
                             div {
                                 draggable: true,
                                 ondragstart: move |event| {
-                                    prime_drag_session(&event, "workspace-route", format!("root-card:{id}"), is_dragging);
-                                    info!(card_id = %id, "Started dragging root card");
+                                    prime_drag_session(&event, "workspace-route", format!("root-card:{}", card.id), is_dragging);
+                                    info!(card_id = %card.id, "Started dragging root card");
                                     record_diagnostic(
                                         Level::INFO,
                                         "workspace-route",
-                                        format!("Started dragging root card {id}"),
+                                        format!("Started dragging root card {}", card.id),
                                     );
                                 },
                                 ondragend: move |_| {
@@ -111,27 +103,19 @@ pub fn Home() -> Element {
                                     is_dragging.set(IsDragging(false));
                                 },
                                 CardItem {
-                                    title,
-                                    subtitle: format!("{count} nested items"),
-                                    due_date,
-                                    is_overdue,
-                                    labels: label_ids
-                                        .iter()
-                                        .filter_map(|label_id| {
-                                            label_definitions
-                                                .iter()
-                                                .find(|label| label.id() == *label_id)
-                                                .map(|label| render_label_chip(label.name().to_string(), label.color()))
-                                        })
-                                        .collect(),
+                                    title: card.title,
+                                    subtitle: format!("{} nested items", card.nested_item_count),
+                                    due_date: card.due_date,
+                                    is_overdue: card.is_overdue,
+                                    labels: card.labels,
                                     on_open: move |_| {
-                                        navigator().push(Route::Board { card_id: id });
+                                        navigator().push(Route::Board { card_id: card.id });
                                     },
                                     on_rename: move |_| {
-                                        active_modal.set(Some(ModalType::EditCard { id }));
+                                        active_modal.set(Some(ModalType::EditCard { id: card.id }));
                                     },
                                     on_delete: move |_| {
-                                        delete_card_with_feedback(id, registry, warning_message);
+                                        delete_card_with_feedback(card.id, registry, warning_message);
                                     },
                                 }
                             }
@@ -149,7 +133,7 @@ fn delete_card_with_feedback(
     registry: Signal<CardRegistry>,
     warning_message: Signal<Option<String>>,
 ) {
-    let _ = execute_command_with_feedback(
+    if execute_command_with_feedback(
         Command::DeleteCard {
             id,
             strategy: DeleteStrategy::CascadeDelete,
@@ -158,7 +142,9 @@ fn delete_card_with_feedback(
         warning_message,
         "workspace-route",
         format!("delete workspace card {id}"),
-    );
+    )
+    .is_err()
+    {}
 }
 
 fn render_root_drop_zone(
@@ -169,26 +155,11 @@ fn render_root_drop_zone(
     is_dragging: Signal<IsDragging>,
 ) -> Element {
     let is_active = root_drop_index() == Some(index);
-    let class_name = if is_active {
-        "flex h-10 items-center justify-center rounded-2xl border-2 border-dashed text-[10px] font-black uppercase tracking-[0.28em] opacity-100"
-    } else if is_dragging().0 {
-        "flex h-10 items-center justify-center rounded-2xl border-2 border-dashed text-[10px] font-black uppercase tracking-[0.28em] opacity-40 hover:opacity-100"
-    } else {
-        "flex h-2 items-center justify-center rounded-2xl border-2 border-dashed border-transparent bg-transparent text-[10px] font-black uppercase tracking-[0.28em] text-transparent opacity-0"
-    };
-
-    let style = if is_active {
-        "border-color: var(--app-drop-active-border); background-color: var(--app-drop-active-bg); color: var(--app-drop-active-text);"
-    } else if is_dragging().0 {
-        "border-color: var(--app-drop-dragging-border); background-color: var(--app-drop-dragging-bg); color: var(--app-drop-dragging-text);"
-    } else {
-        ""
-    };
+    let class_name = drop_zone_classes(DropZoneKind::Root, is_active, is_dragging().0);
 
     rsx! {
         div {
-            class: "{class_name} transition-all duration-200",
-            style: "{style}",
+            class: "{class_name}",
             ondragover: move |event| {
                 prime_drop_target(&event);
                 root_drop_index.set(Some(index));
@@ -220,13 +191,16 @@ fn render_root_drop_zone(
                         "workspace-route",
                         format!("Attempting root reorder for {dragged_id} at index {index}"),
                     );
-                    let _ = execute_command_with_feedback(
+                    if execute_command_with_feedback(
                         Command::ReorderRootCards { ordered_ids: reordered },
                         registry,
                         warning_message,
                         "workspace-route",
                         format!("reorder root cards with dragged card {dragged_id}"),
-                    );
+                    )
+                    .is_err()
+                    {
+                    }
                 }
             },
             if is_dragging().0 {

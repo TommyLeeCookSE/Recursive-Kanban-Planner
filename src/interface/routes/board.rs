@@ -6,14 +6,17 @@ use crate::domain::id::{BucketId, CardId};
 use crate::domain::registry::{CardRegistry, DeleteStrategy};
 use crate::infrastructure::logging::record_diagnostic;
 use crate::interface::Route;
-use crate::interface::app::IsDragging;
 use crate::interface::actions::{
     dispatch_card_rule_event, execute_command_with_feedback, prime_drag_session, prime_drop_target,
     report_result,
 };
+use crate::interface::app::IsDragging;
 use crate::interface::components::card_item::CardItem;
 use crate::interface::components::layout::TopBar;
-use crate::interface::components::modal::{ModalType, render_label_chip};
+use crate::interface::components::modal::ModalType;
+use crate::interface::components::visuals::{
+    DropZoneKind, build_card_display, drop_zone_classes, render_label_chip,
+};
 use dioxus::prelude::*;
 use std::collections::HashMap;
 use tracing::{Level, error, info};
@@ -93,26 +96,14 @@ pub fn Board(card_id: CardId) -> Element {
 
     let board_id = card_id;
     let board_title = board_state.view.card.title().to_string();
-    let board_due_date = board_state
-        .view
-        .card
-        .due_date()
-        .map(|due| due.to_string())
-        .unwrap_or_else(|| "None".to_string());
-    let board_labels = {
-        let label_ids = board_state.view.card.label_ids();
-        label_ids
-            .iter()
-            .filter_map(|label_id| {
-                reg_guard
-                    .label_definitions()
-                    .iter()
-                    .find(|label| label.id() == *label_id)
-                    .map(|label| (label.name().to_string(), label.color()))
-            })
-            .collect::<Vec<_>>()
-    };
     let label_definitions = reg_guard.label_definitions().to_vec();
+    let board_display = build_card_display(board_state.view.card, &label_definitions);
+    let board_due_date = board_display
+        .due_date
+        .as_deref()
+        .unwrap_or("None")
+        .to_string();
+    let board_labels = board_display.labels.clone();
     let column_models = board_state
         .view
         .columns
@@ -123,22 +114,16 @@ pub fn Board(card_id: CardId) -> Element {
             cards: column
                 .cards
                 .iter()
-                .map(|card| CardRenderModel {
-                    id: card.id(),
-                    title: card.title().to_string(),
-                    nested_item_count: card.children_ids().len(),
-                    due_date: card.due_date().map(|due| due.to_string()),
-                    is_overdue: card.due_date().map(|due| due.is_overdue()).unwrap_or(false),
-                    labels: card
-                        .label_ids()
-                        .iter()
-                        .filter_map(|label_id| {
-                            label_definitions
-                                .iter()
-                                .find(|label| label.id() == *label_id)
-                                .map(|label| (label.name().to_string(), label.color()))
-                        })
-                        .collect(),
+                .map(|card| {
+                    let display = build_card_display(card, &label_definitions);
+                    CardRenderModel {
+                        id: display.id,
+                        title: display.title,
+                        nested_item_count: display.nested_item_count,
+                        due_date: display.due_date,
+                        is_overdue: display.is_overdue,
+                        labels: display.labels,
+                    }
                 })
                 .collect(),
         })
@@ -309,7 +294,7 @@ fn render_column(column: ColumnRenderModel, context: BoardRenderContext) -> Elem
                             class: "app-button-secondary inline-flex h-8 min-w-[3.5rem] items-center justify-center rounded-full px-3 text-[11px] font-black uppercase tracking-widest text-red-400 hover:text-red-500",
                             title: "Delete this bucket",
                             onclick: move |_| {
-                                let _ = execute_command_with_feedback(
+                                if execute_command_with_feedback(
                                     Command::RemoveBucket {
                                         card_id: context.board_id,
                                         bucket_id,
@@ -317,8 +302,14 @@ fn render_column(column: ColumnRenderModel, context: BoardRenderContext) -> Elem
                                     context.registry,
                                     warning_message,
                                     "board-route",
-                                    format!("delete bucket {bucket_id} from board {}", context.board_id),
-                                );
+                                    format!(
+                                        "delete bucket {bucket_id} from board {}",
+                                        context.board_id
+                                    ),
+                                )
+                                .is_err()
+                                {
+                                }
                             },
                             "Delete"
                         }
@@ -334,16 +325,7 @@ fn render_column(column: ColumnRenderModel, context: BoardRenderContext) -> Elem
                 }
             }
             div { class: "flex-grow overflow-y-auto space-y-4 pr-2",
-                {render_card_drop_zone(
-                    context.board_id,
-                    bucket_id,
-                    0,
-                    context.drag,
-                    context.registry,
-                    context.warning_message,
-                    context.popup_queue,
-                    context.is_dragging,
-                )}
+                {render_card_drop_zone(bucket_id, 0, context.clone())}
                 for (index, card) in column.cards.iter().cloned().enumerate() {
                     {render_card_item(card, bucket_id, index, context.clone())}
                 }
@@ -391,26 +373,12 @@ fn render_card_item(
                 on_rename: move |_| active_modal.set(Some(ModalType::EditCard { id: card_id })),
                 due_date: card.due_date.clone(),
                 is_overdue: card.is_overdue,
-                labels: card
-                    .labels
-                    .iter()
-                    .cloned()
-                    .map(|(name, color)| render_label_chip(name, color))
-                    .collect(),
+                labels: card.labels,
                 on_delete: move |_| {
                     delete_card_with_feedback(card_id, context.registry, context.warning_message);
                 },
             }
-            {render_card_drop_zone(
-                context.board_id,
-                bucket_id,
-                index + 1,
-                context.drag,
-                context.registry,
-                context.warning_message,
-                context.popup_queue,
-                context.is_dragging,
-            )}
+            {render_card_drop_zone(bucket_id, index + 1, context.clone())}
         }
     }
 }
@@ -425,27 +393,11 @@ fn render_bucket_drop_zone(
 ) -> Element {
     let mut bucket_drop_index = drag.bucket_drop_index;
     let is_active = bucket_drop_index() == Some(index);
-
-    let class_name = if is_active {
-        "flex h-full w-12 items-center justify-center rounded-full border-2 border-dashed text-[10px] font-black uppercase tracking-[0.24em] opacity-100"
-    } else if is_dragging().0 {
-        "flex h-full w-12 items-center justify-center rounded-full border-2 border-dashed text-[10px] font-black uppercase tracking-[0.24em] opacity-40 hover:opacity-100"
-    } else {
-        "flex h-full w-2 items-center justify-center rounded-full border-2 border-dashed border-transparent bg-transparent text-[10px] font-black uppercase tracking-[0.24em] text-transparent opacity-0"
-    };
-
-    let style = if is_active {
-        "align-self: stretch; min-height: 18rem; border-color: var(--app-drop-active-border); background-color: var(--app-drop-active-bg); color: var(--app-drop-active-text);"
-    } else if is_dragging().0 {
-        "align-self: stretch; min-height: 18rem; border-color: var(--app-drop-dragging-border); background-color: var(--app-drop-dragging-bg); color: var(--app-drop-dragging-text);"
-    } else {
-        "align-self: stretch; min-height: 18rem;"
-    };
+    let class_name = drop_zone_classes(DropZoneKind::Bucket, is_active, is_dragging().0);
 
     rsx! {
         div {
-            class: "{class_name} transition-all duration-200",
-            style: "{style}",
+            class: "{class_name}",
             ondragover: move |event| {
                 prime_drop_target(&event);
                 bucket_drop_index.set(Some(index));
@@ -482,7 +434,7 @@ fn render_bucket_drop_zone(
                         "board-route",
                         format!("Attempting bucket reorder for {bucket_id} on board {board_id} at index {index}"),
                     );
-                    let _ = execute_command_with_feedback(
+                    if execute_command_with_feedback(
                         Command::ReorderBuckets {
                             card_id: board_id,
                             ordered_ids: reordered,
@@ -490,8 +442,13 @@ fn render_bucket_drop_zone(
                         registry,
                         warning_message,
                         "board-route",
-                        format!("reorder buckets on board {board_id} with dragged bucket {bucket_id}"),
-                    );
+                        format!(
+                            "reorder buckets on board {board_id} with dragged bucket {bucket_id}"
+                        ),
+                    )
+                    .is_err()
+                    {
+                    }
                 }
             },
             if is_dragging().0 {
@@ -502,38 +459,22 @@ fn render_bucket_drop_zone(
 }
 
 fn render_card_drop_zone(
-    board_id: CardId,
     bucket_id: BucketId,
     index: usize,
-    drag: BoardDragSignals,
-    mut registry: Signal<CardRegistry>,
-    warning_message: Signal<Option<String>>,
-    popup_queue: Signal<Vec<PopupNotification>>,
-    is_dragging: Signal<IsDragging>,
+    context: BoardRenderContext,
 ) -> Element {
-    let mut card_drop_target = drag.card_drop_target;
+    let board_id = context.board_id;
+    let mut registry = context.registry;
+    let warning_message = context.warning_message;
+    let popup_queue = context.popup_queue;
+    let mut card_drop_target = context.drag.card_drop_target;
+    let is_dragging = context.is_dragging;
     let is_active = card_drop_target() == Some((bucket_id, index));
-
-    let class_name = if is_active {
-        "flex h-10 items-center justify-center rounded-2xl border-2 border-dashed text-[10px] font-black uppercase tracking-[0.28em] opacity-100"
-    } else if is_dragging().0 {
-        "flex h-10 items-center justify-center rounded-2xl border-2 border-dashed text-[10px] font-black uppercase tracking-[0.28em] opacity-40 hover:opacity-100"
-    } else {
-        "flex h-2 items-center justify-center rounded-2xl border-2 border-dashed border-transparent bg-transparent text-[10px] font-black uppercase tracking-[0.28em] text-transparent opacity-0"
-    };
-
-    let style = if is_active {
-        "border-color: var(--app-drop-active-border); background-color: var(--app-drop-active-bg); color: var(--app-drop-active-text);"
-    } else if is_dragging().0 {
-        "border-color: var(--app-drop-dragging-border); background-color: var(--app-drop-dragging-bg); color: var(--app-drop-dragging-text);"
-    } else {
-        ""
-    };
+    let class_name = drop_zone_classes(DropZoneKind::Card, is_active, is_dragging().0);
 
     rsx! {
         div {
-            class: "{class_name} transition-all duration-200",
-            style: "{style}",
+            class: "{class_name}",
             ondragover: move |event| {
                 prime_drop_target(&event);
                 card_drop_target.set(Some((bucket_id, index)));
@@ -678,7 +619,7 @@ fn delete_card_with_feedback(
     registry: Signal<CardRegistry>,
     warning_message: Signal<Option<String>>,
 ) {
-    let _ = execute_command_with_feedback(
+    if execute_command_with_feedback(
         Command::DeleteCard {
             id,
             strategy: DeleteStrategy::CascadeDelete,
@@ -687,7 +628,9 @@ fn delete_card_with_feedback(
         warning_message,
         "board-route",
         format!("delete board card {id}"),
-    );
+    )
+    .is_err()
+    {}
 }
 
 fn render_board_load_error() -> Element {

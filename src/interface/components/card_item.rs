@@ -1,3 +1,5 @@
+use crate::domain::label::LabelColor;
+use crate::interface::components::visuals::render_label_chip;
 use dioxus::prelude::*;
 
 /// A premium, reusable card component for both Workspace and Board views.
@@ -26,7 +28,7 @@ pub fn CardItem(
     subtitle: String,
     #[props(default)] due_date: Option<String>,
     #[props(default)] is_overdue: bool,
-    #[props(default)] labels: Vec<Element>,
+    #[props(default)] labels: Vec<(String, LabelColor)>,
     /// Triggered when the main body of the card is clicked.
     on_open: EventHandler<()>,
     /// Optional rename event. If None, the rename button is hidden.
@@ -57,8 +59,8 @@ pub fn CardItem(
                 }
                 if !labels.is_empty() {
                     div { class: "mt-4 flex flex-wrap gap-2",
-                        for label in labels {
-                            {label}
+                        for (name, color) in labels {
+                            {render_label_chip(name, color)}
                         }
                     }
                 }

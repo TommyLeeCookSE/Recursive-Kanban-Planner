@@ -351,4 +351,45 @@
     background-color: color-mix(in srgb, var(--app-surface-soft) 72%, transparent);
     color: var(--app-text-soft);
   }
+
+  .app-drop-zone {
+    @apply flex items-center justify-center rounded-2xl border-2 border-dashed text-[10px] font-black uppercase tracking-[0.24em] transition-all duration-200;
+  }
+
+  .app-drop-zone--root {
+    @apply h-10;
+    min-height: 2.5rem;
+  }
+
+  .app-drop-zone--bucket {
+    @apply h-full w-12;
+    min-height: 18rem;
+  }
+
+  .app-drop-zone--card {
+    @apply h-10;
+    min-height: 2.5rem;
+  }
+
+  .app-drop-zone--hidden {
+    @apply border-transparent bg-transparent opacity-0;
+    color: transparent;
+    width: 0;
+    min-width: 0;
+    min-height: 0;
+  }
+
+  .app-drop-zone--active {
+    opacity: 1;
+    border-color: var(--app-drop-active-border);
+    background-color: var(--app-drop-active-bg);
+    color: var(--app-drop-active-text);
+  }
+
+  .app-drop-zone--dragging {
+    opacity: 0.4;
+    border-color: var(--app-drop-dragging-border);
+    background-color: var(--app-drop-dragging-bg);
+    color: var(--app-drop-dragging-text);
+  }
 }
