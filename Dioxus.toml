@@ -1,13 +1,18 @@
 [application]
 name = "kanban_planner"
-platforms = ["web"]
+default_platform = "web"
 
-[web.setup]
-index_html = "index.html"
+[web.app]
+title = "kanban_planner"
 
 [web.resource]
-assets = "assets"
 
-[web.watcher]
-watch_path = ["src", "assets", "tailwind.css"]
-reload_html = true
+[web.resource.dev]
+
+[web.build]
+target = "web"
+dist = "dist"
+
+[web.dev]
+port = 8080
+open = true
