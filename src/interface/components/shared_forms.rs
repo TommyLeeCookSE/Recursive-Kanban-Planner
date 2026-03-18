@@ -19,6 +19,21 @@ pub fn user_message_for_command_error(error: &DomainError) -> String {
     error.to_string()
 }
 
+pub fn confirm_destructive_action(message: &str) -> bool {
+    #[cfg(target_arch = "wasm32")]
+    {
+        web_sys::window()
+            .and_then(|window| window.confirm_with_message(message).ok())
+            .unwrap_or(false)
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let _ = message;
+        true
+    }
+}
+
 pub fn toggle_id<T>(signal: &mut Signal<Vec<T>>, id: T)
 where
     T: Copy + Eq + 'static,

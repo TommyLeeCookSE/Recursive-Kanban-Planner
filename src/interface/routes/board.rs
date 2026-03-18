@@ -14,9 +14,11 @@ use crate::interface::app::IsDragging;
 use crate::interface::components::card_item::CardItem;
 use crate::interface::components::layout::TopBar;
 use crate::interface::components::modal::ModalType;
+use crate::interface::components::shared_forms::confirm_destructive_action;
 use crate::interface::components::visuals::{
     DropZoneKind, build_card_display, drop_zone_classes, render_label_chip,
-    surface_action_button_classes, surface_icon_button_classes,
+    surface_action_button_classes, surface_destructive_icon_button_classes,
+    surface_icon_button_classes,
 };
 use dioxus::prelude::*;
 use std::collections::HashMap;
@@ -155,7 +157,7 @@ pub fn Board(card_id: CardId) -> Element {
                     "Create Bucket"
                 }
                 button {
-                    class: "app-button-secondary h-14 px-8",
+                    class: "app-button-secondary h-14 min-w-[4.5rem] px-0 text-2xl leading-none",
                     onclick: move |_| {
                         let result = dispatch_card_rule_event(
                             board_id,
@@ -172,7 +174,8 @@ pub fn Board(card_id: CardId) -> Element {
                         );
                         active_modal.set(Some(ModalType::CardNotes { card_id: board_id }));
                     },
-                    "Notes"
+                    title: "Open notes",
+                    "📄"
                 }
                 button {
                     class: "app-button-secondary h-14 px-8",
@@ -180,9 +183,10 @@ pub fn Board(card_id: CardId) -> Element {
                     "Labels"
                 }
                 button {
-                    class: "app-button-secondary h-14 px-8",
+                    class: "app-button-secondary h-14 min-w-[4.5rem] px-0 text-2xl leading-none",
                     onclick: move |_| active_modal.set(Some(ModalType::EditCard { id: board_id })),
-                    "Settings"
+                    title: "Open settings",
+                    "⚙"
                 }
             }
 
@@ -260,6 +264,7 @@ fn render_column(column: ColumnRenderModel, context: BoardRenderContext) -> Elem
     let mut is_dragging = context.is_dragging;
     let can_delete_bucket = bucket_name != crate::domain::card::UNASSIGNED_BUCKET_NAME;
     let can_rename_bucket = can_delete_bucket;
+    let bucket_name_for_delete = bucket_name.clone();
     let column_class = "app-column-surface group flex max-h-full w-80 flex-shrink-0 flex-col rounded-[2rem] p-5 transition-all hover:border-sunfire/30";
 
     rsx! {
@@ -307,25 +312,29 @@ fn render_column(column: ColumnRenderModel, context: BoardRenderContext) -> Elem
                         }
                         if can_delete_bucket {
                             button {
-                                class: "{surface_action_button_classes()} text-red-400 hover:text-red-500",
+                                class: "{surface_destructive_icon_button_classes()}",
                                 title: "Delete this bucket",
                                 onclick: move |_| {
-                                    let _ = execute_command_with_feedback(
-                                        Command::RemoveBucket {
-                                            card_id: context.board_id,
-                                            bucket_id,
-                                        },
-                                        context.registry,
-                                        warning_message,
-                                        "board-route",
-                                        format!(
-                                            "delete bucket {bucket_id} from board {}",
-                                            context.board_id
-                                        ),
-                                    );
+                                    if confirm_destructive_action(&format!(
+                                        "Delete the bucket '{bucket_name_for_delete}' and all cards inside it?"
+                                    )) {
+                                        let _ = execute_command_with_feedback(
+                                            Command::RemoveBucket {
+                                                card_id: context.board_id,
+                                                bucket_id,
+                                            },
+                                            context.registry,
+                                            warning_message,
+                                            "board-route",
+                                            format!(
+                                                "delete bucket {bucket_id} from board {}",
+                                                context.board_id
+                                            ),
+                                        );
+                                    }
                                 },
-                            "Delete"
-                        }
+                                span { "🗑" }
+                            }
                         }
                         button {
                             class: "{surface_icon_button_classes()} hover:rotate-90",

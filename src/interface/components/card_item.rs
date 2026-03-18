@@ -1,5 +1,8 @@
 use crate::domain::label::LabelColor;
-use crate::interface::components::visuals::{render_label_chip, surface_action_button_classes};
+use crate::interface::components::shared_forms::confirm_destructive_action;
+use crate::interface::components::visuals::{
+    render_label_chip, surface_action_button_classes, surface_destructive_icon_button_classes,
+};
 use dioxus::prelude::*;
 
 /// A premium, reusable card component for both Workspace and Board views.
@@ -71,9 +74,16 @@ pub fn CardItem(
                     div { class: "flex items-center gap-2",
                         if let Some(delete_handler) = on_delete {
                             button {
-                                class: "{surface_action_button_classes()} text-red-400 hover:text-red-500",
-                                onclick: move |_| delete_handler.call(()),
-                                "Delete"
+                                class: "{surface_destructive_icon_button_classes()}",
+                                title: "Delete this card",
+                                onclick: move |_| {
+                                    if confirm_destructive_action(&format!(
+                                        "Delete the card '{title}' and all of its descendants?"
+                                    )) {
+                                        delete_handler.call(());
+                                    }
+                                },
+                                span { "🗑" }
                             }
                         }
                         if let Some(rename_handler) = on_rename {

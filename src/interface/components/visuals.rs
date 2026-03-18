@@ -86,3 +86,7 @@ pub fn surface_action_button_classes() -> &'static str {
 pub fn surface_icon_button_classes() -> &'static str {
     "app-button-secondary inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-dashed p-0 text-sm leading-none"
 }
+
+pub fn surface_destructive_icon_button_classes() -> &'static str {
+    "app-button-secondary inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full p-0 text-sm leading-none text-red-400 hover:text-red-500"
+}
