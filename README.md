@@ -7,6 +7,7 @@ A high-performance, premium Kanban application built with **Rust** and **Dioxus*
 ## 🌟 Concept
 
 In the **Recursive Kanban Planner**, every task is more than just a line of text—it's a **Card**.
+
 - **Nested Boards**: Any card can be opened to reveal its own internal Kanban board.
 - **Infinite Recursion**: Break down complex projects into infinite sub-levels without losing context.
 - **Clean Structure**: High-level boards stay tidy while detailed work lives deep in the tree.
@@ -40,13 +41,17 @@ cargo install dioxus-cli
 ### Running Locally
 
 #### 🌐 Web (WASM)
+
 To launch the browser version:
+
 ```bash
 dx serve --platform web
 ```
 
 #### 🖥️ Desktop (Native)
+
 To launch the native desktop application:
+
 ```bash
 dx serve --platform desktop
 ```
@@ -56,12 +61,30 @@ dx serve --platform desktop
 ## 🏗️ Architecture
 
 The project follows a strict **Clean Architecture** pattern to ensure maintainability:
+
 - **Domain**: Core entities and business invariants (`id`, `bucket`, `card`, `registry`).
 - **Application**: The command dispatcher and high-level view models.
 - **Infrastructure**: Persistence facades (LocalStorage) and logging.
 - **Interface**: The Dioxus UI components and routing.
 
 For a deeper dive, read the full [Design Document](docs/design_document.md).
+
+---
+
+## 🧹 Quality & Linting
+
+To maintain code quality, the project adheres to strict Rust idioms and formatting. Use the following commands to verify the codebase:
+
+```bash
+# Run unit and integration tests
+cargo test
+
+# Check for lint warnings and suggestions
+cargo clippy --all-targets -- -D warnings
+
+# Ensure code is formatted correctly
+cargo fmt --check
+```
 
 ---
 
@@ -76,4 +99,5 @@ For a deeper dive, read the full [Design Document](docs/design_document.md).
 ---
 
 ## 🛡️ License
+
 Distributed under the MIT License. See `LICENSE` for more information.
