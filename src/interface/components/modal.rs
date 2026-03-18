@@ -91,3 +91,50 @@ pub fn CardModal(
         }
     }
 }
+
+#[component]
+pub fn BucketModal(
+    on_close: EventHandler<()>,
+    card_id: CardId,
+    registry: Signal<crate::domain::registry::CardRegistry>,
+) -> Element {
+    let mut input_name = use_signal(String::new);
+
+    rsx! {
+        Modal {
+            on_close: move |_| on_close.call(()),
+            title: "New Column",
+            div { class: "flex flex-col gap-4",
+                input { 
+                   class: "px-4 py-2 border rounded bg-white dark:bg-gray-700 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-sunfire text-gray-900 dark:text-gray-100",
+                   placeholder: "Column Name (e.g., Todo, Doing)",
+                   value: "{input_name}",
+                   oninput: move |e| input_name.set(e.value()),
+                   autofocus: true,
+                }
+                div { class: "flex justify-end gap-2",
+                    button { 
+                       class: "px-4 py-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200",
+                       onclick: move |_| on_close.call(()),
+                       "Cancel"
+                    }
+                    button { 
+                       class: "px-6 py-2 bg-sunfire hover:bg-sunfire-dark text-white font-bold rounded shadow transition-all disabled:opacity-50",
+                       disabled: input_name().is_empty(),
+                       onclick: move |_| {
+                           use crate::application::{execute, Command};
+                           let mut reg = registry.write();
+                           let cmd = Command::AddBucket { 
+                               card_id, 
+                               name: input_name().to_string() 
+                           };
+                           let _ = execute(cmd, &mut reg);
+                           on_close.call(());
+                       },
+                       "Add Column"
+                    }
+                }
+            }
+        }
+    }
+}

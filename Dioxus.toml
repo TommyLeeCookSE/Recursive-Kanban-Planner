@@ -1,0 +1,13 @@
+[application]
+name = "kanban_planner"
+platforms = ["web"]
+
+[web.setup]
+index_html = "index.html"
+
+[web.resource]
+assets = "assets"
+
+[web.watcher]
+watch_path = ["src", "assets", "tailwind.css"]
+reload_html = true

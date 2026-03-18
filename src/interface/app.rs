@@ -47,6 +47,16 @@ pub fn App() -> Element {
                                  }
                              }
                         },
+                        ModalType::CreateBucket { card_id } => {
+                            use crate::interface::components::modal::BucketModal;
+                            rsx! {
+                                BucketModal {
+                                    on_close: move |_| active_modal.set(None),
+                                    card_id,
+                                    registry,
+                                }
+                            }
+                        },
                         _ => rsx! { div {} }
                     }
                 }

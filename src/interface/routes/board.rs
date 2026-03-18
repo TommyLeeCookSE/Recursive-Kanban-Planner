@@ -40,7 +40,9 @@ pub fn Board(card_id: CardId) -> Element {
                     p { class: "text-sm text-gray-500", "Managing {total_children} items" }
                 }
                 div { class: "flex gap-3",
-                    button { class: "px-4 py-2 bg-sunfire hover:bg-sunfire-dark text-white rounded-lg shadow transition-all",
+                    button { 
+                        class: "px-4 py-2 bg-sunfire hover:bg-sunfire-dark text-white rounded-lg shadow transition-all",
+                        onclick: move |_| active_modal.set(Some(ModalType::CreateBucket { card_id })),
                         "+ Add Column"
                     }
                 }
