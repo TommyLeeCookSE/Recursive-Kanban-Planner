@@ -10,6 +10,12 @@ use tracing::{Level, info, warn};
 ///
 /// Sets up the global state (Persistence, Registry, Theme, Active Modal)
 /// and provides them via the Context API to the rest of the component tree.
+///
+/// # Examples
+///
+/// ```ignore
+/// dioxus::launch(kanban_planner::interface::app::App);
+/// ```
 pub fn App() -> Element {
     let persistence_warning = use_context_provider(|| Signal::new(None::<String>));
 

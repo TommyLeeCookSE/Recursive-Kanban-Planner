@@ -1,11 +1,24 @@
 use crate::application::{Command, execute};
+use crate::domain::error::DomainError;
 use crate::domain::id::{BucketId, CardId};
 use crate::domain::registry::CardRegistry;
 use crate::infrastructure::logging::record_diagnostic;
 use dioxus::prelude::*;
-use tracing::{Level, error, info};
+use tracing::{Level, warn};
 
 /// Defines the type of modal to be displayed and the data it requires.
+///
+/// # Examples
+///
+/// ```rust
+/// use kanban_planner::interface::components::modal::ModalType;
+///
+/// let modal = ModalType::CreateCard {
+///     parent_id: None,
+///     bucket_id: None,
+/// };
+/// assert!(matches!(modal, ModalType::CreateCard { .. }));
+/// ```
 #[derive(Clone, Debug, PartialEq)]
 pub enum ModalType {
     /// Modal for creating a new card (root or child).
@@ -30,6 +43,18 @@ pub enum ModalType {
 }
 
 /// A generic blurred modal wrapper that handles the overlay and center positioning.
+///
+/// # Examples
+///
+/// ```ignore
+/// rsx! {
+///     Modal {
+///         on_close: move |_| {},
+///         title: "New Card".to_string(),
+///         div { "Modal body" }
+///     }
+/// }
+/// ```
 #[component]
 pub fn Modal(on_close: EventHandler<()>, title: String, children: Element) -> Element {
     rsx! {
@@ -59,6 +84,19 @@ pub fn Modal(on_close: EventHandler<()>, title: String, children: Element) -> El
 }
 
 /// Modal component for creating a new task or board.
+///
+/// # Examples
+///
+/// ```ignore
+/// rsx! {
+///     CardModal {
+///         on_close: move |_| {},
+///         parent_id: None,
+///         bucket_id: None,
+///         registry,
+///     }
+/// }
+/// ```
 #[component]
 pub fn CardModal(
     on_close: EventHandler<()>,
@@ -67,6 +105,7 @@ pub fn CardModal(
     registry: Signal<CardRegistry>,
 ) -> Element {
     let mut input_title = use_signal(String::new);
+    let mut error_message = use_signal(|| None::<String>);
 
     rsx! {
         Modal {
@@ -80,6 +119,11 @@ pub fn CardModal(
                     oninput: move |e| input_title.set(e.value()),
                     autofocus: true,
                 }
+                if let Some(message) = error_message() {
+                    p { class: "rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-200",
+                        "{message}"
+                    }
+                }
                 div { class: "flex justify-end gap-2",
                     button {
                         class: "px-4 py-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200",
@@ -90,28 +134,33 @@ pub fn CardModal(
                         class: "px-6 py-2 bg-sunfire hover:bg-sunfire-dark text-white font-bold rounded shadow transition-all disabled:opacity-50",
                         disabled: input_title().trim().is_empty(),
                         onclick: move |_| {
-                            let mut reg = registry.write();
                             let trimmed_title = input_title().trim().to_string();
-                            let cmd = match parent_id {
-                                Some(p_id) => Command::CreateChildCard {
-                                    title: trimmed_title,
-                                    parent_id: p_id,
-                                    bucket_id: bucket_id.unwrap_or_default(),
-                                },
-                                None => Command::CreateRootCard {
-                                    title: trimmed_title,
-                                },
+                            let command = match build_create_card_command(trimmed_title, parent_id, bucket_id) {
+                                Ok(command) => command,
+                                Err(error_value) => {
+                                    let user_message = user_message_for_command_error(&error_value);
+                                    warn!(
+                                        parent_id = ?parent_id,
+                                        bucket_id = ?bucket_id,
+                                        error = %error_value,
+                                        "Card modal rejected invalid create-card context"
+                                    );
+                                    error_message.set(Some(user_message.clone()));
+                                    record_diagnostic(Level::WARN, "ui-modal", user_message);
+                                    return;
+                                }
                             };
-                            info!(parent_id = ?parent_id, bucket_id = ?bucket_id, "Submitting create card modal");
-                            if let Err(error_value) = execute(cmd, &mut reg) {
-                                error!(error = %error_value, parent_id = ?parent_id, bucket_id = ?bucket_id, "Create card modal submission failed");
-                                record_diagnostic(
-                                    Level::ERROR,
-                                    "ui-modal",
-                                    format!("Create card modal failed: {error_value}"),
-                                );
+
+                            let mut reg = registry.write();
+                            match execute(command, &mut reg) {
+                                Ok(()) => {
+                                    error_message.set(None);
+                                    on_close.call(());
+                                }
+                                Err(error_value) => {
+                                    error_message.set(Some(user_message_for_command_error(&error_value)));
+                                }
                             }
-                            on_close.call(());
                         },
                         "Create Item"
                     }
@@ -122,6 +171,19 @@ pub fn CardModal(
 }
 
 /// Modal component for changing the title of a card.
+///
+/// # Examples
+///
+/// ```ignore
+/// rsx! {
+///     RenameCardModal {
+///         on_close: move |_| {},
+///         id: card_id,
+///         current_title: "Current title".to_string(),
+///         registry,
+///     }
+/// }
+/// ```
 #[component]
 pub fn RenameCardModal(
     on_close: EventHandler<()>,
@@ -130,6 +192,7 @@ pub fn RenameCardModal(
     registry: Signal<CardRegistry>,
 ) -> Element {
     let mut input_title = use_signal(move || current_title.clone());
+    let mut error_message = use_signal(|| None::<String>);
 
     rsx! {
         Modal {
@@ -143,6 +206,11 @@ pub fn RenameCardModal(
                     oninput: move |e| input_title.set(e.value()),
                     autofocus: true,
                 }
+                if let Some(message) = error_message() {
+                    p { class: "rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-200",
+                        "{message}"
+                    }
+                }
                 div { class: "flex justify-end gap-2",
                     button {
                         class: "px-4 py-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200",
@@ -154,22 +222,21 @@ pub fn RenameCardModal(
                         disabled: input_title().trim().is_empty(),
                         onclick: move |_| {
                             let mut reg = registry.write();
-                            info!(card_id = %id, "Submitting rename card modal");
-                            if let Err(error_value) = execute(
+                            match execute(
                                 Command::RenameCard {
                                     id,
                                     title: input_title().trim().to_string(),
                                 },
                                 &mut reg,
                             ) {
-                                error!(card_id = %id, error = %error_value, "Rename card modal submission failed");
-                                record_diagnostic(
-                                    Level::ERROR,
-                                    "ui-modal",
-                                    format!("Rename card modal failed for {id}: {error_value}"),
-                                );
+                                Ok(()) => {
+                                    error_message.set(None);
+                                    on_close.call(());
+                                }
+                                Err(error_value) => {
+                                    error_message.set(Some(user_message_for_command_error(&error_value)));
+                                }
                             }
-                            on_close.call(());
                         },
                         "Save Changes"
                     }
@@ -180,6 +247,18 @@ pub fn RenameCardModal(
 }
 
 /// Modal component for adding a new column to a board.
+///
+/// # Examples
+///
+/// ```ignore
+/// rsx! {
+///     BucketModal {
+///         on_close: move |_| {},
+///         card_id: board_id,
+///         registry,
+///     }
+/// }
+/// ```
 #[component]
 pub fn BucketModal(
     on_close: EventHandler<()>,
@@ -187,6 +266,7 @@ pub fn BucketModal(
     registry: Signal<CardRegistry>,
 ) -> Element {
     let mut input_name = use_signal(String::new);
+    let mut error_message = use_signal(|| None::<String>);
 
     rsx! {
         Modal {
@@ -200,6 +280,11 @@ pub fn BucketModal(
                     oninput: move |e| input_name.set(e.value()),
                     autofocus: true,
                 }
+                if let Some(message) = error_message() {
+                    p { class: "rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-200",
+                        "{message}"
+                    }
+                }
                 div { class: "flex justify-end gap-2",
                     button {
                         class: "px-4 py-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200",
@@ -211,27 +296,93 @@ pub fn BucketModal(
                         disabled: input_name().trim().is_empty(),
                         onclick: move |_| {
                             let mut reg = registry.write();
-                            info!(card_id = %card_id, "Submitting create bucket modal");
-                            if let Err(error_value) = execute(
+                            match execute(
                                 Command::AddBucket {
                                     card_id,
                                     name: input_name().trim().to_string(),
                                 },
                                 &mut reg,
                             ) {
-                                error!(card_id = %card_id, error = %error_value, "Create bucket modal submission failed");
-                                record_diagnostic(
-                                    Level::ERROR,
-                                    "ui-modal",
-                                    format!("Create bucket modal failed for {card_id}: {error_value}"),
-                                );
+                                Ok(()) => {
+                                    error_message.set(None);
+                                    on_close.call(());
+                                }
+                                Err(error_value) => {
+                                    error_message.set(Some(user_message_for_command_error(&error_value)));
+                                }
                             }
-                            on_close.call(());
                         },
                         "Add Column"
                     }
                 }
             }
+        }
+    }
+}
+
+fn build_create_card_command(
+    title: String,
+    parent_id: Option<CardId>,
+    bucket_id: Option<BucketId>,
+) -> Result<Command, DomainError> {
+    match parent_id {
+        Some(parent_id) => {
+            let bucket_id = bucket_id.ok_or_else(|| {
+                DomainError::InvalidOperation(
+                    "Unable to create a child card because no destination column was selected."
+                        .to_string(),
+                )
+            })?;
+
+            Ok(Command::CreateChildCard {
+                title,
+                parent_id,
+                bucket_id,
+            })
+        }
+        None => Ok(Command::CreateRootCard { title }),
+    }
+}
+
+fn user_message_for_command_error(error: &DomainError) -> String {
+    error.to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::domain::id::{BucketId, CardId};
+
+    #[test]
+    fn create_child_card_requires_bucket_id() {
+        let parent_id = CardId::default();
+        let error = build_create_card_command("Child".to_string(), Some(parent_id), None)
+            .expect_err("missing child bucket should be rejected");
+
+        assert!(
+            matches!(error, DomainError::InvalidOperation(message) if message.contains("destination column"))
+        );
+    }
+
+    #[test]
+    fn create_child_card_command_preserves_bucket_id() {
+        let parent_id = CardId::default();
+        let bucket_id = BucketId::default();
+
+        let command =
+            build_create_card_command("Child".to_string(), Some(parent_id), Some(bucket_id))
+                .expect("valid child command should be created");
+
+        match command {
+            Command::CreateChildCard {
+                parent_id: actual_parent_id,
+                bucket_id: actual_bucket_id,
+                ..
+            } => {
+                assert_eq!(actual_parent_id, parent_id);
+                assert_eq!(actual_bucket_id, bucket_id);
+            }
+            _ => panic!("expected child card command"),
         }
     }
 }

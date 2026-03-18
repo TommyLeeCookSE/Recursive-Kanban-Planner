@@ -5,6 +5,14 @@ use crate::interface::components::modal::ModalType;
 use dioxus::prelude::*;
 
 /// The Home/Workspace view showing all top-level boards.
+///
+/// # Examples
+///
+/// ```ignore
+/// rsx! {
+///     Home {}
+/// }
+/// ```
 #[component]
 pub fn Home() -> Element {
     let registry = use_context::<Signal<CardRegistry>>();
@@ -14,13 +22,18 @@ pub fn Home() -> Element {
         let reg = registry.read();
         reg.get_root_cards()
             .iter()
-            .map(|c| (c.id(), c.title().to_string(), c.children_ids().len()))
+            .map(|card| {
+                (
+                    card.id(),
+                    card.title().to_string(),
+                    card.children_ids().len(),
+                )
+            })
             .collect::<Vec<_>>()
     };
 
     rsx! {
         div { class: "p-12 max-w-7xl mx-auto min-h-full",
-            // Header Section
             div { class: "flex items-center justify-between mb-12",
                 div {
                     h1 { class: "text-5xl font-black text-gray-900 dark:text-white tracking-tight mb-2",
@@ -32,21 +45,30 @@ pub fn Home() -> Element {
                 }
                 button {
                     class: "px-8 py-4 bg-sunfire hover:bg-sunfire-dark text-white font-bold rounded-2xl shadow-lg hover:shadow-sunfire/20 transition-all transform hover:scale-105 active:scale-95 flex items-center gap-2",
-                    onclick: move |_| active_modal.set(Some(ModalType::CreateCard { parent_id: None, bucket_id: None })),
+                    onclick: move |_| active_modal.set(Some(ModalType::CreateCard {
+                        parent_id: None,
+                        bucket_id: None,
+                    })),
                     span { class: "text-2xl", "+" }
                     "New Board"
                 }
             }
 
-            // Grid Section
             if root_cards.is_empty() {
                 div { class: "flex flex-col items-center justify-center py-32 bg-white/50 dark:bg-gray-800/30 rounded-3xl border-2 border-dashed border-gray-200 dark:border-gray-700/50 backdrop-blur-sm",
-                    div { class: "text-6xl mb-6 opacity-20", "🗂️" }
-                    p { class: "text-2xl font-bold text-gray-400 dark:text-gray-600 mb-8", "No boards found in your workspace." }
+                    div { class: "text-sm font-black uppercase tracking-[0.4em] text-gray-300 dark:text-gray-600 mb-6",
+                        "EMPTY WORKSPACE"
+                    }
+                    p { class: "text-2xl font-bold text-gray-400 dark:text-gray-600 mb-8",
+                        "No boards found in your workspace."
+                    }
                     button {
                         class: "px-8 py-4 bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-bold rounded-2xl shadow-xl border border-gray-200 dark:border-gray-600 hover:border-sunfire transition-all",
-                        onclick: move |_| active_modal.set(Some(ModalType::CreateCard { parent_id: None, bucket_id: None })),
-                        "Create Your First Card"
+                        onclick: move |_| active_modal.set(Some(ModalType::CreateCard {
+                            parent_id: None,
+                            bucket_id: None,
+                        })),
+                        "Create Your First Board"
                     }
                 }
             } else {

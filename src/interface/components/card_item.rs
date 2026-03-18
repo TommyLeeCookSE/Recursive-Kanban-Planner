@@ -3,6 +3,19 @@ use dioxus::prelude::*;
 use std::str::FromStr;
 
 /// Defines a potential destination bucket for a card move action.
+///
+/// # Examples
+///
+/// ```rust
+/// use kanban_planner::domain::id::BucketId;
+/// use kanban_planner::interface::components::card_item::MoveTarget;
+///
+/// let target = MoveTarget {
+///     id: BucketId::default(),
+///     name: "Doing".to_string(),
+/// };
+/// assert_eq!(target.name, "Doing");
+/// ```
 #[derive(Clone, PartialEq, Debug, serde::Serialize, serde::Deserialize)]
 pub struct MoveTarget {
     pub id: BucketId,
@@ -15,6 +28,19 @@ pub struct MoveTarget {
 /// - Clickable area for navigation (opening the card).
 /// - Optional "Rename" action.
 /// - Optional "Move" dropdown (only visible if `move_targets` is provided).
+///
+/// # Examples
+///
+/// ```ignore
+/// rsx! {
+///     CardItem {
+///         title: "Design API".to_string(),
+///         subtitle: "2 nested items".to_string(),
+///         current_bucket_id: None,
+///         on_open: move |_| {},
+///     }
+/// }
+/// ```
 #[component]
 pub fn CardItem(
     /// Main display text.
@@ -44,7 +70,7 @@ pub fn CardItem(
     rsx! {
         article {
             class: "flex flex-col rounded-2xl border border-transparent bg-white dark:bg-gray-800 shadow-sm transition-all hover:border-sunfire/50 hover:shadow-xl group",
-            
+
             // Primary Action Area
             button {
                 class: "flex-grow w-full text-left p-6 cursor-pointer outline-none focus:ring-2 focus:ring-sunfire/30 rounded-t-2xl",
@@ -60,7 +86,7 @@ pub fn CardItem(
             // Secondary Actions (if provided)
             if on_rename.is_some() || show_move_ui {
                 div { class: "border-t border-gray-100 dark:border-gray-700/50 px-5 py-4 flex flex-wrap items-center gap-4 bg-gray-50/50 dark:bg-gray-950/20 rounded-b-2xl",
-                    
+
                     if let (Some(move_handler), true) = (on_move, show_move_ui) {
                         div { class: "flex items-center gap-2",
                             label { class: "text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-600",

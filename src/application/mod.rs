@@ -7,6 +7,17 @@ use crate::infrastructure::logging::record_diagnostic;
 use tracing::{Level, error, info};
 
 /// Application layer commands that can be executed against the domain.
+///
+/// # Examples
+///
+/// ```rust
+/// use kanban_planner::application::Command;
+///
+/// let command = Command::CreateRootCard {
+///     title: "Roadmap".to_string(),
+/// };
+/// assert!(matches!(command, Command::CreateRootCard { .. }));
+/// ```
 #[derive(Debug)]
 pub enum Command {
     CreateRootCard {
@@ -57,6 +68,27 @@ pub enum Command {
 }
 
 /// Executes a command against the card registry.
+///
+/// The application layer owns command start, success, and failure logging.
+/// Callers should surface user-facing state as needed, but should not duplicate
+/// command failure logs around this function.
+///
+/// # Examples
+///
+/// ```rust
+/// use kanban_planner::application::{Command, execute};
+/// use kanban_planner::domain::registry::CardRegistry;
+///
+/// let mut registry = CardRegistry::new();
+/// execute(
+///     Command::CreateRootCard {
+///         title: "Workspace".to_string(),
+///     },
+///     &mut registry,
+/// )?;
+/// assert_eq!(registry.get_root_cards().len(), 1);
+/// # Ok::<(), kanban_planner::domain::error::DomainError>(())
+/// ```
 pub fn execute(command: Command, registry: &mut CardRegistry) -> Result<(), DomainError> {
     log_command_start(&command);
     let command_label = command_name(&command);
@@ -121,41 +153,25 @@ pub fn execute(command: Command, registry: &mut CardRegistry) -> Result<(), Doma
     result
 }
 
-/// Executes a command and automatically handles error logging and diagnostic recording.
-///
-/// Use this in the interface layer to avoid duplicating error handling logic.
-pub fn execute_and_log(
-    command: Command,
-    registry: &mut CardRegistry,
-    label: &str,
-) -> Result<(), DomainError> {
-    let command_name = command_name(&command);
-    match execute(command, registry) {
-        Ok(()) => Ok(()),
-        Err(err) => {
-            error!(
-                layer = label,
-                command = command_name,
-                error = %err,
-                "Command execution failed"
-            );
-            record_diagnostic(
-                Level::ERROR,
-                label,
-                format!("Action '{command_name}' failed in {label}: {err}"),
-            );
-            Err(err)
-        }
-    }
-}
-
 /// A read-only projection of a single card's board, used for UI rendering.
+///
+/// # Examples
+///
+/// ```ignore
+/// // BoardView is returned by build_board_view(...) and then consumed by the UI.
+/// ```
 pub struct BoardView<'a> {
     pub card: &'a Card,
     pub columns: Vec<ColumnView<'a>>,
 }
 
 /// A single column in a [`BoardView`].
+///
+/// # Examples
+///
+/// ```ignore
+/// // ColumnView is produced as part of a BoardView projection.
+/// ```
 pub struct ColumnView<'a> {
     pub bucket: &'a Bucket,
     pub cards: Vec<&'a Card>,
@@ -165,6 +181,20 @@ pub struct ColumnView<'a> {
 ///
 /// If the card has an "Unassigned" bucket that is empty, it is omitted from the view
 /// to reduce visual clutter on highly organized boards.
+///
+/// # Examples
+///
+/// ```rust
+/// use kanban_planner::application::build_board_view;
+/// use kanban_planner::domain::registry::CardRegistry;
+///
+/// let mut registry = CardRegistry::new();
+/// let board_id = registry.create_root_card("Workspace".to_string())?;
+/// let view = build_board_view(board_id, &registry)?;
+///
+/// assert_eq!(view.card.id(), board_id);
+/// # Ok::<(), kanban_planner::domain::error::DomainError>(())
+/// ```
 pub fn build_board_view(
     card_id: CardId,
     registry: &CardRegistry,

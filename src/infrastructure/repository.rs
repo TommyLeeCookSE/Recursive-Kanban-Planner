@@ -4,6 +4,19 @@ use crate::infrastructure::logging::record_diagnostic;
 use tracing::{Level, error, info};
 
 /// A repository that serializes and deserializes the full Kanban board state to JSON.
+///
+/// # Examples
+///
+/// ```rust
+/// use kanban_planner::domain::registry::CardRegistry;
+/// use kanban_planner::infrastructure::repository::JsonRepository;
+///
+/// let registry = CardRegistry::new();
+/// let json = JsonRepository::serialize_registry(&registry)?;
+/// let restored = JsonRepository::deserialize_registry(&json)?;
+/// assert_eq!(restored.get_root_cards().len(), 0);
+/// # Ok::<(), kanban_planner::domain::error::DomainError>(())
+/// ```
 pub struct JsonRepository;
 
 impl JsonRepository {
@@ -46,7 +59,16 @@ impl JsonRepository {
 }
 
 /// A repository that saves and loads the JSON state to/from the browser's `localStorage`.
-/// Note: This will only work in environments where `web_sys::window()` is fully available (e.g., WASM in the browser).
+///
+/// Note: This only works in environments where `web_sys::window()` is fully available,
+/// such as a browser-hosted `wasm32` build.
+///
+/// # Examples
+///
+/// ```ignore
+/// let registry = kanban_planner::domain::registry::CardRegistry::new();
+/// kanban_planner::infrastructure::repository::LocalStorageRepository::save_to_local_storage(&registry)?;
+/// ```
 pub struct LocalStorageRepository;
 
 impl LocalStorageRepository {
@@ -123,6 +145,16 @@ impl LocalStorageRepository {
 }
 
 /// A small platform-aware persistence facade used by the interface layer.
+///
+/// # Examples
+///
+/// ```ignore
+/// match kanban_planner::infrastructure::repository::AppPersistence::load_registry() {
+///     Ok(Some(_registry)) => {}
+///     Ok(None) => {}
+///     Err(error) => eprintln!("{error}"),
+/// }
+/// ```
 pub struct AppPersistence;
 
 impl AppPersistence {

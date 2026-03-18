@@ -11,6 +11,21 @@ const DIAGNOSTIC_CAPACITY: usize = 1000;
 static DIAGNOSTICS: LazyLock<Mutex<VecDeque<DiagnosticEntry>>> =
     LazyLock::new(|| Mutex::new(VecDeque::with_capacity(DIAGNOSTIC_CAPACITY)));
 
+/// A single in-memory diagnostic entry captured for later inspection.
+///
+/// # Examples
+///
+/// ```rust
+/// use kanban_planner::infrastructure::logging::DiagnosticEntry;
+///
+/// let entry = DiagnosticEntry {
+///     timestamp_unix_secs: 0,
+///     level: "INFO".to_string(),
+///     target: "startup".to_string(),
+///     message: "Logging initialized".to_string(),
+/// };
+/// assert_eq!(entry.target, "startup");
+/// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct DiagnosticEntry {
     pub timestamp_unix_secs: u64,
@@ -19,11 +34,28 @@ pub struct DiagnosticEntry {
     pub message: String,
 }
 
+/// Keeps native logging resources alive for the life of the application.
+///
+/// # Examples
+///
+/// ```ignore
+/// let _guard = kanban_planner::infrastructure::logging::init_logging()?;
+/// ```
 pub struct LoggingGuard {
     #[cfg(not(target_arch = "wasm32"))]
     _worker_guard: tracing_appender::non_blocking::WorkerGuard,
 }
 
+/// Errors that can occur while initializing the logging subsystem.
+///
+/// # Examples
+///
+/// ```ignore
+/// match kanban_planner::infrastructure::logging::init_logging() {
+///     Ok(_guard) => {}
+///     Err(error) => eprintln!("{error}"),
+/// }
+/// ```
 #[derive(Debug, Error)]
 pub enum LoggingInitError {
     #[cfg(not(target_arch = "wasm32"))]
@@ -38,6 +70,16 @@ pub enum LoggingInitError {
     Subscriber(#[from] tracing_subscriber::util::TryInitError),
 }
 
+/// Initializes runtime logging for the current target platform.
+///
+/// On native targets this sets up rolling file logging and stderr output. On
+/// `wasm32` it installs console logging and a panic hook.
+///
+/// # Examples
+///
+/// ```ignore
+/// let _guard = kanban_planner::infrastructure::logging::init_logging()?;
+/// ```
 pub fn init_logging() -> Result<LoggingGuard, LoggingInitError> {
     #[cfg(target_arch = "wasm32")]
     {
@@ -129,6 +171,13 @@ pub fn init_logging() -> Result<LoggingGuard, LoggingInitError> {
     }
 }
 
+/// Returns a snapshot of the in-memory diagnostics ring buffer.
+///
+/// # Examples
+///
+/// ```rust
+/// let _snapshot = kanban_planner::infrastructure::logging::diagnostics_snapshot();
+/// ```
 pub fn diagnostics_snapshot() -> Vec<DiagnosticEntry> {
     DIAGNOSTICS
         .lock()
@@ -138,6 +187,22 @@ pub fn diagnostics_snapshot() -> Vec<DiagnosticEntry> {
         .collect()
 }
 
+/// Records a diagnostic entry in the in-memory ring buffer.
+///
+/// This does not replace structured tracing logs; it complements them with a
+/// lightweight snapshot for UI diagnostics and export flows.
+///
+/// # Examples
+///
+/// ```rust
+/// use tracing::Level;
+///
+/// kanban_planner::infrastructure::logging::record_diagnostic(
+///     Level::INFO,
+///     "tests",
+///     "diagnostic recorded",
+/// );
+/// ```
 pub fn record_diagnostic(level: Level, target: &str, message: impl Into<String>) {
     let entry = DiagnosticEntry {
         timestamp_unix_secs: unix_timestamp_secs(),
@@ -153,6 +218,14 @@ pub fn record_diagnostic(level: Level, target: &str, message: impl Into<String>)
     diagnostics.push_back(entry);
 }
 
+/// Returns the enabled app feature name for the current build.
+///
+/// # Examples
+///
+/// ```rust
+/// let feature_name = kanban_planner::infrastructure::logging::feature_name();
+/// assert!(!feature_name.is_empty());
+/// ```
 pub fn feature_name() -> &'static str {
     #[cfg(feature = "desktop")]
     {
@@ -176,6 +249,14 @@ pub fn feature_name() -> &'static str {
     }
 }
 
+/// Returns a simplified runtime target label for diagnostics and startup logs.
+///
+/// # Examples
+///
+/// ```rust
+/// let target_name = kanban_planner::infrastructure::logging::target_name();
+/// assert!(!target_name.is_empty());
+/// ```
 pub fn target_name() -> &'static str {
     #[cfg(target_arch = "wasm32")]
     {
