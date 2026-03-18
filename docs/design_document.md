@@ -41,13 +41,15 @@ A recursive, card-based planning system. Everything is a `Card`. No separate ent
 | `DeleteStrategy` enum | `src/domain/registry.rs` | `Reject`, `CascadeDelete`, `ReparentToGrandparent` |
 | `Command` enum and `execute` | `src/application/mod.rs` | Full dispatcher for all registry mutations |
 | `BoardView` / `ColumnView` | `src/application/mod.rs` | Read-only projections for UI rendering |
-| Dioxus hello-world shell | `src/app.rs`, `src/main.rs` | Compiles, no real routing yet |
+| Serde support | `src/domain/*.rs` | `Serialize`/`Deserialize` derives added to all domain types |
+| JsonRepository | `src/infrastructure/mod.rs` | Basic registry persistence |
+| Dioxus Interface | `src/interface/` | `app`, `components`, `routes`, `error_templates` |
 
 ### 🔲 Not Yet Implemented
 
-- `src/infrastructure/` — JSON serialization, localStorage adapter
 - Real Dioxus routing (`/`, `/board/:card_id`)
 - Any UI components beyond the hello-world shell
+- `LocalStorageRepository` for browser persistence
 
 ### ⚠️ Open Behavioral Decisions (spec gaps the next implementer must resolve in code)
 
@@ -267,20 +269,25 @@ anomalies in the UI, which are extremely hard to trace.
 
 ```text
 src/
-├── domain/          ← Pure logic. No I/O. No Dioxus. No serde yet.
-│   ├── id.rs        ← CardId, BucketId (ULID newtypes, PartialOrd/Ord derived)
-│   ├── bucket.rs    ← Bucket entity
-│   ├── card.rs      ← Card entity + pub(crate) escape hatches for Registry
-│   ├── error.rs     ← DomainError (thiserror, PartialEq/Eq)
-│   ├── registry.rs  ← CardRegistry + DeleteStrategy
+├── domain/          ← Pure logic. No I/O.
+│   ├── id.rs
+│   ├── bucket.rs
+│   ├── card.rs
+│   ├── error.rs
+│   ├── registry.rs
 │   └── mod.rs
-├── application/     ← NOT YET CREATED. Command enum + dispatch + BoardView projection.
-├── infrastructure/  ← NOT YET CREATED. JsonRepository + LocalStorageRepository.
-├── app.rs           ← Dioxus root component (hello-world shell, #![allow(non_snake_case)])
-├── components.rs    ← Empty placeholder
-├── routes.rs        ← Empty placeholder
-├── lib.rs
-└── main.rs
+├── application/     ← Commands & Projections.
+│   └── mod.rs
+├── infrastructure/  ← JSON & localStorage adapters.
+│   └── mod.rs
+├── interface/       ← Dioxus UI Layer.
+│   ├── app.rs
+│   ├── components.rs
+│   ├── routes.rs
+│   ├── error_templates.rs
+│   └── mod.rs
+├── lib.rs           ← Crate root (exports all layers).
+└── main.rs          ← Binary entry point.
 ```
 
 ---
@@ -291,9 +298,8 @@ src/
 - **Export/Import:** Download full state as JSON; re-upload to restore.
 - **Future:** Google Drive / Dropbox optional sync.
 
-Serde derives (`Serialize`, `Deserialize`) are **deferred** until the infrastructure layer is built.
-Do not add them to domain types prematurely. (`CardId` and `BucketId` already have derives from
-an earlier pass — these are acceptable since ULID already depends on serde.)
+Serde derives (`Serialize`, `Deserialize`) are now **implemented** across all domain types.
+Verify WASM compatibility during the next infrastructure pass.
 
 ---
 

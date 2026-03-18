@@ -40,28 +40,28 @@
 
 ---
 
-## P2 — Application Commands
+## P2 — Application Commands ✅ COMPLETE
 
-- [ ] `src/application/mod.rs` — `Command` enum + `execute` dispatcher
+- [x] `src/application/mod.rs` — `Command` enum + `execute` dispatcher
   - Variants: `CreateRootCard`, `CreateChildCard`, `RenameCard`, `DeleteCard { strategy }`,
     `MoveCardToBucket`, `ReparentCard`, `AddBucket`, `RemoveBucket`, `RenameBucket`,
     `ReorderBuckets`, `ReorderChildren`
   - `execute(command, &mut registry) -> Result<(), DomainError>`
-- [ ] `BoardView { card: &Card, columns: Vec<ColumnView> }` struct
-- [ ] `ColumnView { bucket: &Bucket, cards: Vec<&Card> }` struct
-- [ ] `build_board_view(card_id, &registry) -> Result<BoardView, DomainError>` —
+- [x] `BoardView { card: &Card, columns: Vec<ColumnView> }` struct
+- [x] `ColumnView { bucket: &Bucket, cards: Vec<&Card> }` struct
+- [x] `build_board_view(card_id, &registry) -> Result<BoardView, DomainError>` —
   Unassigned column omitted when empty
 
 ---
 
-## P3 — Persistence / Infrastructure
+## P3 — Persistence / Infrastructure ✅ COMPLETE
 
-- [ ] `Serialize`/`Deserialize` derives added to domain types (gate: verify they compile for WASM)
-- [ ] `src/infrastructure/mod.rs`
-- [ ] `JsonRepository`: `serialize_registry` / `deserialize_registry` using `serde_json`
-- [ ] Roundtrip integration test: create → serialize → deserialize → verify full structural equality
-- [ ] `LocalStorageRepository`: `save_to_local_storage` / `load_from_local_storage` using `web-sys`
-- [ ] Janitor gate: verify `web-sys` compiles for `wasm32-unknown-unknown` before adding
+- [x] `Serialize`/`Deserialize` derives added to domain types (gate: verify they compile for WASM)
+- [x] `src/infrastructure/mod.rs`
+- [x] `JsonRepository`: `serialize_registry` / `deserialize_registry` using `serde_json`
+- [x] Roundtrip integration test: create → serialize → deserialize → verify full structural equality
+- [x] `LocalStorageRepository`: `save_to_local_storage` / `load_from_local_storage` using `web-sys`
+- [x] Janitor gate: verify `web-sys` compiles for `wasm32-unknown-unknown` before adding
 
 ---
 

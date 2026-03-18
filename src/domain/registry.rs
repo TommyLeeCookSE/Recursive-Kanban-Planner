@@ -3,12 +3,16 @@ use crate::domain::error::DomainError;
 use crate::domain::id::{BucketId, CardId};
 use std::collections::HashMap;
 
+use serde::{Deserialize, Serialize};
+
 /// The central store managing all cards and enforcing cross-card, structural invariants.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CardRegistry {
     store: HashMap<CardId, Card>,
 }
 
 /// The strategy to use when deleting a card that has children.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum DeleteStrategy {
     /// Reject the deletion if the card has any children.
     Reject,

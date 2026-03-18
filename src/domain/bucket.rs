@@ -14,6 +14,8 @@
 
 use crate::domain::id::BucketId;
 
+use serde::{Deserialize, Serialize};
+
 /// Represents a column or organizational divider on a Card's board.
 ///
 /// The fields are intentionally private to ensure state can only be modified through
@@ -30,7 +32,7 @@ use crate::domain::id::BucketId;
 /// bucket.rename("In Progress".to_string());
 /// assert_eq!(bucket.name(), "In Progress");
 /// ```
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Bucket {
     id: BucketId,
     name: String,

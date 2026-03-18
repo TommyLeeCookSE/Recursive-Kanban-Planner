@@ -19,6 +19,8 @@ use crate::domain::bucket::Bucket;
 use crate::domain::error::DomainError;
 use crate::domain::id::{BucketId, CardId};
 
+use serde::{Deserialize, Serialize};
+
 /// The name automatically given to the default bucket on every card's board.
 pub const UNASSIGNED_BUCKET_NAME: &str = "Unassigned";
 
@@ -37,7 +39,7 @@ pub const UNASSIGNED_BUCKET_NAME: &str = "Unassigned";
 /// assert!(root.parent_id().is_none());
 /// assert!(!root.buckets().is_empty(), "Root cards must have at least the Unassigned bucket");
 /// ```
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Card {
     id: CardId,
     title: String,
