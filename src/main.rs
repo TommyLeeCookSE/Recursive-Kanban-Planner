@@ -1,4 +1,4 @@
-use kanban_planner::app::App;
+use kanban_planner::App;
 
 fn main() {
     // Launch the Dioxus app.
