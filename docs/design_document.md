@@ -48,13 +48,12 @@ A recursive, card-based planning system. Everything is a `Card`. No separate ent
 | Serde support | `src/domain/*.rs` | `Serialize`/`Deserialize` derives added to all domain types |
 | JsonRepository | `src/infrastructure/mod.rs` | Basic registry persistence |
 | Dioxus Interface | `src/interface/` | `app`, `components`, `routes`, `error_templates` exist; interface layer is clippy/rustfmt clean |
+| `TopBar`, `CardItem`, rename/create modals | `src/interface/components/` | Reusable board header, interactive card controls, blurred modal flows |
 | `LocalStorageRepository` | `src/infrastructure/repository.rs` | Saves/loads registry to browser storage on `wasm32` |
 | `AppPersistence` facade | `src/infrastructure/repository.rs` | Platform-aware persistence boundary used by the interface layer |
 
 ### 🔲 Not Yet Implemented / Not Yet Verified
 
-- Dedicated `TopBar` and `CardItem` component extraction/polish
-- Full modal flow coverage beyond create-card/create-bucket wiring
 - End-to-end `dx serve` verification for WASM and desktop
 - Native desktop/mobile persistence backend beyond browser storage
 
@@ -369,9 +368,9 @@ All binding. Not subject to re-debate.
 
 ### Mutating State
 
-- **Moving Cards:** No drag-and-drop for the MVP. A Context Menu handles movement. The user hovers over a "Move" button on the card, which reveals a dropdown of the parent’s available buckets. Cards *cannot* be moved to different parent cards in the MVP (only to different buckets within the same board).
+- **Moving Cards:** No drag-and-drop for the MVP. Each `CardItem` exposes a move dropdown listing the parent card's available buckets. Cards *cannot* be moved to different parent cards in the MVP (only to different buckets within the same board).
 - **Buckets:** Buckets cannot be reorganized after creation. The user must delete and recreate them to reorder.
-  - *Rule:* Deleting a bucket executes the `RemoveBucket` command. The domain mandates that any cards inside are automatically dumped into the explicit "Unassigned" bucket via a fallback.
+  - *Rule:* Deleting a bucket executes the `RemoveBucket` command. The domain rejects deletion while any cards are still assigned to that bucket.
   - *Rule:* The "Unassigned" bucket is hidden unless it contains cards or if it is the *only* bucket on the board.
 - **Modals:** Creating/Editing occurs in clean modal pop-ups.
   - Modals must blur the background (`backdrop-filter: blur(5px)` or similar) to prevent accidental clicks.

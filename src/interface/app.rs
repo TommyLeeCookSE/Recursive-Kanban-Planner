@@ -1,7 +1,7 @@
 use crate::domain::registry::CardRegistry;
 use crate::infrastructure::repository::AppPersistence;
 use crate::interface::Route;
-use crate::interface::components::modal::{BucketModal, CardModal, ModalType};
+use crate::interface::components::modal::{BucketModal, CardModal, ModalType, RenameCardModal};
 use dioxus::prelude::*;
 
 pub fn App() -> Element {
@@ -72,7 +72,16 @@ pub fn App() -> Element {
                                 }
                             }
                         },
-                        _ => rsx! { div {} }
+                        ModalType::RenameCard { id, current_title } => {
+                            rsx! {
+                                RenameCardModal {
+                                    on_close: move |_| active_modal.set(None),
+                                    id,
+                                    current_title,
+                                    registry,
+                                }
+                            }
+                        },
                     }
                 }
             }

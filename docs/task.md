@@ -72,10 +72,10 @@
 - [x] Fix the interface lint/format regressions in `src/interface/app.rs` and related interface files
 - [x] `tailwind.config.js`: Initialize Tailwind CSS, configure `darkMode: 'class'`, and setup Warm Orange brand colors.
 - [x] Dioxus Router setup (`/` vs `/board/:card_id`) in `app.rs`.
-- [ ] Implement `TopBar` component (Flexbox: Back Arrow/Previous Card Name, Current Card Name, +Create Bucket, Modifiers).
+- [x] Implement `TopBar` component (Back Arrow/Previous Card Name, Current Card Name, +Create Bucket, modifiers).
 - [x] Implement `Board` and `Column` view layout (horizontal/vertical auto-scrolling).
-- [ ] Implement `CardItem` component with click-to-nav behaviour and "Move" dropdown context menu.
-- [ ] Implement blurred `Modal` system for "Create Card," "Rename Item," and "Create Bucket." Modal closes on "X" (auto-saves).
+- [x] Implement `CardItem` component with click-to-nav behaviour and move dropdown controls.
+- [x] Implement blurred `Modal` system for "Create Card," "Rename Item," and "Create Bucket." Modal closes on "X" (auto-saves).
 - [x] Hook UI components to application layer `Command` dispatching via shared `Signal<CardRegistry>`.
 - [x] Run state persistence through the `AppPersistence` facade on each mutation.
 
