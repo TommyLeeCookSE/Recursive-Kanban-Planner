@@ -143,7 +143,7 @@ impl CardRegistry {
         let child_id = child.id();
 
         // Enforce bidirectional relationship
-        let parent_mut = self.get_card_mut(parent_id).unwrap(); // safe because we verified it above
+        let parent_mut = self.get_card_mut(parent_id)?;
         parent_mut.add_child(child_id);
 
         // Store the child
@@ -211,9 +211,7 @@ impl CardRegistry {
         }
 
         // Assign
-        self.get_card_mut(card_id)
-            .unwrap()
-            .assign_to_bucket(bucket_id);
+        self.get_card_mut(card_id)?.assign_to_bucket(bucket_id);
         Ok(())
     }
 
@@ -225,10 +223,9 @@ impl CardRegistry {
     ) -> Result<(), DomainError> {
         // First check children
         for child_id in self.get_card(card_id)?.children_ids().to_vec() {
-            if let Ok(child) = self.get_card(child_id) {
-                if child.bucket_id() == Some(bucket_id) {
-                    return Err(DomainError::BucketNotEmpty);
-                }
+            let child = self.get_card(child_id)?;
+            if child.bucket_id() == Some(bucket_id) {
+                return Err(DomainError::BucketNotEmpty);
             }
         }
 
@@ -284,7 +281,11 @@ impl CardRegistry {
             .iter()
             .find(|b| b.name() == UNASSIGNED_BUCKET_NAME)
             .map(|b| b.id())
-            .unwrap();
+            .ok_or_else(|| {
+                DomainError::InvalidOperation(
+                    "New parent is missing the required 'Unassigned' bucket.".into(),
+                )
+            })?;
 
         self.get_card_mut(new_parent_id)?.add_child(card_id);
 
@@ -296,7 +297,7 @@ impl CardRegistry {
         }
 
         // Update the card itself
-        let card_mut = self.get_card_mut(card_id).unwrap();
+        let card_mut = self.get_card_mut(card_id)?;
         card_mut.set_parent(Some(new_parent_id));
         card_mut.set_bucket(Some(unassigned_bucket_id));
 

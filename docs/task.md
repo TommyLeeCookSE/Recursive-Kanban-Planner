@@ -15,7 +15,7 @@
 - [x] `detect_cycle`, `reparent_card`, `delete_card` with all three `DeleteStrategy` variants
 - [x] Registry tests: lifecycle, cycle detection, delete strategies, bucket-not-empty guard
 - [x] Dioxus shell and route scaffolding added — `src/interface/app.rs`, `src/interface/routes/`
-- [ ] `cargo test --all`, `cargo clippy --all-targets -- -D warnings`, `cargo fmt -- --check` all pass on the current interface branch (`cargo test` currently passes; clippy/rustfmt still fail)
+- [x] `cargo test --all`, `cargo clippy --all-targets -- -D warnings`, `cargo fmt -- --check` all pass on the current branch
 - [x] Architecture documented — `docs/design_document.md`
 - [x] Agent skills defined — `.agents/skills/`
 - [x] GitHub Issues created and P0/P1 issues closed
@@ -61,13 +61,15 @@
 - [x] `JsonRepository`: `serialize_registry` / `deserialize_registry` using `serde_json`
 - [x] Roundtrip integration test: create → serialize → deserialize → verify full structural equality
 - [x] `LocalStorageRepository`: `save_to_local_storage` / `load_from_local_storage` using `web-sys`
+- [x] `AppPersistence` facade: browser-first persistence boundary with explicit non-web unsupported errors
+- [x] Non-web policy: app falls back to session-only state with a visible persistence warning
 - [x] Janitor gate: verify `web-sys` compiles for `wasm32-unknown-unknown` before adding
 
 ---
 
 ## P4 — Dioxus Interface
 
-- [ ] Fix the current interface lint/format regressions in `src/interface/app.rs` and related interface files
+- [x] Fix the interface lint/format regressions in `src/interface/app.rs` and related interface files
 - [x] `tailwind.config.js`: Initialize Tailwind CSS, configure `darkMode: 'class'`, and setup Warm Orange brand colors.
 - [x] Dioxus Router setup (`/` vs `/board/:card_id`) in `app.rs`.
 - [ ] Implement `TopBar` component (Flexbox: Back Arrow/Previous Card Name, Current Card Name, +Create Bucket, Modifiers).
@@ -75,13 +77,13 @@
 - [ ] Implement `CardItem` component with click-to-nav behaviour and "Move" dropdown context menu.
 - [ ] Implement blurred `Modal` system for "Create Card," "Rename Item," and "Create Bucket." Modal closes on "X" (auto-saves).
 - [x] Hook UI components to application layer `Command` dispatching via shared `Signal<CardRegistry>`.
-- [x] Run state diffs against `LocalStorageRepository` on each mutation to persist data.
+- [x] Run state persistence through the `AppPersistence` facade on each mutation.
 
 ---
 
 ## P5 — Release & Docs
 
-- [ ] Reviewer pass: zero `.unwrap()` in non-test code
+- [x] Reviewer pass: zero `.unwrap()` in non-test code
 - [ ] Readability pass: all public items have `///` doc-comments with `# Examples`
 - [ ] Optimizer pass: unnecessary clones, redundant allocations
 - [ ] `dx serve` (WASM build) verified

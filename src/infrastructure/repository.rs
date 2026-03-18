@@ -15,9 +15,7 @@ impl JsonRepository {
     /// Deserializes a robust JSON string back into a `CardRegistry`.
     pub fn deserialize_registry(json: &str) -> Result<CardRegistry, DomainError> {
         serde_json::from_str(json).map_err(|e| {
-            DomainError::InvalidOperation(format!(
-                "Failed to deserialize registry from JSON: {e}"
-            ))
+            DomainError::InvalidOperation(format!("Failed to deserialize registry from JSON: {e}"))
         })
     }
 }
@@ -77,6 +75,39 @@ impl LocalStorageRepository {
     }
 }
 
+/// A small platform-aware persistence facade used by the interface layer.
+pub struct AppPersistence;
+
+impl AppPersistence {
+    /// Loads the registry for the current platform.
+    #[cfg(target_arch = "wasm32")]
+    pub fn load_registry() -> Result<Option<CardRegistry>, DomainError> {
+        LocalStorageRepository::load_from_local_storage()
+    }
+
+    /// Loads the registry for the current platform.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn load_registry() -> Result<Option<CardRegistry>, DomainError> {
+        Err(DomainError::InvalidOperation(
+            "Persistence is not yet supported on this platform".into(),
+        ))
+    }
+
+    /// Saves the registry for the current platform.
+    #[cfg(target_arch = "wasm32")]
+    pub fn save_registry(registry: &CardRegistry) -> Result<(), DomainError> {
+        LocalStorageRepository::save_to_local_storage(registry)
+    }
+
+    /// Saves the registry for the current platform.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn save_registry(_registry: &CardRegistry) -> Result<(), DomainError> {
+        Err(DomainError::InvalidOperation(
+            "Persistence is not yet supported on this platform".into(),
+        ))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -100,5 +131,24 @@ mod tests {
             original, deserialized,
             "Deserialized registry does not match original"
         );
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn test_app_persistence_non_web_load_is_explicitly_unsupported() {
+        assert!(matches!(
+            AppPersistence::load_registry(),
+            Err(DomainError::InvalidOperation(_))
+        ));
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn test_app_persistence_non_web_save_is_explicitly_unsupported() {
+        let registry = CardRegistry::new();
+        assert!(matches!(
+            AppPersistence::save_registry(&registry),
+            Err(DomainError::InvalidOperation(_))
+        ));
     }
 }

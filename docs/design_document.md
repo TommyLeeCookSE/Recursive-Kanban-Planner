@@ -26,10 +26,9 @@ A recursive, card-based planning system. Everything is a `Card`. No separate ent
 
 *Last reconciled: 2026-03-17. Update this section whenever a phase is completed.*
 
-**Current validation state:** The current worktree **builds and passes `cargo test --all`**, but it
-is **not yet fully verification-clean**. `cargo clippy --all-targets -- -D warnings` currently
-fails on interface-layer lints in `src/interface/app.rs`, and `cargo fmt -- --check` currently
-reports formatting drift across the interface layer and `src/infrastructure/repository.rs`.
+**Current validation state:** The current worktree is **verification-clean**.
+`cargo test --all`, `cargo clippy --all-targets -- -D warnings`, and
+`cargo fmt -- --check` all pass.
 
 ### ✅ Implemented in Current Worktree
 
@@ -48,15 +47,16 @@ reports formatting drift across the interface layer and `src/infrastructure/repo
 | `BoardView` / `ColumnView` | `src/application/mod.rs` | Read-only projections for UI rendering |
 | Serde support | `src/domain/*.rs` | `Serialize`/`Deserialize` derives added to all domain types |
 | JsonRepository | `src/infrastructure/mod.rs` | Basic registry persistence |
-| Dioxus Interface | `src/interface/` | `app`, `components`, `routes`, `error_templates` exist and tests pass, but the current branch is not yet clippy/rustfmt clean |
-| `LocalStorageRepository` | `src/infrastructure/repository.rs` | Saves/Loads registry to browser storage |
+| Dioxus Interface | `src/interface/` | `app`, `components`, `routes`, `error_templates` exist; interface layer is clippy/rustfmt clean |
+| `LocalStorageRepository` | `src/infrastructure/repository.rs` | Saves/loads registry to browser storage on `wasm32` |
+| `AppPersistence` facade | `src/infrastructure/repository.rs` | Platform-aware persistence boundary used by the interface layer |
 
 ### 🔲 Not Yet Implemented / Not Yet Verified
 
-- Green `cargo clippy --all-targets -- -D warnings` and `cargo fmt -- --check` on the current interface branch
 - Dedicated `TopBar` and `CardItem` component extraction/polish
 - Full modal flow coverage beyond create-card/create-bucket wiring
 - End-to-end `dx serve` verification for WASM and desktop
+- Native desktop/mobile persistence backend beyond browser storage
 
 ### ✅ Recently Implemented Behavioral Decisions
 
@@ -283,9 +283,14 @@ src/
 
 ## Persistence Strategy
 
-- **Primary:** Browser `localStorage`. State is serialized to JSON via `JsonRepository` and stored via `LocalStorageRepository`.
+- **Primary:** Browser `localStorage` on `wasm32`. State is serialized to JSON via `JsonRepository`
+  and stored via `LocalStorageRepository`.
+- **Interface boundary:** The UI talks to `AppPersistence`, not directly to browser storage.
+- **Non-web policy:** Native/non-browser targets are currently session-only. `AppPersistence`
+  returns `DomainError::InvalidOperation("Persistence is not yet supported on this platform")`,
+  and the app falls back to an empty in-memory registry while surfacing a visible warning banner.
 - **Export/Import:** Download full state as JSON; re-upload to restore.
-- **Future:** Google Drive / Dropbox optional sync.
+- **Future:** Add a native desktop/mobile persistence backend, then optional cloud sync.
 
 Serde derives (`Serialize`, `Deserialize`) are **implemented** across all domain types.
 WASM compatibility has been verified (including `getrandom` JS feature gates).

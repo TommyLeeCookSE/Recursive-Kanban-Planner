@@ -1,3 +1,5 @@
+#![allow(non_snake_case)]
+
 //! # Interface Layer
 //!
 //! This module houses the UI layer of the application using Dioxus.
