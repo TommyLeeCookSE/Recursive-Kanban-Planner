@@ -50,7 +50,7 @@ pub fn Board(card_id: CardId) -> Element {
     let nested_item_count = board_state.view.card.children_ids().len();
 
     rsx! {
-        div { class: "h-full flex flex-col bg-gray-50 dark:bg-gray-950 transition-colors",
+        div { class: "flex h-full flex-col",
             TopBar {
                 title: board_title.clone(),
                 back_route: board_state.back_route.clone(),
@@ -64,13 +64,13 @@ pub fn Board(card_id: CardId) -> Element {
                 })),
             }
 
-            div { class: "px-12 py-5 border-b border-gray-100 dark:border-gray-800/60 bg-white/70 dark:bg-gray-900/50 backdrop-blur-md flex items-center justify-between",
-                p { class: "text-xs font-black uppercase tracking-[0.3em] text-gray-400 dark:text-gray-600",
+            div { class: "app-panel flex items-center justify-between border-b px-6 py-5 lg:px-12",
+                p { class: "app-kicker",
                     "Status: Active | {nested_item_count} nested items"
                 }
             }
 
-            div { class: "flex-grow overflow-x-auto p-12",
+            div { class: "flex-grow overflow-x-auto px-6 py-10 lg:px-12",
                 div { class: "flex gap-8 h-full items-start min-w-max",
                     for column in board_state.view.columns.iter() {
                         {render_column(
@@ -136,11 +136,11 @@ fn render_column(
     rsx! {
         div {
             key: "{bucket_id}",
-            class: "group/col flex-shrink-0 w-80 bg-gray-200/40 dark:bg-gray-800/30 p-5 rounded-3xl flex flex-col max-h-full border border-gray-100 dark:border-gray-800/40 hover:border-sunfire/30 hover:bg-gray-200/60 dark:hover:bg-gray-800/50 transition-all",
+            class: "app-column-surface group flex max-h-full w-80 flex-shrink-0 flex-col rounded-[2rem] p-5 transition-all hover:border-sunfire/30",
             div { class: "flex items-center justify-between mb-6 px-3",
-                h2 { class: "text-[11px] font-black uppercase tracking-[0.4em] text-gray-400 dark:text-gray-600 group-hover/col:text-sunfire/60 transition-colors", "{bucket_name}" }
+                h2 { class: "app-kicker transition-colors group-hover:text-sunfire", "{bucket_name}" }
                 button {
-                    class: "inline-flex items-center justify-center h-8 w-8 rounded-full border-2 border-dashed border-gray-200 dark:border-gray-700 text-gray-400 hover:border-sunfire hover:text-sunfire transition-all hover:rotate-90",
+                    class: "app-button-secondary inline-flex h-8 w-8 items-center justify-center rounded-full border-2 border-dashed p-0 hover:rotate-90",
                     onclick: move |_| active_modal.set(Some(ModalType::CreateCard {
                         parent_id: Some(board_id),
                         bucket_id: Some(bucket_id),
@@ -206,15 +206,17 @@ fn render_card_item(
 
 fn render_board_load_error() -> Element {
     rsx! {
-        div { class: "p-20 text-center",
-            h2 { class: "text-2xl font-bold text-red-500 mb-4", "Board could not be loaded" }
-            p { class: "text-gray-500", "The board data is unavailable or inconsistent. Check the logs for the full error." }
+        div { class: "mx-auto max-w-3xl px-6 py-20 text-center lg:px-12",
+            div { class: "app-empty-state rounded-[2rem] px-8 py-16",
+                h2 { class: "mb-4 text-2xl font-bold text-red-500", "Board could not be loaded" }
+                p { class: "app-text-muted", "The board data is unavailable or inconsistent. Check the logs for the full error." }
             button {
-                class: "mt-8 px-6 py-2 bg-sunfire text-white rounded-lg",
-                onclick: |_| {
-                    navigator().push(Route::Home {});
-                },
-                "Back to Workspace"
+                    class: "app-button-primary mt-8 px-6 py-3",
+                    onclick: |_| {
+                        navigator().push(Route::Home {});
+                    },
+                    "Back to Workspace"
+                }
             }
         }
     }

@@ -33,18 +33,21 @@ pub fn Home() -> Element {
     };
 
     rsx! {
-        div { class: "p-12 max-w-7xl mx-auto min-h-full",
-            div { class: "flex items-center justify-between mb-12",
+        div { class: "mx-auto min-h-full max-w-7xl px-6 py-12 lg:px-12",
+            div { class: "mb-12 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between",
                 div {
-                    h1 { class: "text-5xl font-black text-gray-900 dark:text-white tracking-tight mb-2",
+                    div { class: "app-kicker mb-3",
+                        "Workspace"
+                    }
+                    h1 { class: "app-text-primary mb-2 text-5xl font-black tracking-tight",
                         "My Workspace"
                     }
-                    p { class: "text-gray-500 dark:text-gray-400 font-medium",
+                    p { class: "app-text-muted max-w-2xl text-base font-medium lg:text-lg",
                         "Organize your world with nested recursive boards."
                     }
                 }
                 button {
-                    class: "px-8 py-4 bg-sunfire hover:bg-sunfire-dark text-white font-bold rounded-2xl shadow-lg hover:shadow-sunfire/20 transition-all transform hover:scale-105 active:scale-95 flex items-center gap-2",
+                    class: "app-button-primary px-8 py-4",
                     onclick: move |_| active_modal.set(Some(ModalType::CreateCard {
                         parent_id: None,
                         bucket_id: None,
@@ -55,15 +58,15 @@ pub fn Home() -> Element {
             }
 
             if root_cards.is_empty() {
-                div { class: "flex flex-col items-center justify-center py-32 bg-white/50 dark:bg-gray-800/30 rounded-3xl border-2 border-dashed border-gray-200 dark:border-gray-700/50 backdrop-blur-sm",
-                    div { class: "text-sm font-black uppercase tracking-[0.4em] text-gray-300 dark:text-gray-600 mb-6",
+                div { class: "app-empty-state flex flex-col items-center justify-center rounded-[2rem] py-32 text-center",
+                    div { class: "app-kicker mb-6 text-sm",
                         "EMPTY WORKSPACE"
                     }
-                    p { class: "text-2xl font-bold text-gray-400 dark:text-gray-600 mb-8",
+                    p { class: "app-text-muted mb-8 text-2xl font-bold",
                         "No boards found in your workspace."
                     }
                     button {
-                        class: "px-8 py-4 bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-bold rounded-2xl shadow-xl border border-gray-200 dark:border-gray-600 hover:border-sunfire transition-all",
+                        class: "app-button-secondary px-8 py-4",
                         onclick: move |_| active_modal.set(Some(ModalType::CreateCard {
                             parent_id: None,
                             bucket_id: None,

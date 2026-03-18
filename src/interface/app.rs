@@ -55,6 +55,12 @@ pub fn App() -> Element {
     // Global modal state.
     let mut active_modal = use_context_provider(|| Signal::new(None::<ModalType>));
 
+    let shell_class = if is_dark() {
+        "app-shell theme-dark dark"
+    } else {
+        "app-shell theme-light"
+    };
+
     // Side effect: Save to persistence whenever the registry changes.
     let mut save_warning = persistence_warning;
     use_effect(move || {
@@ -70,52 +76,53 @@ pub fn App() -> Element {
     });
 
     rsx! {
-        // Root container with dark class toggle
-        div { class: if is_dark() { "dark" } else { "" },
-            div { class: "bg-gray-100 dark:bg-gray-900 min-h-screen text-gray-900 dark:text-gray-100 transition-colors duration-200",
-                link { rel: "stylesheet", href: asset!("/assets/app.css") }
+        div { class: "{shell_class}",
+            link { rel: "stylesheet", href: asset!("/assets/app.css") }
+            div { class: "app-backdrop" }
+            div { class: "app-atmosphere" }
 
+            div { class: "app-content",
                 if let Some(message) = persistence_warning() {
-                    div { class: "px-6 py-3 bg-amber-100 text-amber-900 border-b border-amber-300 dark:bg-amber-900/40 dark:text-amber-100 dark:border-amber-800",
+                    div { class: "app-warning-banner px-6 py-3 text-sm font-semibold lg:px-12",
                         "{message}"
                     }
                 }
 
                 Router::<Route> {}
+            }
 
-                // Modal Overlay Dispatcher
-                if let Some(modal) = active_modal() {
-                    match modal {
-                        ModalType::CreateCard { parent_id, bucket_id } => {
-                            rsx! {
-                                CardModal {
-                                    on_close: move |_| active_modal.set(None),
-                                    parent_id,
-                                    bucket_id,
-                                    registry,
-                                }
+            // Modal Overlay Dispatcher
+            if let Some(modal) = active_modal() {
+                match modal {
+                    ModalType::CreateCard { parent_id, bucket_id } => {
+                        rsx! {
+                            CardModal {
+                                on_close: move |_| active_modal.set(None),
+                                parent_id,
+                                bucket_id,
+                                registry,
                             }
-                        },
-                        ModalType::CreateBucket { card_id } => {
-                            rsx! {
-                                BucketModal {
-                                    on_close: move |_| active_modal.set(None),
-                                    card_id,
-                                    registry,
-                                }
+                        }
+                    },
+                    ModalType::CreateBucket { card_id } => {
+                        rsx! {
+                            BucketModal {
+                                on_close: move |_| active_modal.set(None),
+                                card_id,
+                                registry,
                             }
-                        },
-                        ModalType::RenameCard { id, current_title } => {
-                            rsx! {
-                                RenameCardModal {
-                                    on_close: move |_| active_modal.set(None),
-                                    id,
-                                    current_title,
-                                    registry,
-                                }
+                        }
+                    },
+                    ModalType::RenameCard { id, current_title } => {
+                        rsx! {
+                            RenameCardModal {
+                                on_close: move |_| active_modal.set(None),
+                                id,
+                                current_title,
+                                registry,
                             }
-                        },
-                    }
+                        }
+                    },
                 }
             }
         }

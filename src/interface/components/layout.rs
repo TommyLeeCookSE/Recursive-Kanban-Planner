@@ -32,21 +32,21 @@ pub fn NavbarLayout() -> Element {
     let nav = navigator();
 
     rsx! {
-        div { class: "min-h-screen flex flex-col bg-gray-50 dark:bg-gray-950 font-sans antialiased selection:bg-sunfire/30 selection:text-sunfire-dark",
-            nav { class: "sticky top-0 z-40 h-20 flex items-center justify-between px-12 bg-white/90 dark:bg-gray-900/95 border-b border-gray-100 dark:border-gray-800/80 backdrop-blur-xl transition-all",
+        div { class: "min-h-screen flex flex-col selection:bg-sunfire/30 selection:text-white",
+            nav { class: "app-navbar",
                 div { class: "flex items-center gap-8",
                     Link {
                         to: Route::Home {},
                         class: "group flex items-center gap-3",
-                        div { class: "h-10 w-10 bg-sunfire rounded-xl shadow-lg shadow-sunfire/30 flex items-center justify-center transform group-hover:rotate-12 transition-transform",
+                        div { class: "flex h-10 w-10 items-center justify-center rounded-xl bg-sunfire shadow-lg shadow-sunfire/30 transition-transform group-hover:rotate-12",
                             span { class: "text-white text-xl font-black", "K" }
                         }
-                        span { class: "font-black text-2xl tracking-tighter text-gray-900 dark:text-white group-hover:text-sunfire transition-colors",
+                        span { class: "app-text-primary text-2xl font-black tracking-tighter transition-colors group-hover:text-sunfire",
                             "Kanban"
                         }
                     }
                     button {
-                        class: "ml-4 px-6 py-2.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-bold rounded-2xl shadow-xl hover:shadow-sunfire/10 hover:bg-sunfire dark:hover:bg-sunfire transition-all transform hover:-translate-y-0.5 active:translate-y-0 flex items-center gap-2",
+                        class: "app-button-primary ml-4 px-6 py-2.5",
                         onclick: move |_| active_modal.set(Some(ModalType::CreateCard {
                             parent_id: None,
                             bucket_id: None,
@@ -57,25 +57,25 @@ pub fn NavbarLayout() -> Element {
                 }
 
                 div { class: "flex items-center gap-4",
-                    div { class: "hidden md:flex items-center gap-2 pr-4 border-r border-gray-100 dark:border-gray-800",
+                    div { class: "hidden items-center gap-2 border-r pr-4 md:flex", style: "border-color: var(--app-border);",
                         {render_export_button(registry, persistence_warning)}
                         {render_import_button(registry, active_modal, persistence_warning, nav)}
                         {render_clear_cache_button(registry, active_modal, persistence_warning, nav)}
                     }
                     if cfg!(target_arch = "wasm32") {
-                        span { class: "text-[9px] font-black uppercase tracking-[0.3em] text-gray-300 dark:text-gray-700",
+                        span { class: "app-kicker",
                             "Web Utilities"
                         }
                     }
 
                     button {
-                        class: "p-3 rounded-2xl bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-sunfire hover:bg-sunfire/10 transition-all",
+                        class: "app-button-secondary min-w-[7.5rem] px-4 py-3 text-sm",
                         onclick: move |_| is_dark.set(!is_dark()),
                         title: "Toggle Light/Dark Mode",
                         if is_dark() {
-                            span { "Light" }
+                            span { "Sunrise" }
                         } else {
-                            span { "Dark" }
+                            span { "Evening" }
                         }
                     }
                 }
@@ -97,7 +97,7 @@ fn render_export_button(
         let mut persistence_warning = persistence_warning;
         return rsx! {
             button {
-                class: "rounded-2xl px-4 py-2 text-xs font-black uppercase tracking-widest text-gray-500 hover:text-sunfire dark:text-gray-400 dark:hover:text-sunfire transition-colors",
+                class: "app-utility-button",
                 title: "Download a JSON backup of your workspace",
                 onclick: move |_| {
                     let snapshot = registry.read().clone();
@@ -129,7 +129,7 @@ fn render_import_button(
     {
         return rsx! {
             button {
-                class: "rounded-2xl px-4 py-2 text-xs font-black uppercase tracking-widest text-gray-500 hover:text-sunfire dark:text-gray-400 dark:hover:text-sunfire transition-colors",
+                class: "app-utility-button",
                 title: "Replace your workspace with a validated JSON import",
                 onclick: move |_| {
                     begin_import_flow(
@@ -167,7 +167,7 @@ fn render_clear_cache_button(
         let mut persistence_warning = persistence_warning;
         return rsx! {
             button {
-                class: "rounded-2xl px-4 py-2 text-xs font-black uppercase tracking-widest text-red-400 hover:text-red-500 dark:text-red-300 dark:hover:text-red-200 transition-colors",
+                class: "app-danger-button",
                 title: "Clear saved data and reset the workspace",
                 onclick: move |_| {
                     match clear_workspace_with_confirmation() {
@@ -200,12 +200,12 @@ fn render_clear_cache_button(
 fn disabled_utility_button(label: &str, title: &str) -> Element {
     rsx! {
         button {
-            class: "cursor-not-allowed rounded-2xl px-4 py-2 text-xs font-black uppercase tracking-widest text-gray-300 dark:text-gray-600 border border-transparent opacity-70",
+            class: "app-utility-button-disabled",
             disabled: true,
             title: "{title}",
             "{label}"
         }
-        span { class: "text-[9px] font-black uppercase tracking-[0.3em] text-gray-300 dark:text-gray-700",
+        span { class: "app-kicker",
             "Soon"
         }
     }
@@ -415,21 +415,21 @@ pub fn TopBar(
     on_secondary: EventHandler<()>,
 ) -> Element {
     rsx! {
-        div { class: "px-12 py-8 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800/60 shadow-sm",
+        div { class: "app-panel border-b px-6 py-8 lg:px-12",
             div { class: "max-w-7xl mx-auto flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between",
                 div { class: "flex items-start gap-6",
                     button {
-                        class: "mt-1.5 p-3 rounded-2xl border border-gray-100 dark:border-gray-800 text-gray-400 hover:text-sunfire hover:border-sunfire/50 transition-all group",
+                        class: "app-button-secondary mt-1.5 p-3 group",
                         onclick: move |_| {
                             navigator().push(back_route.clone());
                         },
                         span { class: "transform group-hover:-translate-x-1 block transition-transform", "Back" }
                     }
-                    div { class: "min-w-0 pr-8 border-r border-gray-100 dark:border-gray-800",
-                        span { class: "text-[10px] font-black uppercase tracking-[0.5em] text-gray-300 dark:text-gray-700 block mb-1",
+                    div { class: "min-w-0 border-r pr-8", style: "border-color: var(--app-border);",
+                        span { class: "app-kicker mb-1 block",
                             "Board Context / {back_label}"
                         }
-                        h1 { class: "text-5xl font-black tracking-tighter text-gray-900 dark:text-white truncate max-w-2xl",
+                        h1 { class: "app-text-primary max-w-2xl truncate text-5xl font-black tracking-tighter",
                             "{title}"
                         }
                     }
@@ -437,13 +437,13 @@ pub fn TopBar(
 
                 div { class: "flex flex-wrap items-center gap-4",
                     button {
-                        class: "h-14 px-8 rounded-2xl border-2 border-sunfire/40 bg-sunfire/5 text-sunfire font-bold hover:bg-sunfire/10 transition-all flex items-center gap-3 active:scale-95 shadow-lg shadow-sunfire/5",
+                        class: "app-button-secondary h-14 px-8 text-sunfire",
                         onclick: move |_| on_primary.call(()),
                         span { class: "text-xl", "+" }
                         "{primary_label}"
                     }
                     button {
-                        class: "h-14 px-8 rounded-2xl border-2 border-gray-100 dark:border-gray-800 text-gray-500 dark:text-gray-400 font-bold hover:border-gray-300 dark:hover:border-gray-600 hover:text-gray-900 dark:hover:text-white transition-all active:scale-95",
+                        class: "app-button-secondary h-14 px-8",
                         onclick: move |_| on_secondary.call(()),
                         "{secondary_label}"
                     }

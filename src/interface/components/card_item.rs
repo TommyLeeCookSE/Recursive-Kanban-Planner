@@ -69,31 +69,31 @@ pub fn CardItem(
 
     rsx! {
         article {
-            class: "flex flex-col rounded-2xl border border-transparent bg-white dark:bg-gray-800 shadow-sm transition-all hover:border-sunfire/50 hover:shadow-xl group",
+            class: "app-card-surface group flex flex-col rounded-[1.75rem] transition-all hover:border-sunfire/50 hover:-translate-y-0.5",
 
             // Primary Action Area
             button {
-                class: "flex-grow w-full text-left p-6 cursor-pointer outline-none focus:ring-2 focus:ring-sunfire/30 rounded-t-2xl",
+                class: "flex-grow w-full rounded-t-[1.75rem] p-6 text-left outline-none transition-colors focus:ring-2 focus:ring-sunfire/30",
                 onclick: move |_| on_open.call(()),
-                h3 { class: "font-semibold text-gray-900 dark:text-gray-100 group-hover:text-sunfire transition-colors h-12 overflow-hidden line-clamp-2",
+                h3 { class: "app-text-primary h-12 overflow-hidden text-lg font-semibold transition-colors group-hover:text-sunfire line-clamp-2",
                     "{title}"
                 }
-                p { class: "mt-3 text-xs font-medium uppercase tracking-widest text-gray-400 dark:text-gray-500",
+                p { class: "app-text-soft mt-3 text-xs font-medium uppercase tracking-widest",
                     "{subtitle}"
                 }
             }
 
             // Secondary Actions (if provided)
             if on_rename.is_some() || show_move_ui {
-                div { class: "border-t border-gray-100 dark:border-gray-700/50 px-5 py-4 flex flex-wrap items-center gap-4 bg-gray-50/50 dark:bg-gray-950/20 rounded-b-2xl",
+                div { class: "flex flex-wrap items-center gap-4 rounded-b-[1.75rem] border-t px-5 py-4", style: "border-color: var(--app-border); background-color: color-mix(in srgb, var(--app-surface-soft) 74%, transparent);",
 
                     if let (Some(move_handler), true) = (on_move, show_move_ui) {
                         div { class: "flex items-center gap-2",
-                            label { class: "text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-600",
+                            label { class: "app-kicker",
                                 "Move"
                             }
                             select {
-                                class: "rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 focus:border-sunfire focus:outline-none focus:ring-1 focus:ring-sunfire",
+                                class: "app-input rounded-full px-3 py-1.5 text-xs font-semibold",
                                 value: "{current_bucket_value}",
                                 onchange: move |e| {
                                     if let Ok(bucket_id) = BucketId::from_str(&e.value()) {
@@ -109,7 +109,7 @@ pub fn CardItem(
 
                     if let Some(rename_handler) = on_rename {
                         button {
-                            class: "ml-auto inline-flex items-center gap-2 rounded-full border border-gray-200 dark:border-gray-700 px-3 py-1.5 text-[11px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 hover:border-sunfire hover:text-sunfire hover:bg-white dark:hover:bg-gray-800 transition-all",
+                            class: "app-button-secondary ml-auto rounded-full px-3 py-1.5 text-[11px] font-black uppercase tracking-widest",
                             onclick: move |_| rename_handler.call(()),
                             "Rename"
                         }
