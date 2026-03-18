@@ -42,7 +42,7 @@ pub fn Home() -> Element {
 
     rsx! {
         div { class: "mx-auto min-h-full max-w-7xl px-6 py-12 lg:px-12",
-            div { class: "mb-12 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between",
+            div { class: "mb-12 flex flex-col gap-6 lg:flex-row lg:flex-wrap lg:items-center lg:justify-between",
                 div {
                     div { class: "app-kicker mb-3",
                         "Workspace"
@@ -83,7 +83,7 @@ pub fn Home() -> Element {
                     }
                 }
             } else {
-                div { class: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8",
+                div { class: "grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4",
                     for (index, card) in root_cards.iter().cloned().enumerate() {
                         div { key: "{card.id}", class: "flex flex-col gap-3",
                             {render_root_drop_zone(index, root_drop_index, registry, warning_message, is_dragging)}

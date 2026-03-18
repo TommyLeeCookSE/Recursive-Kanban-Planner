@@ -1,5 +1,5 @@
 use crate::domain::label::LabelColor;
-use crate::interface::components::visuals::render_label_chip;
+use crate::interface::components::visuals::{render_label_chip, surface_action_button_classes};
 use dioxus::prelude::*;
 
 /// A premium, reusable card component for both Workspace and Board views.
@@ -71,14 +71,14 @@ pub fn CardItem(
                     div { class: "flex items-center gap-2",
                         if let Some(delete_handler) = on_delete {
                             button {
-                                class: "app-button-secondary rounded-full px-3 py-1.5 text-[11px] font-black uppercase tracking-widest text-red-400 hover:text-red-500",
+                                class: "{surface_action_button_classes()} text-red-400 hover:text-red-500",
                                 onclick: move |_| delete_handler.call(()),
                                 "Delete"
                             }
                         }
                         if let Some(rename_handler) = on_rename {
                             button {
-                                class: "app-button-secondary rounded-full px-3 py-1.5 text-[11px] font-black uppercase tracking-widest",
+                                class: "{surface_action_button_classes()}",
                                 onclick: move |_| rename_handler.call(()),
                                 "Edit"
                             }

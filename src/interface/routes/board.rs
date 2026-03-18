@@ -16,6 +16,7 @@ use crate::interface::components::layout::TopBar;
 use crate::interface::components::modal::ModalType;
 use crate::interface::components::visuals::{
     DropZoneKind, build_card_display, drop_zone_classes, render_label_chip,
+    surface_action_button_classes, surface_icon_button_classes,
 };
 use dioxus::prelude::*;
 use std::collections::HashMap;
@@ -185,8 +186,8 @@ pub fn Board(card_id: CardId) -> Element {
                 }
             }
 
-            div { class: "app-panel flex items-center justify-between border-b px-6 py-5 lg:px-12",
-                div { class: "flex items-center gap-4",
+            div { class: "app-panel flex flex-wrap items-center justify-between gap-4 border-b px-6 py-5 lg:px-12",
+                div { class: "flex flex-wrap items-center gap-4",
                     p { class: "app-kicker", "Status: Active | Due: {board_due_date} | Labels:" }
                     if board_labels.is_empty() {
                         span { class: "app-text-muted text-xs font-black uppercase tracking-widest", "None" }
@@ -285,56 +286,56 @@ fn render_column(column: ColumnRenderModel, context: BoardRenderContext) -> Elem
                 is_dragging.set(IsDragging(false));
             },
             div {
-                class: "mb-6 flex flex-col gap-3 rounded-2xl px-3 py-2",
+                class: "mb-6 flex flex-col gap-4 rounded-2xl px-3 py-2",
                 div {
-                    class: "flex cursor-grab items-start justify-between gap-3 active:cursor-grabbing",
+                    class: "flex flex-col items-center gap-3 text-center",
                     h2 {
-                        class: "app-kicker min-w-0 flex-1 leading-tight transition-colors group-hover:text-sunfire",
+                        class: "app-kicker text-sm leading-tight transition-colors group-hover:text-sunfire md:text-base",
                         "{bucket_name}"
                     }
-                    div { class: "flex shrink-0 flex-wrap items-center justify-end gap-2",
-                    if can_rename_bucket {
-                        button {
-                            class: "app-button-secondary inline-flex h-7 min-w-[3.25rem] items-center justify-center rounded-full px-2.5 text-[10px] font-black uppercase tracking-widest",
-                            title: "Rename this bucket",
-                            onclick: move |_| active_modal.set(Some(ModalType::EditBucket {
-                                card_id: context.board_id,
-                                bucket_id,
-                            })),
-                            "Rename"
+                    div { class: "flex flex-wrap items-center justify-center gap-2",
+                        if can_rename_bucket {
+                            button {
+                                class: "{surface_action_button_classes()}",
+                                title: "Rename this bucket",
+                                onclick: move |_| active_modal.set(Some(ModalType::EditBucket {
+                                    card_id: context.board_id,
+                                    bucket_id,
+                                })),
+                                "Rename"
+                            }
                         }
-                    }
-                    if can_delete_bucket {
-                        button {
-                            class: "app-button-secondary inline-flex h-7 min-w-[3rem] items-center justify-center rounded-full px-2.5 text-[10px] font-black uppercase tracking-widest text-red-400 hover:text-red-500",
-                            title: "Delete this bucket",
-                            onclick: move |_| {
-                                let _ = execute_command_with_feedback(
-                                    Command::RemoveBucket {
-                                        card_id: context.board_id,
-                                        bucket_id,
-                                    },
-                                    context.registry,
-                                    warning_message,
-                                    "board-route",
-                                    format!(
-                                        "delete bucket {bucket_id} from board {}",
-                                        context.board_id
-                                    ),
-                                );
-                            },
+                        if can_delete_bucket {
+                            button {
+                                class: "{surface_action_button_classes()} text-red-400 hover:text-red-500",
+                                title: "Delete this bucket",
+                                onclick: move |_| {
+                                    let _ = execute_command_with_feedback(
+                                        Command::RemoveBucket {
+                                            card_id: context.board_id,
+                                            bucket_id,
+                                        },
+                                        context.registry,
+                                        warning_message,
+                                        "board-route",
+                                        format!(
+                                            "delete bucket {bucket_id} from board {}",
+                                            context.board_id
+                                        ),
+                                    );
+                                },
                             "Delete"
                         }
+                        }
+                        button {
+                            class: "{surface_icon_button_classes()} hover:rotate-90",
+                            onclick: move |_| active_modal.set(Some(ModalType::CreateCard {
+                                parent_id: Some(context.board_id),
+                                bucket_id: Some(bucket_id),
+                            })),
+                            "+"
+                        }
                     }
-                    button {
-                        class: "app-button-secondary inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-dashed p-0 text-sm leading-none hover:rotate-90",
-                        onclick: move |_| active_modal.set(Some(ModalType::CreateCard {
-                            parent_id: Some(context.board_id),
-                            bucket_id: Some(bucket_id),
-                        })),
-                        "+"
-                    }
-                }
                 }
             }
             div { class: "flex-grow overflow-y-auto space-y-4 pr-2",

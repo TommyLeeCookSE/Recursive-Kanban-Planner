@@ -78,3 +78,11 @@ pub fn render_label_chip(name: String, color: LabelColor) -> Element {
         }
     }
 }
+
+pub fn surface_action_button_classes() -> &'static str {
+    "app-button-secondary inline-flex h-8 min-w-[4.5rem] items-center justify-center rounded-full px-3 text-[11px] font-black uppercase tracking-widest"
+}
+
+pub fn surface_icon_button_classes() -> &'static str {
+    "app-button-secondary inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-dashed p-0 text-sm leading-none"
+}

@@ -33,9 +33,9 @@ pub fn NavbarLayout() -> Element {
     let nav = navigator();
 
     rsx! {
-        div { class: "min-h-screen flex flex-col selection:bg-sunfire/30 selection:text-white",
-            nav { class: "app-navbar",
-                div { class: "flex items-center gap-8",
+            div { class: "min-h-screen flex flex-col selection:bg-sunfire/30 selection:text-white",
+                nav { class: "app-navbar",
+                    div { class: "flex flex-wrap items-center gap-8",
                     Link {
                         to: Route::Home {},
                         class: "group flex items-center gap-3",
@@ -57,8 +57,8 @@ pub fn NavbarLayout() -> Element {
                     }
                 }
 
-                div { class: "flex items-center gap-4",
-                    div { class: "hidden items-center gap-2 border-r pr-4 md:flex", style: "border-color: var(--app-border);",
+                div { class: "flex flex-wrap items-center gap-4",
+                    div { class: "hidden flex-wrap items-center gap-2 border-r pr-4 md:flex", style: "border-color: var(--app-border);",
                         {render_export_button(registry, persistence_warning)}
                         {render_import_button(registry, active_modal, persistence_warning, nav)}
                         {render_clear_cache_button(registry, active_modal, persistence_warning, nav)}
@@ -422,26 +422,28 @@ fn clear_workspace_with_confirmation() -> Result<bool, crate::domain::error::Dom
 pub fn TopBar(title: String, back_route: Route, back_label: String, children: Element) -> Element {
     rsx! {
         div { class: "app-panel border-b px-6 py-8 lg:px-12",
-            div { class: "max-w-7xl mx-auto flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between",
-                div { class: "flex items-start gap-6",
+            div { class: "mx-auto grid max-w-7xl grid-cols-1 gap-8 lg:grid-cols-[auto_minmax(0,1fr)_auto] lg:items-center",
+                div { class: "flex items-center justify-start lg:justify-self-start",
                     button {
-                        class: "app-button-secondary mt-1.5 min-w-[10rem] justify-center px-6 py-4 text-base font-black group",
+                        class: "app-button-secondary min-w-[12rem] justify-center px-6 py-4 text-base font-black group",
                         onclick: move |_| {
                             navigator().push(back_route.clone());
                         },
-                        span { class: "transform group-hover:-translate-x-1 block transition-transform", "Back" }
-                    }
-                    div { class: "min-w-0 border-r pr-8", style: "border-color: var(--app-border);",
-                        span { class: "app-kicker mb-1 block",
-                            "Board Context / {back_label}"
-                        }
-                        h1 { class: "app-text-primary max-w-2xl truncate text-5xl font-black tracking-tighter",
-                            "{title}"
-                        }
+                        span { class: "block transform transition-transform group-hover:-translate-x-1", "Back to:" }
+                        span { "{back_label}" }
                     }
                 }
 
-                div { class: "flex flex-wrap items-center gap-4",
+                div { class: "min-w-0 text-center lg:justify-self-center",
+                    h1 { class: "app-text-primary max-w-2xl break-words text-5xl font-black tracking-tighter",
+                        "{title}"
+                    }
+                    p { class: "app-kicker mt-3 block",
+                        "Board Context / {back_label}"
+                    }
+                }
+
+                div { class: "flex flex-wrap items-center justify-start gap-4 lg:justify-self-end lg:justify-end",
                     {children}
                 }
             }
