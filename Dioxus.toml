@@ -6,7 +6,7 @@ default_platform = "web"
 title = "Kanban Planner"
 
 [web.resource]
-assets = "assets"
+dev = {}
 
 [web.build]
 target = "web"
@@ -17,8 +17,4 @@ port = 8080
 open = true
 
 [web.watcher]
-watch_path = ["src", "assets", "tailwind.config.js", "src/interface/tailwind.css"]
-
-[web.tailwindcss]
-input = "src/interface/tailwind.css"
-config = "tailwind.config.js"
+watch_path = ["src", "assets"]

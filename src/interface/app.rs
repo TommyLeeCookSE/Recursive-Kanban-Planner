@@ -63,7 +63,7 @@ pub fn App() -> Element {
         // Root container with dark class toggle
         div { class: if is_dark() { "dark" } else { "" },
             div { class: "bg-gray-100 dark:bg-gray-900 min-h-screen text-gray-900 dark:text-gray-100 transition-colors duration-200",
-                link { rel: "stylesheet", href: asset!("/src/interface/tailwind.css") }
+                link { rel: "stylesheet", href: asset!("/assets/app.css") }
 
                 if let Some(message) = persistence_warning() {
                     div { class: "px-6 py-3 bg-amber-100 text-amber-900 border-b border-amber-300 dark:bg-amber-900/40 dark:text-amber-100 dark:border-amber-800",

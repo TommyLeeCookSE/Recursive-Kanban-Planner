@@ -4,7 +4,16 @@ use kanban_planner::infrastructure::logging::{
 };
 use tracing::{Level, info};
 
+#[cfg(target_arch = "wasm32")]
+fn init_wasm_logging() {
+    console_error_panic_hook::set_once();
+    let _ = tracing_wasm::set_as_global_default();
+}
+
 fn main() {
+    #[cfg(target_arch = "wasm32")]
+    init_wasm_logging();
+
     let _logging_guard = match init_logging() {
         Ok(guard) => Some(guard),
         Err(error) => {
