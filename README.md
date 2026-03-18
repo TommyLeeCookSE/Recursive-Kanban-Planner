@@ -1,103 +1,84 @@
 # Recursive Kanban Planner
 
-A high-performance, premium Kanban application built with **Rust** and **Dioxus**. Organize your life and projects with nested, recursive boards that follow the mantra: **"Everything is a Card."**
+Recursive Kanban Planner is a local-first Kanban application built with Rust and Dioxus. The core idea is simple: every task is a card, and every card can open into its own board.
 
----
+## Concept
 
-## 🌟 Concept
+- Nested boards let any card become a planning surface for its own child cards.
+- Recursive structure keeps high-level boards clean while detailed work lives deeper in the tree.
+- Clean Architecture keeps domain rules, application commands, infrastructure, and UI concerns separated.
 
-In the **Recursive Kanban Planner**, every task is more than just a line of text—it's a **Card**.
+## Current MVP
 
-- **Nested Boards**: Any card can be opened to reveal its own internal Kanban board.
-- **Infinite Recursion**: Break down complex projects into infinite sub-levels without losing context.
-- **Clean Structure**: High-level boards stay tidy while detailed work lives deep in the tree.
+- Root boards and nested child cards
+- Per-card bucket management
+- Card create, rename, move, reparent, and delete flows
+- Bucket create, rename, remove, and reorder flows in the domain/application layers
+- Browser persistence through `localStorage`
+- Native and web runtime logging
+- Dioxus router-based workspace and board views
 
----
+## Verified Status
 
-## 🛠️ Technology Stack
+Validated in this worktree on 2026-03-18:
 
-- **[Rust](https://www.rust-lang.org/)**: For memory safety, performance, and cross-platform builds.
-- **[Dioxus 0.7](https://dioxuslabs.com/)**: A modern UI framework for high-speed WebAssembly and Desktop apps.
-- **[Tailwind CSS](https://tailwindcss.com/)**: For the premium, "glassmorphism" aesthetic.
-- **[ULID](https://github.com/ulid/spec)**: For collision-resistant, sortable identifiers.
-- **[Serde](https://serde.rs/)**: For efficient JSON data persistence.
+```bash
+cargo test
+cargo clippy --all-targets -- -D warnings
+cargo fmt --check
+cargo check --target wasm32-unknown-unknown
+cargo check --no-default-features --features desktop
+```
 
----
+What is not fully verified yet:
 
-## 🚀 Getting Started
+- Manual `dx serve --platform desktop` runtime launch in this environment
+- Export/import workflow from the top navigation
+
+## Getting Started
 
 ### Prerequisites
 
-You must have the **Rust** toolchain and the **Dioxus CLI** installed:
+- Install the Rust toolchain with `rustup`
+- Install the Dioxus CLI with `cargo install dioxus-cli`
+- Add the web target with `rustup target add wasm32-unknown-unknown`
 
-```bash
-# Install Rust (via rustup)
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-
-# Install Dioxus CLI
-cargo install dioxus-cli
-```
-
-### Running Locally
-
-#### 🌐 Web (WASM)
-
-To launch the browser version:
+### Run the Web App
 
 ```bash
 dx serve --platform web
 ```
 
-#### 🖥️ Desktop (Native)
-
-To launch the native desktop application:
+### Run the Desktop App
 
 ```bash
 dx serve --platform desktop
 ```
 
----
+## Persistence
 
-## 🏗️ Architecture
+Browser builds save automatically to `localStorage`.
 
-The project follows a strict **Clean Architecture** pattern to ensure maintainability:
+Native builds currently fall back to in-memory state and show a warning banner because a desktop/mobile persistence backend has not been implemented yet.
 
-- **Domain**: Core entities and business invariants (`id`, `bucket`, `card`, `registry`).
-- **Application**: The command dispatcher and high-level view models.
-- **Infrastructure**: Persistence facades (LocalStorage) and logging.
-- **Interface**: The Dioxus UI components and routing.
+The `Export` and `Import` buttons are present in the navigation, but their workflows are still planned rather than implemented.
 
-For a deeper dive, read the full [Design Document](docs/design_document.md).
+## Architecture
 
----
+- Domain: entities, identifiers, and invariants
+- Application: commands and UI-friendly projections
+- Infrastructure: persistence and logging adapters
+- Interface: Dioxus components, routes, and modal flows
 
-## 🧹 Quality & Linting
+See [docs/design_document.md](docs/design_document.md) for the detailed architecture contract and [docs/task.md](docs/task.md) for the current execution plan.
 
-To maintain code quality, the project adheres to strict Rust idioms and formatting. Use the following commands to verify the codebase:
+## Suggested Next Stages
 
-```bash
-# Run unit and integration tests
-cargo test
+1. Replace the move dropdown with drag-and-drop for cards and buckets.
+2. Add notebook-style notes to cards, including titled note pages.
+3. Add due dates and board-level due-state surfacing.
+4. Add configurable tags plus event hooks such as note-open, note-close, and bucket-entry automation.
 
-# Check for lint warnings and suggestions
-cargo clippy --all-targets -- -D warnings
+## License
 
-# Ensure code is formatted correctly
-cargo fmt --check
-```
-
----
-
-## 💾 Data & Persistence
-
-> [!WARNING]
-> Your data is currently stored in your **Browser's LocalStorage**. Clearing your browser cache or switching devices will result in data loss unless you use the **Export** feature.
-
-- **Auto-Save**: The app saves your registry state after every significant change.
-- **Export/Import**: Use the buttons in the Top Navigation bar to download your workspace as a `.json` file for backup or transfer.
-
----
-
-## 🛡️ License
-
-Distributed under the MIT License. See `LICENSE` for more information.
+Distributed under the MIT License.

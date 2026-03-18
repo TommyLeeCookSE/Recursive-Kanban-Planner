@@ -2,6 +2,7 @@ use std::collections::VecDeque;
 use std::sync::{LazyLock, Mutex};
 use thiserror::Error;
 use tracing::Level;
+#[cfg(not(target_arch = "wasm32"))]
 use tracing_subscriber::Layer;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;

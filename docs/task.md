@@ -20,7 +20,10 @@
 - [x] `cargo test --all` passes
 - [x] `cargo clippy --all-targets -- -D warnings` passes
 - [x] `cargo fmt -- --check` passes
+- [x] `cargo check --target wasm32-unknown-unknown` passes
+- [x] `cargo check --no-default-features --features desktop` passes
 - [x] Design document reconciled with the current MVP implementation
+- [x] `README.md` reconciled with actual feature status
 
 ---
 
@@ -95,6 +98,36 @@
 - [x] Readability pass: public API entry points have `///` docs with `# Examples`
 - [x] Documentation reconciled with current MVP behavior
 - [x] Web-target cargo validation is green
-- [ ] `dx serve --platform desktop` verified
-- [ ] `README.md` written
+- [x] Desktop-target cargo compilation validated
+- [ ] `dx serve --platform desktop` verified end-to-end
+- [ ] Export/import flow implemented
 - [ ] Tag `v0.1.0` on GitHub
+
+---
+
+## Proposed Next Stages
+
+### P6 - Direct Manipulation UX
+
+- [ ] Replace the move dropdown with drag-and-drop for cards within a board
+- [ ] Add drag-and-drop bucket ordering in the board view
+- [ ] Decide whether root boards on `Home` should support drag-and-drop ordering too
+
+### P7 - Card Notebook
+
+- [ ] Add notes to cards
+- [ ] Open notes in a notebook-style popup
+- [ ] Support titled note pages rather than a single untitled text blob
+
+### P8 - Due Dates
+
+- [ ] Add an optional due date field to cards
+- [ ] Surface overdue and due-soon state in board cards
+- [ ] Decide whether completion is inferred from bucket membership or stored explicitly
+
+### P9 - Tags and Trigger Rules
+
+- [ ] Add configurable tags to cards
+- [ ] Separate presentational tags from behavior-driving tags if both are needed
+- [ ] Define trigger points such as note-open, note-close, and bucket-entry
+- [ ] Route trigger effects through an explicit rule engine instead of ad hoc UI conditionals

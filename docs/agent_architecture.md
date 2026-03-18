@@ -1,71 +1,76 @@
 # Multi-Agent Architecture
 
-The Recursive Kanban Planner is developed using a structured multi-agent system. Each agent has a narrow role, reads its own `SKILL.md` for instructions, and communicates back through the Orchestrator.
+The Recursive Kanban Planner uses a structured multi-agent workflow. Each agent has a narrow role, reads its own `SKILL.md`, and reports back through the Orchestrator.
 
-**All agent skill definitions live in `.agents/skills/`.**
-
----
+All agent skill definitions live in `.agents/skills/`.
 
 ## Core Flow
 
-1. **User Request** → Orchestrator interprets intent.
-2. Orchestrator reads the required agent skill files and activates the appropriate agents.
-3. **Planner** designs the architecture or confirms the spec before any code is written.
-4. **Implementer** writes production `src/` code per the Planner's spec.
-5. **Tester** writes tests and runs the full verification suite.
-6. **Reviewer** and **Readability** agents gatekeep code quality.
-7. If any agent rejects the work, the Orchestrator routes feedback back to the Implementer.
-8. Once all passes, the Orchestrator commits and notifies the User.
-
----
+1. User request -> Orchestrator interprets intent.
+2. Orchestrator reads the required skill files and activates the right agents.
+3. Planner defines or confirms the architecture before implementation starts.
+4. Implementer writes production `src/` code from the approved spec.
+5. Tester runs the verification suite and adds tests as needed.
+6. Reviewer and Readability gatekeep correctness and maintainability.
+7. If work is rejected, the Orchestrator routes feedback back to the Implementer.
+8. Once the checks pass, the Orchestrator closes the loop with the user.
 
 ## Agent Roster
 
-### 🧠 Orchestrator (The Manager)
-- Central router and decision-maker.
-- Reads skill files, delegates to agents, manages feedback loops.
+### Orchestrator
+
+- Central router and decision-maker
+- Reads skill files, delegates work, and manages feedback loops
 - Skill: `.agents/skills/orchestrator/SKILL.md`
 
-### 🗺️ Planner (The Architect)
-- Enforces Domain-Driven Design and layered architecture.
-- Never writes production code. Maintains `docs/design_document.md`.
+### Planner
+
+- Enforces Domain-Driven Design and layered architecture
+- Never writes production code
+- Maintains `docs/design_document.md`
 - Skill: `.agents/skills/planner/SKILL.md`
 
-### 🛠️ Implementer (The Coder)
-- Writes all Rust and Dioxus code in `src/`.
-- Receives explicit specs from Planner/Orchestrator. Does not invent architecture.
+### Implementer
+
+- Writes Rust and Dioxus production code in `src/`
+- Receives explicit specs from Planner or Orchestrator
 - Skill: `.agents/skills/implementer/SKILL.md`
 
-### 🧪 Tester (The QA Engineer)
-- Writes unit and integration tests. Runs the full verification suite.
-- Rejects implementations that fail `cargo test`, `cargo clippy`, or `cargo fmt`.
+### Tester
+
+- Writes tests and runs the verification suite
+- Rejects work that fails `cargo test`, `cargo clippy`, or `cargo fmt`
 - Skill: `.agents/skills/tester/SKILL.md`
 
-### 🦅 Reviewer (The Gatekeeper)
-- Enforces idiomatic Rust: no `.unwrap()` in production, no unhandled `Result`, no type erasure.
+### Reviewer
+
+- Enforces idiomatic Rust
+- Rejects unhandled `Result`s, unsafe domain shortcuts, and type-erasing patterns
 - Skill: `.agents/skills/reviewer/SKILL.md`
 
-### 📖 Readability (The Editor)
-- Enforces documentation and naming standards.
-- Requires `/// # Examples` on all public domain items.
+### Readability
+
+- Enforces naming, documentation, and API clarity
+- Requires `/// # Examples` on public domain-facing items
 - Skill: `.agents/skills/readability/SKILL.md`
 
-### 📦 Janitor (The Repo Manager)
-- Manages `Cargo.toml`, `cargo fmt`, conventional commits, and dependency hygiene.
+### Janitor
+
+- Manages `Cargo.toml`, formatting, dependency hygiene, and repo-state cleanliness
 - Skill: `.agents/skills/janitor/SKILL.md`
 
-### 🚀 Optimizer (The Modernizer)
-- Applies modern Rust syntax and removes performance anti-patterns.
-- Operates only when the codebase is stable and all tests pass.
+### Optimizer
+
+- Applies modern Rust syntax and performance cleanups once the codebase is stable
 - Skill: `.agents/skills/optimizer/SKILL.md`
 
----
-
 ## Technology Stack
-- **Language:** Rust (edition 2024)
-- **UI Framework:** Dioxus 0.6 (WASM + desktop + mobile from one codebase)
-- **Identifiers:** ULID via the `ulid` crate
-- **Error types:** `thiserror`
-- **Serialization:** `serde` + `serde_json` (infrastructure layer only)
-- **Styling:** Tailwind CSS (Utility-first, configured via `tailwind.config.js`)
-- **No server:** No Axum, no Tokio, no Leptos. Fully client-side.
+
+- Language: Rust (edition 2024)
+- UI framework: Dioxus 0.7
+- Targets: WebAssembly, desktop, and mobile from one codebase
+- Identifiers: ULID via the `ulid` crate
+- Error types: `thiserror`
+- Serialization: `serde` + `serde_json` in the infrastructure layer
+- Styling: Tailwind CSS
+- No server: fully client-side

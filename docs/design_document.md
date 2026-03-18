@@ -32,13 +32,15 @@ Stack:
 
 ## Current Implementation Status
 
-Last reconciled: 2026-03-17
+Last reconciled: 2026-03-18
 
 Current validation state:
 
-- `cargo test --all` passes
+- `cargo test` passes
 - `cargo clippy --all-targets -- -D warnings` passes
-- `cargo fmt -- --check` passes
+- `cargo fmt --check` passes
+- `cargo check --target wasm32-unknown-unknown` passes
+- `cargo check --no-default-features --features desktop` passes
 
 Implemented in the current worktree:
 
@@ -63,9 +65,12 @@ Implemented in the current worktree:
 
 Not yet implemented or not yet fully verified:
 
-- Desktop-target `dx serve --platform desktop` verification
+- Desktop-target `dx serve --platform desktop` runtime verification
 - Native desktop/mobile persistence backend beyond browser storage
-- Release README and tagging workflow
+- Export/import workflows from the top navigation
+- Drag-and-drop card and bucket movement
+- Card notes, due dates, and configurable tag-trigger behavior
+- Release tagging workflow
 
 Recent binding decisions already implemented:
 
@@ -297,6 +302,7 @@ Current non-web behavior:
 - returns `DomainError::InvalidOperation("Persistence is not yet supported on this platform")`
 - app starts with empty in-memory state
 - app shows a visible warning banner that the session is not persisted
+- top-navigation export/import controls are not wired yet
 
 Future:
 
@@ -352,6 +358,7 @@ No extra ordering fields are used.
 - Click a card to drill into that card's board
 - Use the `Back` control to move exactly one level up
 - No breadcrumb tree in MVP
+- Export/import buttons are visual placeholders until the workflow lands
 
 ### Board behavior
 
@@ -378,14 +385,43 @@ No extra ordering fields are used.
 
 ## Future Features (Not in MVP)
 
-- Labels
+- Drag-and-drop card and bucket ordering
+- Root-board ordering in the workspace view
+- Labels and configurable tags
 - Deadlines
 - Recurrence
 - Templates
 - Notes
 - Attachments
+- Event hooks such as note-open, note-close, and bucket-entry automation
 - Multi-user features
 - Permissions
 - Analytics
 - AI planning assistance
 - Cloud sync
+
+## Suggested Next Delivery Stages
+
+### Stage 1: Direct manipulation
+
+- Replace the per-card move dropdown with drag-and-drop inside a board
+- Add bucket drag-and-drop so column ordering is managed visually
+- Introduce explicit ordering for root boards if workspace-level drag-and-drop is desired
+
+### Stage 2: Card notebook
+
+- Add a `CardNotes` model owned by the card
+- Support titled note pages in a notebook-style modal or route
+- Decide early whether notes are a single rich document or multiple ordered pages
+
+### Stage 3: Due dates
+
+- Add an optional due date field to cards in the domain model
+- Surface overdue, due-soon, and completed-state cues in the board UI
+- Decide whether due dates are date-only or timezone-aware timestamps
+
+### Stage 4: Tags and behavior hooks
+
+- Model tags as first-class data instead of free-form strings if they drive behavior
+- Separate visual tags from trigger tags if both concepts are needed
+- Introduce an explicit event-hook layer for actions such as note-open, note-close, or bucket-entry behavior
