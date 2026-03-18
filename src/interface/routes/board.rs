@@ -258,6 +258,7 @@ fn render_column(column: ColumnRenderModel, context: BoardRenderContext) -> Elem
     let mut bucket_drop_index = context.drag.bucket_drop_index;
     let mut is_dragging = context.is_dragging;
     let can_delete_bucket = bucket_name != crate::domain::card::UNASSIGNED_BUCKET_NAME;
+    let can_rename_bucket = can_delete_bucket;
     let column_class = "app-column-surface group flex max-h-full w-80 flex-shrink-0 flex-col rounded-[2rem] p-5 transition-all hover:border-sunfire/30";
 
     rsx! {
@@ -284,17 +285,31 @@ fn render_column(column: ColumnRenderModel, context: BoardRenderContext) -> Elem
                 is_dragging.set(IsDragging(false));
             },
             div {
-                class: "mb-6 flex cursor-grab items-center justify-between rounded-2xl px-3 py-2 active:cursor-grabbing",
+                class: "mb-6 flex flex-col gap-3 rounded-2xl px-3 py-2",
                 div {
-                    h2 { class: "app-kicker transition-colors group-hover:text-sunfire", "{bucket_name}" }
-                }
-                div { class: "flex items-center gap-2",
+                    class: "flex cursor-grab items-start justify-between gap-3 active:cursor-grabbing",
+                    h2 {
+                        class: "app-kicker min-w-0 flex-1 leading-tight transition-colors group-hover:text-sunfire",
+                        "{bucket_name}"
+                    }
+                    div { class: "flex shrink-0 flex-wrap items-center justify-end gap-2",
+                    if can_rename_bucket {
+                        button {
+                            class: "app-button-secondary inline-flex h-7 min-w-[3.25rem] items-center justify-center rounded-full px-2.5 text-[10px] font-black uppercase tracking-widest",
+                            title: "Rename this bucket",
+                            onclick: move |_| active_modal.set(Some(ModalType::EditBucket {
+                                card_id: context.board_id,
+                                bucket_id,
+                            })),
+                            "Rename"
+                        }
+                    }
                     if can_delete_bucket {
                         button {
-                            class: "app-button-secondary inline-flex h-8 min-w-[3.5rem] items-center justify-center rounded-full px-3 text-[11px] font-black uppercase tracking-widest text-red-400 hover:text-red-500",
+                            class: "app-button-secondary inline-flex h-7 min-w-[3rem] items-center justify-center rounded-full px-2.5 text-[10px] font-black uppercase tracking-widest text-red-400 hover:text-red-500",
                             title: "Delete this bucket",
                             onclick: move |_| {
-                                if execute_command_with_feedback(
+                                let _ = execute_command_with_feedback(
                                     Command::RemoveBucket {
                                         card_id: context.board_id,
                                         bucket_id,
@@ -306,22 +321,20 @@ fn render_column(column: ColumnRenderModel, context: BoardRenderContext) -> Elem
                                         "delete bucket {bucket_id} from board {}",
                                         context.board_id
                                     ),
-                                )
-                                .is_err()
-                                {
-                                }
+                                );
                             },
                             "Delete"
                         }
                     }
                     button {
-                        class: "app-button-secondary inline-flex h-8 w-8 items-center justify-center rounded-full border-2 border-dashed p-0 hover:rotate-90",
+                        class: "app-button-secondary inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-dashed p-0 text-sm leading-none hover:rotate-90",
                         onclick: move |_| active_modal.set(Some(ModalType::CreateCard {
                             parent_id: Some(context.board_id),
                             bucket_id: Some(bucket_id),
                         })),
                         "+"
                     }
+                }
                 }
             }
             div { class: "flex-grow overflow-y-auto space-y-4 pr-2",
@@ -434,7 +447,7 @@ fn render_bucket_drop_zone(
                         "board-route",
                         format!("Attempting bucket reorder for {bucket_id} on board {board_id} at index {index}"),
                     );
-                    if execute_command_with_feedback(
+                    let _ = execute_command_with_feedback(
                         Command::ReorderBuckets {
                             card_id: board_id,
                             ordered_ids: reordered,
@@ -445,10 +458,7 @@ fn render_bucket_drop_zone(
                         format!(
                             "reorder buckets on board {board_id} with dragged bucket {bucket_id}"
                         ),
-                    )
-                    .is_err()
-                    {
-                    }
+                    );
                 }
             },
             if is_dragging().0 {

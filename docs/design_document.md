@@ -304,6 +304,19 @@ Layer responsibilities:
 - Infrastructure: persistence, logging, platform adapters
 - Interface: Dioxus components, routing, user-facing flows
 
+### Styling Workflow
+
+- `src/interface/tailwind.css` is the editable source of truth for theme and UI styling.
+- `assets/app.css` is generated output and should be refreshed with `npm run build:css`.
+- `npm run check:css` validates that the generated stylesheet matches the committed asset.
+- Theme, drop-zone, and surface classes should be defined semantically so both light and dark modes stay in sync.
+
+### Browser Smoke Coverage
+
+- `tests/smoke.spec.ts` provides a small Playwright smoke test for app boot, board creation, bucket creation, bucket rename exposure, theme toggle, and top-nav utility visibility.
+- The smoke test is intended as a fast regression check, not a full end-to-end suite.
+- `npm run smoke` runs the CSS parity check and then the smoke suite.
+
 ---
 
 ## Persistence Strategy

@@ -23,6 +23,10 @@
 - [x] Date-only due dates with overdue state
 - [x] Reusable visual labels
 - [x] Popup-only rule presets for note and bucket events
+- [x] Bucket rename is exposed directly in the board UI
+- [x] Modal system split into feature-focused modules
+- [x] `src/interface/tailwind.css` is the editable stylesheet source
+- [x] Browser smoke test covers app boot, board creation, bucket creation, bucket rename, and theme toggle
 - [x] `cargo test --all` passes
 - [x] `cargo clippy --all-targets -- -D warnings` passes
 - [x] `cargo fmt -- --check` passes
@@ -30,6 +34,7 @@
 - [x] `cargo check --no-default-features --features desktop` passes
 - [x] Design document reconciled with the current MVP implementation
 - [x] `README.md` reconciled with actual feature status
+- [x] Frontend tooling added for stylesheet generation and smoke tests
 
 ---
 
@@ -107,6 +112,7 @@
 - [x] Desktop-target cargo compilation validated
 - [ ] `dx serve --platform desktop` verified end-to-end
 - [ ] Tag `v0.1.0` on GitHub
+- [ ] Keep the browser smoke test aligned with future UI changes
 
 ---
 

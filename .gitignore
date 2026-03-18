@@ -1,2 +1,4 @@
 /target
 /logs
+/node_modules
+/test-results

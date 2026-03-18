@@ -47,11 +47,24 @@ What is not fully verified yet:
 - Install the Rust toolchain with `rustup`
 - Install the Dioxus CLI with `cargo install dioxus-cli`
 - Add the web target with `rustup target add wasm32-unknown-unknown`
+- Install the frontend toolchain with `npm install`
 
 ### Run the Web App
 
 ```bash
 dx serve --platform web
+```
+
+To refresh the committed stylesheet after editing `src/interface/tailwind.css`, run:
+
+```bash
+npm run build:css
+```
+
+To run the browser smoke test and CSS parity check together:
+
+```bash
+npm run smoke
 ```
 
 ### Run the Desktop App

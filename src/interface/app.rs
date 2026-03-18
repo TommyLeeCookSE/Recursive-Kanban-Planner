@@ -4,8 +4,8 @@ use crate::infrastructure::logging::record_diagnostic;
 use crate::infrastructure::repository::AppPersistence;
 use crate::interface::Route;
 use crate::interface::components::modal::{
-    BucketModal, CardLabelsModal, CardModal, EditCardModal, ManageLabelsModal, ManageRulesModal,
-    ModalType, NotesModal,
+    BucketModal, CardLabelsModal, CardModal, EditBucketModal, EditCardModal, ManageLabelsModal,
+    ManageRulesModal, ModalType, NotesModal,
 };
 use dioxus::prelude::*;
 use tracing::{Level, info, warn};
@@ -145,6 +145,16 @@ pub fn App() -> Element {
                             BucketModal {
                                 on_close: move |_| active_modal.set(None),
                                 card_id,
+                                registry,
+                            }
+                        }
+                    },
+                    ModalType::EditBucket { card_id, bucket_id } => {
+                        rsx! {
+                            EditBucketModal {
+                                on_close: move |_| active_modal.set(None),
+                                card_id,
+                                bucket_id,
                                 registry,
                             }
                         }
