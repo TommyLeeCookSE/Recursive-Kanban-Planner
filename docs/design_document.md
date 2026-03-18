@@ -26,7 +26,12 @@ A recursive, card-based planning system. Everything is a `Card`. No separate ent
 
 *Last reconciled: 2026-03-17. Update this section whenever a phase is completed.*
 
-### ✅ Implemented and Verified
+**Current validation state:** The current worktree **builds and passes `cargo test --all`**, but it
+is **not yet fully verification-clean**. `cargo clippy --all-targets -- -D warnings` currently
+fails on interface-layer lints in `src/interface/app.rs`, and `cargo fmt -- --check` currently
+reports formatting drift across the interface layer and `src/infrastructure/repository.rs`.
+
+### ✅ Implemented in Current Worktree
 
 | Item | File | Notes |
 | :--- | :--- | :--- |
@@ -43,16 +48,17 @@ A recursive, card-based planning system. Everything is a `Card`. No separate ent
 | `BoardView` / `ColumnView` | `src/application/mod.rs` | Read-only projections for UI rendering |
 | Serde support | `src/domain/*.rs` | `Serialize`/`Deserialize` derives added to all domain types |
 | JsonRepository | `src/infrastructure/mod.rs` | Basic registry persistence |
-| Dioxus Interface | `src/interface/` | `app`, `components`, `routes`, `error_templates` |
+| Dioxus Interface | `src/interface/` | `app`, `components`, `routes`, `error_templates` exist and tests pass, but the current branch is not yet clippy/rustfmt clean |
 | `LocalStorageRepository` | `src/infrastructure/repository.rs` | Saves/Loads registry to browser storage |
 
-### 🔲 Not Yet Implemented
+### 🔲 Not Yet Implemented / Not Yet Verified
 
-- Real Dioxus routing (`/`, `/board/:card_id`)
-- Any UI components beyond the hello-world shell
-- Full Tailwind CSS configuration logic
+- Green `cargo clippy --all-targets -- -D warnings` and `cargo fmt -- --check` on the current interface branch
+- Dedicated `TopBar` and `CardItem` component extraction/polish
+- Full modal flow coverage beyond create-card/create-bucket wiring
+- End-to-end `dx serve` verification for WASM and desktop
 
-### ⚠️ Open Behavioral Decisions (spec gaps the next implementer must resolve in code)
+### ✅ Recently Implemented Behavioral Decisions
 
 1. **Same-parent reparenting** — `reparent_card(id, current_parent)` is a **no-op** returning `Ok(())`. It preserves child ordering and bucket assignment.
 2. **Read-path corruption** — `get_children` and `board_projection` **fail loudly**. `CardNotFound` or `BucketNotFound` are returned if the registry's internal pointers refer to missing cards or buckets.
@@ -182,20 +188,17 @@ impl CardRegistry {
 
 ---
 
-## Unresolved Architectural Decisions
+## Resolved Behavioral Decisions
 
-*These are open specs. Do not code them in without recording the decision here first.*
+*These decisions are resolved and implemented in the current domain layer.*
 
 ### 1. Same-Parent Reparenting Contract
-
-**The question:** What should `reparent_card(card_id, new_parent_id)` do when `new_parent_id` is
-already the card's current parent?
 
 **Decision (binding):**
 `reparent_card` MUST be a no-op when `new_parent_id == card.parent_id()`. It returns `Ok(())`
 immediately, preserving child ordering and bucket assignment unchanged.
 
-**Required change:** Add an early-return guard after existence validation:
+**Implemented behavior:** The registry now performs an early return after existence validation:
 
 ```rust
 if card.parent_id() == Some(new_parent_id) {
@@ -203,20 +206,12 @@ if card.parent_id() == Some(new_parent_id) {
 }
 ```
 
-**Required test:** `test_reparent_to_same_parent_is_noop` — verify child ordering and bucket
+**Regression test:** `test_reparent_to_same_parent_is_noop` — verify child ordering and bucket
 assignment are unchanged after the call.
 
 ---
 
 ### 2. Read-Path Corruption Policy
-
-**The question:** When `get_children` or `board_projection` encounters an internally inconsistent
-state (a parent's `children_ids` list references a `CardId` not in the store, or a child's
-`bucket_id` is not in the parent's bucket list), should the registry fail loudly or silently
-degrade?
-
-**Current implementation:** Silent tolerance — missing children are skipped; unknown bucket IDs
-fall back to Unassigned.
 
 **Decision (binding):** **Fail loudly.**
 
@@ -225,7 +220,7 @@ maintain the invariant that every ID in a `children_ids` list resolves to a stor
 every child's `bucket_id` is valid on its parent. If this invariant is violated, it is a bug in
 the registry code, not a legitimate data state. The read path should surface it immediately.
 
-**Required changes:**
+**Implemented behavior:**
 
 1. `get_children`: replace the `if let Some(child)` guard with a hard failure:
 

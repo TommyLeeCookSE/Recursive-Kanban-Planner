@@ -14,8 +14,8 @@
 - [x] Registry mutations: `rename_card`, `add_bucket`, `reorder_buckets`, `move_card_to_bucket`, `remove_bucket`
 - [x] `detect_cycle`, `reparent_card`, `delete_card` with all three `DeleteStrategy` variants
 - [x] Registry tests: lifecycle, cycle detection, delete strategies, bucket-not-empty guard
-- [x] Dioxus shell compiles — `src/app.rs`
-- [x] `cargo test --all`, `cargo clippy --all-targets -- -D warnings`, `cargo fmt -- --check` all pass
+- [x] Dioxus shell and route scaffolding added — `src/interface/app.rs`, `src/interface/routes/`
+- [ ] `cargo test --all`, `cargo clippy --all-targets -- -D warnings`, `cargo fmt -- --check` all pass on the current interface branch (`cargo test` currently passes; clippy/rustfmt still fail)
 - [x] Architecture documented — `docs/design_document.md`
 - [x] Agent skills defined — `.agents/skills/`
 - [x] GitHub Issues created and P0/P1 issues closed
@@ -67,6 +67,7 @@
 
 ## P4 — Dioxus Interface
 
+- [ ] Fix the current interface lint/format regressions in `src/interface/app.rs` and related interface files
 - [x] `tailwind.config.js`: Initialize Tailwind CSS, configure `darkMode: 'class'`, and setup Warm Orange brand colors.
 - [x] Dioxus Router setup (`/` vs `/board/:card_id`) in `app.rs`.
 - [ ] Implement `TopBar` component (Flexbox: Back Arrow/Previous Card Name, Current Card Name, +Create Bucket, Modifiers).
