@@ -12,9 +12,14 @@ Recursive Kanban Planner is a local-first Kanban application built with Rust and
 
 - Root boards and nested child cards
 - Per-card bucket management
-- Card create, rename, move, reparent, and delete flows
-- Bucket create, rename, remove, and reorder flows in the domain/application layers
+- Card create, edit, move, reparent, and delete flows
+- Bucket create, rename, remove, reorder, and drag-and-drop flows
+- Drag-and-drop for cards, buckets, and root boards
+- Notebook-style notes with titled plain-text pages on each card
+- Date-only due dates with overdue card styling
+- Reusable visual labels and popup-only rule presets
 - Browser persistence through `localStorage`
+- Export, import, and clear-cache utilities in the top navigation
 - Native and web runtime logging
 - Dioxus router-based workspace and board views
 
@@ -33,7 +38,7 @@ cargo check --no-default-features --features desktop
 What is not fully verified yet:
 
 - Manual `dx serve --platform desktop` runtime launch in this environment
-- Export/import workflow from the top navigation
+- Manual browser sanity pass for the newer notebook, due-date, label, rule, and drag/drop flows
 
 ## Getting Started
 
@@ -61,7 +66,7 @@ Browser builds save automatically to `localStorage`.
 
 Native builds currently fall back to in-memory state and show a warning banner because a desktop/mobile persistence backend has not been implemented yet.
 
-The `Export` and `Import` buttons are present in the navigation, but their workflows are still planned rather than implemented.
+The top navigation now includes working `Export`, `Import`, and `Clear Cache` actions for web builds. Import replaces the active workspace only after the snapshot is validated.
 
 ## Architecture
 
@@ -74,10 +79,10 @@ See [docs/design_document.md](docs/design_document.md) for the detailed architec
 
 ## Suggested Next Stages
 
-1. Replace the move dropdown with drag-and-drop for cards and buckets.
-2. Add notebook-style notes to cards, including titled note pages.
-3. Add due dates and board-level due-state surfacing.
-4. Add configurable tags plus event hooks such as note-open, note-close, and bucket-entry automation.
+1. Polish the new notebook, due-date, label, and rule UI so dense cards stay easy to scan.
+2. Expand rule actions beyond popups once the event model feels stable.
+3. Add richer label and rule management ergonomics, including search/filtering for larger workspaces.
+4. Implement a native persistence backend for desktop/mobile targets.
 
 ## License
 

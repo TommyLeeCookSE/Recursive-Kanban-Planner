@@ -1,10 +1,20 @@
+use crate::application::PopupNotification;
 use crate::domain::registry::CardRegistry;
 use crate::infrastructure::logging::record_diagnostic;
 use crate::infrastructure::repository::AppPersistence;
 use crate::interface::Route;
-use crate::interface::components::modal::{BucketModal, CardModal, ModalType, RenameCardModal};
+use crate::interface::components::modal::{
+    BucketModal, CardLabelsModal, CardModal, EditCardModal, ManageLabelsModal, ManageRulesModal,
+    ModalType, NotesModal,
+};
 use dioxus::prelude::*;
 use tracing::{Level, info, warn};
+
+#[derive(Clone, Copy, Default)]
+pub struct IsDark(pub bool);
+
+#[derive(Clone, Copy, Default)]
+pub struct IsDragging(pub bool);
 
 /// The root application component.
 ///
@@ -50,12 +60,14 @@ pub fn App() -> Element {
     });
 
     // Theme state: default to dark mode.
-    let is_dark = use_context_provider(|| Signal::new(true));
+    let is_dark = use_context_provider(|| Signal::new(IsDark(true)));
 
     // Global modal state.
     let mut active_modal = use_context_provider(|| Signal::new(None::<ModalType>));
+    let mut popup_queue = use_context_provider(|| Signal::new(Vec::<PopupNotification>::new()));
+    let _is_dragging = use_context_provider(|| Signal::new(IsDragging(false)));
 
-    let shell_class = if is_dark() {
+    let shell_class = if is_dark().0 {
         "app-shell theme-dark dark"
     } else {
         "app-shell theme-light"
@@ -91,6 +103,30 @@ pub fn App() -> Element {
                 Router::<Route> {}
             }
 
+            if let Some(popup) = popup_queue().first().cloned() {
+                div { class: "fixed bottom-6 right-6 z-[60] max-w-sm",
+                    div { class: "app-modal-surface rounded-[1.5rem] px-5 py-4",
+                        div { class: "mb-3 flex items-start justify-between gap-4",
+                            div {
+                                h3 { class: "app-text-primary text-lg font-bold", "{popup.title}" }
+                                p { class: "app-text-muted mt-2 text-sm", "{popup.message}" }
+                            }
+                            button {
+                                class: "app-button-ghost p-2",
+                                onclick: move |_| {
+                                    let mut queued = popup_queue();
+                                    if !queued.is_empty() {
+                                        queued.remove(0);
+                                        popup_queue.set(queued);
+                                    }
+                                },
+                                "X"
+                            }
+                        }
+                    }
+                }
+            }
+
             // Modal Overlay Dispatcher
             if let Some(modal) = active_modal() {
                 match modal {
@@ -113,16 +149,49 @@ pub fn App() -> Element {
                             }
                         }
                     },
-                    ModalType::RenameCard { id, current_title } => {
+                    ModalType::EditCard { id } => {
                         rsx! {
-                            RenameCardModal {
+                            EditCardModal {
                                 on_close: move |_| active_modal.set(None),
                                 id,
-                                current_title,
                                 registry,
                             }
                         }
                     },
+                    ModalType::CardNotes { card_id } => {
+                        rsx! {
+                            NotesModal {
+                                on_close: move |_| active_modal.set(None),
+                                card_id,
+                                registry,
+                            }
+                        }
+                    }
+                    ModalType::CardLabels { card_id } => {
+                        rsx! {
+                            CardLabelsModal {
+                                on_close: move |_| active_modal.set(None),
+                                card_id,
+                                registry,
+                            }
+                        }
+                    }
+                    ModalType::ManageLabels {} => {
+                        rsx! {
+                            ManageLabelsModal {
+                                on_close: move |_| active_modal.set(None),
+                                registry,
+                            }
+                        }
+                    }
+                    ModalType::ManageRules {} => {
+                        rsx! {
+                            ManageRulesModal {
+                                on_close: move |_| active_modal.set(None),
+                                registry,
+                            }
+                        }
+                    }
                 }
             }
         }

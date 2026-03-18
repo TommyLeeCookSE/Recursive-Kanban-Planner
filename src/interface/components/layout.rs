@@ -2,6 +2,7 @@ use crate::domain::registry::CardRegistry;
 #[cfg(target_arch = "wasm32")]
 use crate::infrastructure::repository::{AppPersistence, JsonRepository};
 use crate::interface::Route;
+use crate::interface::app::IsDark;
 use crate::interface::components::modal::ModalType;
 use dioxus::prelude::*;
 use dioxus_router::Navigator;
@@ -25,7 +26,7 @@ use web_sys::{Blob, HtmlAnchorElement, HtmlInputElement, Url};
 /// ```
 #[component]
 pub fn NavbarLayout() -> Element {
-    let mut is_dark = use_context::<Signal<bool>>();
+    let mut is_dark = use_context::<Signal<IsDark>>();
     let mut active_modal = use_context::<Signal<Option<ModalType>>>();
     let registry = use_context::<Signal<CardRegistry>>();
     let persistence_warning = use_context::<Signal<Option<String>>>();
@@ -61,6 +62,18 @@ pub fn NavbarLayout() -> Element {
                         {render_export_button(registry, persistence_warning)}
                         {render_import_button(registry, active_modal, persistence_warning, nav)}
                         {render_clear_cache_button(registry, active_modal, persistence_warning, nav)}
+                        button {
+                            class: "app-utility-button",
+                            title: "Manage reusable card labels",
+                            onclick: move |_| active_modal.set(Some(ModalType::ManageLabels {})),
+                            "Labels"
+                        }
+                        button {
+                            class: "app-utility-button",
+                            title: "Manage card automation rules",
+                            onclick: move |_| active_modal.set(Some(ModalType::ManageRules {})),
+                            "Rules"
+                        }
                     }
                     if cfg!(target_arch = "wasm32") {
                         span { class: "app-kicker",
@@ -70,12 +83,12 @@ pub fn NavbarLayout() -> Element {
 
                     button {
                         class: "app-button-secondary min-w-[7.5rem] px-4 py-3 text-sm",
-                        onclick: move |_| is_dark.set(!is_dark()),
+                        onclick: move |_| is_dark.set(IsDark(!is_dark().0)),
                         title: "Toggle Light/Dark Mode",
-                        if is_dark() {
-                            span { "Sunrise" }
-                        } else {
+                        if is_dark().0 {
                             span { "Evening" }
+                        } else {
+                            span { "Sunrise" }
                         }
                     }
                 }
@@ -397,29 +410,22 @@ fn clear_workspace_with_confirmation() -> Result<bool, crate::domain::error::Dom
 ///         title: "Roadmap".to_string(),
 ///         back_route: Route::Home {},
 ///         back_label: "Workspace".to_string(),
-///         primary_label: "Create Bucket".to_string(),
-///         on_primary: move |_| {},
-///         secondary_label: "Settings".to_string(),
-///         on_secondary: move |_| {},
+///         button {
+///             class: "app-button-secondary h-14 px-8 text-sunfire",
+///             onclick: move |_| {},
+///             "Action"
+///         }
 ///     }
 /// }
 /// ```
 #[component]
-pub fn TopBar(
-    title: String,
-    back_route: Route,
-    back_label: String,
-    primary_label: String,
-    on_primary: EventHandler<()>,
-    secondary_label: String,
-    on_secondary: EventHandler<()>,
-) -> Element {
+pub fn TopBar(title: String, back_route: Route, back_label: String, children: Element) -> Element {
     rsx! {
         div { class: "app-panel border-b px-6 py-8 lg:px-12",
             div { class: "max-w-7xl mx-auto flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between",
                 div { class: "flex items-start gap-6",
                     button {
-                        class: "app-button-secondary mt-1.5 p-3 group",
+                        class: "app-button-secondary mt-1.5 min-w-[10rem] justify-center px-6 py-4 text-base font-black group",
                         onclick: move |_| {
                             navigator().push(back_route.clone());
                         },
@@ -436,17 +442,7 @@ pub fn TopBar(
                 }
 
                 div { class: "flex flex-wrap items-center gap-4",
-                    button {
-                        class: "app-button-secondary h-14 px-8 text-sunfire",
-                        onclick: move |_| on_primary.call(()),
-                        span { class: "text-xl", "+" }
-                        "{primary_label}"
-                    }
-                    button {
-                        class: "app-button-secondary h-14 px-8",
-                        onclick: move |_| on_secondary.call(()),
-                        "{secondary_label}"
-                    }
+                    {children}
                 }
             }
         }

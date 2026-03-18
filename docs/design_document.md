@@ -46,19 +46,20 @@ Implemented in the current worktree:
 
 | Item | File | Notes |
 | :--- | :--- | :--- |
-| `CardId` and `BucketId` newtypes | `src/domain/id.rs` | ULID-backed, fully typed identifiers |
+| `CardId`, `BucketId`, and feature id newtypes | `src/domain/id.rs` | ULID-backed ids for cards, buckets, notes, labels, and rules |
 | `Bucket` entity | `src/domain/bucket.rs` | Private fields and controlled mutators |
-| `Card` entity | `src/domain/card.rs` | Local invariants enforced inside the entity |
+| `Card` entity | `src/domain/card.rs` | Local invariants enforced inside the entity, including notes, due dates, labels, and rules |
+| `NotePage`, `DueDate`, `LabelDefinition`, `RuleDefinition` | `src/domain/` | Feature-specific value objects and definitions |
 | `DomainError` | `src/domain/error.rs` | Typed domain errors throughout the domain/application layers |
-| `CardRegistry` and `DeleteStrategy` | `src/domain/registry.rs` | Cross-card invariant boundary |
+| `CardRegistry` and `DeleteStrategy` | `src/domain/registry.rs` | Cross-card invariant boundary plus workspace-level labels/rules |
 | `Command` dispatcher | `src/application/mod.rs` | `execute` owns command lifecycle logging |
-| `BoardView` and `ColumnView` projections | `src/application/mod.rs` | Read-only UI projections |
+| `BoardView`, `ColumnView`, and rule evaluation | `src/application/mod.rs` | Read-only UI projections plus popup trigger evaluation |
 | JSON persistence | `src/infrastructure/repository.rs` | Serialize/deserialize full registry state |
 | Browser persistence | `src/infrastructure/repository.rs` | `localStorage` on `wasm32` |
 | `AppPersistence` facade | `src/infrastructure/repository.rs` | Explicit browser-first persistence boundary |
 | Runtime logging | `src/infrastructure/logging.rs` | `tracing`, diagnostics buffer, native/web setup |
 | Dioxus shell and routing | `src/interface/` | App shell, routes, modal system, board/home views |
-| `TopBar`, `CardItem`, modal flows | `src/interface/components/` | Create, rename, move, and bucket creation UI |
+| `TopBar`, `CardItem`, modal flows | `src/interface/components/` | Create/edit card, notes, labels, rules, and bucket UI |
 | Deterministic child-card creation | `src/interface/components/modal.rs` | Child creation requires a real bucket id |
 | Fail-loud board fallback | `src/interface/routes/board.rs` | Board load preserves the real `DomainError` for logs |
 | Public API docs with examples | `src/application/`, `src/infrastructure/`, `src/interface/` | Public entry points now have `# Examples` blocks |
@@ -67,9 +68,7 @@ Not yet implemented or not yet fully verified:
 
 - Desktop-target `dx serve --platform desktop` runtime verification
 - Native desktop/mobile persistence backend beyond browser storage
-- Export/import workflows from the top navigation
-- Drag-and-drop card and bucket movement
-- Card notes, due dates, and configurable tag-trigger behavior
+- Manual browser sanity pass across the newer notes, due-date, labels, rules, and drag/drop flows
 - Release tagging workflow
 
 Recent binding decisions already implemented:
@@ -82,9 +81,15 @@ Recent binding decisions already implemented:
 
 ---
 
-## Core Concept: Everything Is a Card
+## Core Concept: Cards And Buckets
 
-Cards form a strict tree.
+The current shipped model is intentionally recursive, but it is not cards-only.
+
+- `Card` is the primary planning item and board owner.
+- `Bucket` is a column owned by a card.
+- Opening a card means viewing that card's buckets and child cards.
+
+Cards still form a strict tree:
 
 - Root cards have `parent_id: None`.
 - Non-root cards have both `parent_id: Some(...)` and `bucket_id: Some(...)`.
@@ -243,6 +248,7 @@ Current enforced behavior:
 - child-card creation without a selected bucket is rejected before any command is built
 - the modal stays open and shows inline validation feedback
 - the application layer remains the single owner of command logging
+- note-open, note-close, and moved-to-bucket events are routed through a shared popup-rule dispatcher
 
 ### Board route failure handling
 
@@ -253,6 +259,16 @@ Current enforced behavior:
 - `build_board_view(...)` errors remain typed
 - the route logs the full `DomainError`
 - the user sees a stable fallback panel rather than a misleading "not found" screen
+
+### Persistence validation
+
+The persistence boundary validates deserialized registry state before it is accepted.
+
+Current enforced behavior:
+
+- malformed or tampered snapshots are rejected during JSON load/import
+- legacy snapshots without newer optional fields still load through serde defaults
+- workspace-level label and rule definitions must stay consistent with per-card assignments
 
 ---
 
@@ -302,7 +318,7 @@ Current non-web behavior:
 - returns `DomainError::InvalidOperation("Persistence is not yet supported on this platform")`
 - app starts with empty in-memory state
 - app shows a visible warning banner that the session is not persisted
-- top-navigation export/import controls are not wired yet
+- non-web export/import/clear-cache controls stay unavailable
 
 Future:
 
@@ -339,6 +355,7 @@ Ownership rules:
 
 - Bucket order is the order of `Vec<Bucket>` on the parent card.
 - Child order is the order of `Vec<CardId>` on the parent card.
+- Root-card order is persisted explicitly in `CardRegistry`.
 
 No extra ordering fields are used.
 
@@ -358,21 +375,27 @@ No extra ordering fields are used.
 - Click a card to drill into that card's board
 - Use the `Back` control to move exactly one level up
 - No breadcrumb tree in MVP
-- Export/import buttons are visual placeholders until the workflow lands
+- Web builds expose working export/import/clear-cache controls
+- Workspace-level label and rule managers live in the top navigation
 
 ### Board behavior
 
 - Horizontal scrolling for board columns
 - Vertical scrolling inside columns
-- `CardItem` supports open, rename, and move actions
+- `CardItem` supports open, edit, delete, notes, due-date, label, and rule-aware display
+- Cards and buckets support drag-and-drop reordering
+- Root cards on Home support drag-and-drop reordering
 - Cards may move between buckets inside the same board only
 
 ### Modal behavior
 
 - Background blur
 - Create card
-- Rename card
+- Edit card
 - Create bucket
+- Notebook-style notes modal
+- Workspace label manager
+- Workspace rule manager
 - Inline validation if a child card is missing destination bucket context
 
 ### Error behavior
@@ -380,20 +403,19 @@ No extra ordering fields are used.
 - Board load errors render a user-safe fallback panel
 - Persistence failures surface a visible warning banner
 - Command failures are logged in the application layer and surfaced in the relevant modal when appropriate
+- Rule-triggered popups are queued FIFO so multiple matches do not collide
 
 ---
 
 ## Future Features (Not in MVP)
 
-- Drag-and-drop card and bucket ordering
-- Root-board ordering in the workspace view
-- Labels and configurable tags
-- Deadlines
+- Search and filtering across larger workspaces
+- Rich-text or attachment support for notes
+- More rule actions beyond popup notifications
+- Native desktop/mobile persistence
 - Recurrence
 - Templates
-- Notes
-- Attachments
-- Event hooks such as note-open, note-close, and bucket-entry automation
+- Event hooks beyond note-open, note-close, and bucket-entry popup behavior
 - Multi-user features
 - Permissions
 - Analytics
@@ -402,26 +424,20 @@ No extra ordering fields are used.
 
 ## Suggested Next Delivery Stages
 
-### Stage 1: Direct manipulation
+### Stage 1: UI polish
 
-- Replace the per-card move dropdown with drag-and-drop inside a board
-- Add bucket drag-and-drop so column ordering is managed visually
-- Introduce explicit ordering for root boards if workspace-level drag-and-drop is desired
+- Refine drag/drop affordances now that cards can display more metadata
+- Improve dense-card readability across light and dark themes
+- Tighten modal spacing and settings ergonomics
 
-### Stage 2: Card notebook
+### Stage 2: Rule expansion
 
-- Add a `CardNotes` model owned by the card
-- Support titled note pages in a notebook-style modal or route
-- Decide early whether notes are a single rich document or multiple ordered pages
+- Add more rule actions once popup-only behavior feels stable
+- Consider rule filters or workspace-level enable/disable states
+- Evaluate whether rules need auditability or a recent-events panel
 
-### Stage 3: Due dates
+### Stage 3: Native persistence
 
-- Add an optional due date field to cards in the domain model
-- Surface overdue, due-soon, and completed-state cues in the board UI
-- Decide whether due dates are date-only or timezone-aware timestamps
-
-### Stage 4: Tags and behavior hooks
-
-- Model tags as first-class data instead of free-form strings if they drive behavior
-- Separate visual tags from trigger tags if both concepts are needed
-- Introduce an explicit event-hook layer for actions such as note-open, note-close, or bucket-entry behavior
+- Add a desktop/mobile persistence backend behind `AppPersistence`
+- Keep import/export compatible across browser and native targets
+- Verify end-to-end desktop runtime behavior with the persisted backend

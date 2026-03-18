@@ -17,6 +17,12 @@
 - [x] Runtime logging foundation in `src/infrastructure/logging.rs`
 - [x] Build logging wrapper scripts under `scripts/`
 - [x] Dioxus shell, routes, board view, home view, and modal flows
+- [x] Export, import, and clear-cache web utilities
+- [x] Drag-and-drop for cards, buckets, and root boards
+- [x] Notebook-style notes with titled plain-text pages
+- [x] Date-only due dates with overdue state
+- [x] Reusable visual labels
+- [x] Popup-only rule presets for note and bucket events
 - [x] `cargo test --all` passes
 - [x] `cargo clippy --all-targets -- -D warnings` passes
 - [x] `cargo fmt -- --check` passes
@@ -100,34 +106,26 @@
 - [x] Web-target cargo validation is green
 - [x] Desktop-target cargo compilation validated
 - [ ] `dx serve --platform desktop` verified end-to-end
-- [ ] Export/import flow implemented
 - [ ] Tag `v0.1.0` on GitHub
 
 ---
 
 ## Proposed Next Stages
 
-### P6 - Direct Manipulation UX
+### P6 - UI Polish
 
-- [ ] Replace the move dropdown with drag-and-drop for cards within a board
-- [ ] Add drag-and-drop bucket ordering in the board view
-- [ ] Decide whether root boards on `Home` should support drag-and-drop ordering too
+- [ ] Tighten drag-and-drop affordances now that boards carry more metadata
+- [ ] Rebalance card density, spacing, and readability
+- [ ] Improve modal ergonomics for note, label, and rule editing
 
-### P7 - Card Notebook
+### P7 - Rule Expansion
 
-- [ ] Add notes to cards
-- [ ] Open notes in a notebook-style popup
-- [ ] Support titled note pages rather than a single untitled text blob
+- [ ] Add more rule actions beyond popup notifications
+- [ ] Explore enable/disable or filter controls for larger rule sets
+- [ ] Decide whether recent rule activity needs a visible history panel
 
-### P8 - Due Dates
+### P8 - Native Persistence
 
-- [ ] Add an optional due date field to cards
-- [ ] Surface overdue and due-soon state in board cards
-- [ ] Decide whether completion is inferred from bucket membership or stored explicitly
-
-### P9 - Tags and Trigger Rules
-
-- [ ] Add configurable tags to cards
-- [ ] Separate presentational tags from behavior-driving tags if both are needed
-- [ ] Define trigger points such as note-open, note-close, and bucket-entry
-- [ ] Route trigger effects through an explicit rule engine instead of ad hoc UI conditionals
+- [ ] Add a desktop/mobile persistence backend behind `AppPersistence`
+- [ ] Verify export/import/clear-cache behavior across native and web targets
+- [ ] Run and verify `dx serve --platform desktop` end-to-end

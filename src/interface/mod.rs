@@ -6,6 +6,7 @@
 //! It includes the root application component, individual UI components,
 //! routing definitions, and error UI templates.
 
+pub mod actions;
 pub mod app;
 pub mod components;
 pub mod error_templates;

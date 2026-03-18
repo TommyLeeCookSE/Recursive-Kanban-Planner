@@ -1,33 +1,11 @@
-use crate::domain::id::BucketId;
 use dioxus::prelude::*;
-use std::str::FromStr;
-
-/// Defines a potential destination bucket for a card move action.
-///
-/// # Examples
-///
-/// ```rust
-/// use kanban_planner::domain::id::BucketId;
-/// use kanban_planner::interface::components::card_item::MoveTarget;
-///
-/// let target = MoveTarget {
-///     id: BucketId::default(),
-///     name: "Doing".to_string(),
-/// };
-/// assert_eq!(target.name, "Doing");
-/// ```
-#[derive(Clone, PartialEq, Debug, serde::Serialize, serde::Deserialize)]
-pub struct MoveTarget {
-    pub id: BucketId,
-    pub name: String,
-}
 
 /// A premium, reusable card component for both Workspace and Board views.
 ///
 /// Features:
 /// - Clickable area for navigation (opening the card).
 /// - Optional "Rename" action.
-/// - Optional "Move" dropdown (only visible if `move_targets` is provided).
+/// - Optional "Delete" action.
 ///
 /// # Examples
 ///
@@ -36,7 +14,6 @@ pub struct MoveTarget {
 ///     CardItem {
 ///         title: "Design API".to_string(),
 ///         subtitle: "2 nested items".to_string(),
-///         current_bucket_id: None,
 ///         on_open: move |_| {},
 ///     }
 /// }
@@ -47,31 +24,22 @@ pub fn CardItem(
     title: String,
     /// Second line of text for counts or metadata.
     subtitle: String,
-    /// Current bucket ID (used to pre-select in the Move dropdown).
-    current_bucket_id: Option<BucketId>,
-    /// List of available buckets to move this card into.
-    #[props(default)]
-    move_targets: Vec<MoveTarget>,
+    #[props(default)] due_date: Option<String>,
+    #[props(default)] is_overdue: bool,
+    #[props(default)] labels: Vec<Element>,
     /// Triggered when the main body of the card is clicked.
     on_open: EventHandler<()>,
     /// Optional rename event. If None, the rename button is hidden.
     #[props(default)]
     on_rename: Option<EventHandler<()>>,
-    /// Optional move event. If None or if `move_targets` is empty, the move UI is hidden.
+    /// Optional delete event. If None, the delete button is hidden.
     #[props(default)]
-    on_move: Option<EventHandler<BucketId>>,
+    on_delete: Option<EventHandler<()>>,
 ) -> Element {
-    let current_bucket_value = current_bucket_id
-        .map(|id| id.to_string())
-        .unwrap_or_default();
-
-    let show_move_ui = on_move.is_some() && !move_targets.is_empty();
-
     rsx! {
         article {
             class: "app-card-surface group flex flex-col rounded-[1.75rem] transition-all hover:border-sunfire/50 hover:-translate-y-0.5",
 
-            // Primary Action Area
             button {
                 class: "flex-grow w-full rounded-t-[1.75rem] p-6 text-left outline-none transition-colors focus:ring-2 focus:ring-sunfire/30",
                 onclick: move |_| on_open.call(()),
@@ -81,37 +49,37 @@ pub fn CardItem(
                 p { class: "app-text-soft mt-3 text-xs font-medium uppercase tracking-widest",
                     "{subtitle}"
                 }
-            }
-
-            // Secondary Actions (if provided)
-            if on_rename.is_some() || show_move_ui {
-                div { class: "flex flex-wrap items-center gap-4 rounded-b-[1.75rem] border-t px-5 py-4", style: "border-color: var(--app-border); background-color: color-mix(in srgb, var(--app-surface-soft) 74%, transparent);",
-
-                    if let (Some(move_handler), true) = (on_move, show_move_ui) {
-                        div { class: "flex items-center gap-2",
-                            label { class: "app-kicker",
-                                "Move"
-                            }
-                            select {
-                                class: "app-input rounded-full px-3 py-1.5 text-xs font-semibold",
-                                value: "{current_bucket_value}",
-                                onchange: move |e| {
-                                    if let Ok(bucket_id) = BucketId::from_str(&e.value()) {
-                                        move_handler.call(bucket_id);
-                                    }
-                                },
-                                for target in move_targets {
-                                    option { value: "{target.id}", "{target.name}" }
-                                }
-                            }
+                if let Some(due_date) = due_date {
+                    p {
+                        class: if is_overdue { "mt-3 text-sm font-semibold text-red-500" } else { "app-text-muted mt-3 text-sm font-semibold" },
+                        "Due {due_date}"
+                    }
+                }
+                if !labels.is_empty() {
+                    div { class: "mt-4 flex flex-wrap gap-2",
+                        for label in labels {
+                            {label}
                         }
                     }
+                }
+            }
 
-                    if let Some(rename_handler) = on_rename {
-                        button {
-                            class: "app-button-secondary ml-auto rounded-full px-3 py-1.5 text-[11px] font-black uppercase tracking-widest",
-                            onclick: move |_| rename_handler.call(()),
-                            "Rename"
+            if on_rename.is_some() || on_delete.is_some() {
+                div { class: "flex items-center justify-end rounded-b-[1.75rem] border-t px-5 py-4", style: "border-color: var(--app-border); background-color: color-mix(in srgb, var(--app-surface-soft) 74%, transparent);",
+                    div { class: "flex items-center gap-2",
+                        if let Some(delete_handler) = on_delete {
+                            button {
+                                class: "app-button-secondary rounded-full px-3 py-1.5 text-[11px] font-black uppercase tracking-widest text-red-400 hover:text-red-500",
+                                onclick: move |_| delete_handler.call(()),
+                                "Delete"
+                            }
+                        }
+                        if let Some(rename_handler) = on_rename {
+                            button {
+                                class: "app-button-secondary rounded-full px-3 py-1.5 text-[11px] font-black uppercase tracking-widest",
+                                onclick: move |_| rename_handler.call(()),
+                                "Edit"
+                            }
                         }
                     }
                 }

@@ -1,5 +1,9 @@
 pub mod bucket;
 pub mod card;
+pub mod due_date;
 pub mod error;
 pub mod id;
+pub mod label;
+pub mod note;
 pub mod registry;
+pub mod rule;

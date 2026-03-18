@@ -16,8 +16,10 @@
 //! See `docs/rust-for-python-devs.md` for explanations of Rust patterns used here.
 
 use crate::domain::bucket::Bucket;
+use crate::domain::due_date::DueDate;
 use crate::domain::error::DomainError;
-use crate::domain::id::{BucketId, CardId};
+use crate::domain::id::{BucketId, CardId, LabelId, NotePageId, RuleId};
+use crate::domain::note::NotePage;
 
 use serde::{Deserialize, Serialize};
 
@@ -47,6 +49,14 @@ pub struct Card {
     children_ids: Vec<CardId>,
     bucket_id: Option<BucketId>,
     buckets: Vec<Bucket>,
+    #[serde(default)]
+    notes: Vec<NotePage>,
+    #[serde(default)]
+    due_date: Option<DueDate>,
+    #[serde(default)]
+    label_ids: Vec<LabelId>,
+    #[serde(default)]
+    rule_ids: Vec<RuleId>,
 }
 
 impl Card {
@@ -75,6 +85,10 @@ impl Card {
             children_ids: Vec::new(),
             bucket_id: None,
             buckets: vec![Bucket::new(UNASSIGNED_BUCKET_NAME.to_string())],
+            notes: Vec::new(),
+            due_date: None,
+            label_ids: Vec::new(),
+            rule_ids: Vec::new(),
         })
     }
 
@@ -113,6 +127,10 @@ impl Card {
             children_ids: Vec::new(),
             bucket_id: Some(bucket_id),
             buckets: vec![Bucket::new(UNASSIGNED_BUCKET_NAME.to_string())],
+            notes: Vec::new(),
+            due_date: None,
+            label_ids: Vec::new(),
+            rule_ids: Vec::new(),
         })
     }
 
@@ -149,6 +167,22 @@ impl Card {
     /// Returns a slice of the ordered buckets defined for this card's board.
     pub fn buckets(&self) -> &[Bucket] {
         &self.buckets
+    }
+
+    pub fn notes(&self) -> &[NotePage] {
+        &self.notes
+    }
+
+    pub fn due_date(&self) -> Option<&DueDate> {
+        self.due_date.as_ref()
+    }
+
+    pub fn label_ids(&self) -> &[LabelId] {
+        &self.label_ids
+    }
+
+    pub fn rule_ids(&self) -> &[RuleId] {
+        &self.rule_ids
     }
 
     // -------------------------------------------------------------------------
@@ -326,6 +360,75 @@ impl Card {
         Ok(())
     }
 
+    pub fn add_note_page(&mut self, title: String) -> Result<NotePageId, DomainError> {
+        let note = NotePage::new(title)?;
+        let id = note.id();
+        self.notes.push(note);
+        Ok(id)
+    }
+
+    pub fn rename_note_page(&mut self, id: NotePageId, title: String) -> Result<(), DomainError> {
+        let note = self
+            .notes
+            .iter_mut()
+            .find(|note| note.id() == id)
+            .ok_or_else(|| DomainError::InvalidOperation(format!("Note page not found: {id}")))?;
+        note.rename(title)
+    }
+
+    pub fn save_note_page_body(&mut self, id: NotePageId, body: String) -> Result<(), DomainError> {
+        let note = self
+            .notes
+            .iter_mut()
+            .find(|note| note.id() == id)
+            .ok_or_else(|| DomainError::InvalidOperation(format!("Note page not found: {id}")))?;
+        note.set_body(body);
+        Ok(())
+    }
+
+    pub fn delete_note_page(&mut self, id: NotePageId) -> Result<(), DomainError> {
+        let original_len = self.notes.len();
+        self.notes.retain(|note| note.id() != id);
+        if self.notes.len() == original_len {
+            return Err(DomainError::InvalidOperation(format!(
+                "Note page not found: {id}"
+            )));
+        }
+        Ok(())
+    }
+
+    pub fn set_due_date(&mut self, due_date: Option<DueDate>) {
+        self.due_date = due_date;
+    }
+
+    pub fn assign_label(&mut self, label_id: LabelId) {
+        if !self.label_ids.contains(&label_id) {
+            self.label_ids.push(label_id);
+        }
+    }
+
+    pub fn clear_label_assignments(&mut self, ordered_ids: Vec<LabelId>) {
+        self.label_ids = ordered_ids;
+    }
+
+    pub fn remove_label_assignment(&mut self, label_id: LabelId) {
+        self.label_ids.retain(|id| *id != label_id);
+    }
+
+    pub fn assign_rule(&mut self, rule_id: RuleId) {
+        if !self.rule_ids.contains(&rule_id) {
+            self.rule_ids.push(rule_id);
+        }
+    }
+
+    pub fn clear_rule_assignments(&mut self, ordered_ids: Vec<RuleId>) {
+        self.rule_ids = ordered_ids;
+    }
+
+    pub fn remove_rule_assignment(&mut self, rule_id: RuleId) {
+        self.rule_ids.retain(|id| *id != rule_id);
+    }
+
     // -------------------------------------------------------------------------
     // Child management (called by CardRegistry during structural mutations)
     // -------------------------------------------------------------------------
@@ -460,5 +563,21 @@ mod tests {
             Card::new_root("   ".to_string()),
             Err(DomainError::EmptyTitle)
         ));
+    }
+
+    #[test]
+    fn test_note_page_lifecycle() {
+        let mut card = Card::new_root("Root".to_string()).unwrap();
+        let note_id = card.add_note_page("Ideas".to_string()).unwrap();
+        card.save_note_page_body(note_id, "hello".to_string())
+            .unwrap();
+        card.rename_note_page(note_id, "Refined".to_string())
+            .unwrap();
+
+        assert_eq!(card.notes()[0].title(), "Refined");
+        assert_eq!(card.notes()[0].body(), "hello");
+
+        card.delete_note_page(note_id).unwrap();
+        assert!(card.notes().is_empty());
     }
 }

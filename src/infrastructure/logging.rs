@@ -87,13 +87,19 @@ pub fn init_logging() -> Result<LoggingGuard, LoggingInitError> {
         console_error_panic_hook::set_once();
 
         let subscriber = tracing_wasm::WASMLayer::new(tracing_wasm::WASMLayerConfig::default());
-        tracing_subscriber::registry().with(subscriber).try_init()?;
+        let log_level = resolved_log_level();
+        let filter = tracing_subscriber::EnvFilter::try_new(&log_level)
+            .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("kanban_planner=info,warn"));
+        tracing_subscriber::registry()
+            .with(filter)
+            .with(subscriber)
+            .try_init()?;
 
         tracing::info!(
             version = env!("CARGO_PKG_VERSION"),
             target = target_name(),
             feature = feature_name(),
-            log_level = resolved_log_level(),
+            log_level = %log_level,
             "Logging initialized for web runtime"
         );
         record_diagnostic(Level::INFO, "startup", "Web logging initialized");

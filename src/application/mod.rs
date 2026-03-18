@@ -1,8 +1,11 @@
 use crate::domain::bucket::Bucket;
 use crate::domain::card::Card;
+use crate::domain::due_date::DueDate;
 use crate::domain::error::DomainError;
-use crate::domain::id::{BucketId, CardId};
+use crate::domain::id::{BucketId, CardId, LabelId, NotePageId, RuleId};
+use crate::domain::label::LabelColor;
 use crate::domain::registry::{CardRegistry, DeleteStrategy};
+use crate::domain::rule::{RuleAction, RuleDefinition, RuleTrigger};
 use crate::infrastructure::logging::record_diagnostic;
 use tracing::{Level, error, info};
 
@@ -31,6 +34,54 @@ pub enum Command {
     RenameCard {
         id: CardId,
         title: String,
+    },
+    AddNotePage {
+        card_id: CardId,
+        title: String,
+    },
+    RenameNotePage {
+        card_id: CardId,
+        note_page_id: NotePageId,
+        title: String,
+    },
+    SaveNotePageBody {
+        card_id: CardId,
+        note_page_id: NotePageId,
+        body: String,
+    },
+    DeleteNotePage {
+        card_id: CardId,
+        note_page_id: NotePageId,
+    },
+    SetDueDate {
+        card_id: CardId,
+        due_date: DueDate,
+    },
+    ClearDueDate {
+        card_id: CardId,
+    },
+    CreateLabelDefinition {
+        name: String,
+        color: LabelColor,
+    },
+    DeleteLabelDefinition {
+        label_id: LabelId,
+    },
+    SetCardLabels {
+        card_id: CardId,
+        label_ids: Vec<LabelId>,
+    },
+    CreateRuleDefinition {
+        name: String,
+        trigger: RuleTrigger,
+        action: RuleAction,
+    },
+    DeleteRuleDefinition {
+        rule_id: RuleId,
+    },
+    SetCardRules {
+        card_id: CardId,
+        rule_ids: Vec<RuleId>,
     },
     DeleteCard {
         id: CardId,
@@ -63,6 +114,9 @@ pub enum Command {
     },
     ReorderChildren {
         card_id: CardId,
+        ordered_ids: Vec<CardId>,
+    },
+    ReorderRootCards {
         ordered_ids: Vec<CardId>,
     },
 }
@@ -107,6 +161,44 @@ pub fn execute(command: Command, registry: &mut CardRegistry) -> Result<(), Doma
             Ok(())
         }
         Command::RenameCard { id, title } => registry.rename_card(id, title),
+        Command::AddNotePage { card_id, title } => {
+            registry.add_note_page(card_id, title)?;
+            Ok(())
+        }
+        Command::RenameNotePage {
+            card_id,
+            note_page_id,
+            title,
+        } => registry.rename_note_page(card_id, note_page_id, title),
+        Command::SaveNotePageBody {
+            card_id,
+            note_page_id,
+            body,
+        } => registry.save_note_page_body(card_id, note_page_id, body),
+        Command::DeleteNotePage {
+            card_id,
+            note_page_id,
+        } => registry.delete_note_page(card_id, note_page_id),
+        Command::SetDueDate { card_id, due_date } => registry.set_due_date(card_id, due_date),
+        Command::ClearDueDate { card_id } => registry.clear_due_date(card_id),
+        Command::CreateLabelDefinition { name, color } => {
+            registry.create_label_definition(name, color)?;
+            Ok(())
+        }
+        Command::DeleteLabelDefinition { label_id } => registry.delete_label_definition(label_id),
+        Command::SetCardLabels { card_id, label_ids } => {
+            registry.set_card_labels(card_id, label_ids)
+        }
+        Command::CreateRuleDefinition {
+            name,
+            trigger,
+            action,
+        } => {
+            registry.create_rule_definition(name, trigger, action)?;
+            Ok(())
+        }
+        Command::DeleteRuleDefinition { rule_id } => registry.delete_rule_definition(rule_id),
+        Command::SetCardRules { card_id, rule_ids } => registry.set_card_rules(card_id, rule_ids),
         Command::DeleteCard { id, strategy } => registry.delete_card(id, strategy),
         Command::MoveCardToBucket { card_id, bucket_id } => {
             registry.move_card_to_bucket(card_id, bucket_id)
@@ -133,6 +225,7 @@ pub fn execute(command: Command, registry: &mut CardRegistry) -> Result<(), Doma
             card_id,
             ordered_ids,
         } => registry.reorder_children(card_id, ordered_ids),
+        Command::ReorderRootCards { ordered_ids } => registry.reorder_root_cards(ordered_ids),
     };
 
     match &result {
@@ -175,6 +268,25 @@ pub struct BoardView<'a> {
 pub struct ColumnView<'a> {
     pub bucket: &'a Bucket,
     pub cards: Vec<&'a Card>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PopupNotification {
+    pub title: String,
+    pub message: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TriggeredRuleOutcome {
+    pub rule: RuleDefinition,
+    pub popup: PopupNotification,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CardRuleEvent {
+    NoteOpened,
+    NoteClosed,
+    MovedToBucket(BucketId),
 }
 
 /// Builds a [`BoardView`] for a given card.
@@ -223,6 +335,52 @@ pub fn build_board_view(
     Ok(BoardView { card, columns })
 }
 
+pub fn evaluate_card_rules(
+    card_id: CardId,
+    event: CardRuleEvent,
+    registry: &CardRegistry,
+) -> Result<Vec<TriggeredRuleOutcome>, DomainError> {
+    let card = registry.get_card(card_id)?;
+    let assigned_rule_ids: std::collections::HashSet<RuleId> =
+        card.rule_ids().iter().copied().collect();
+
+    let mut matches = Vec::new();
+    for rule in registry.rule_definitions() {
+        if !assigned_rule_ids.contains(&rule.id()) {
+            continue;
+        }
+
+        if !rule_matches_event(rule.trigger(), &event) {
+            continue;
+        }
+
+        let popup = match rule.action() {
+            RuleAction::ShowPopup { title, message } => PopupNotification {
+                title: title.clone(),
+                message: message.clone(),
+            },
+        };
+
+        matches.push(TriggeredRuleOutcome {
+            rule: rule.clone(),
+            popup,
+        });
+    }
+
+    Ok(matches)
+}
+
+fn rule_matches_event(trigger: &RuleTrigger, event: &CardRuleEvent) -> bool {
+    match (trigger, event) {
+        (RuleTrigger::NoteOpened, CardRuleEvent::NoteOpened) => true,
+        (RuleTrigger::NoteClosed, CardRuleEvent::NoteClosed) => true,
+        (RuleTrigger::MovedToBucket(expected), CardRuleEvent::MovedToBucket(actual)) => {
+            expected == actual
+        }
+        _ => false,
+    }
+}
+
 fn log_command_start(command: &Command) {
     match command {
         Command::CreateRootCard { .. } => {
@@ -242,6 +400,59 @@ fn log_command_start(command: &Command) {
         }
         Command::RenameCard { id, .. } => {
             info!(command = "RenameCard", card_id = %id, "Executing application command");
+        }
+        Command::AddNotePage { card_id, .. } => {
+            info!(command = "AddNotePage", %card_id, "Executing application command");
+        }
+        Command::RenameNotePage {
+            card_id,
+            note_page_id,
+            ..
+        } => {
+            info!(command = "RenameNotePage", %card_id, %note_page_id, "Executing application command");
+        }
+        Command::SaveNotePageBody {
+            card_id,
+            note_page_id,
+            ..
+        } => {
+            info!(command = "SaveNotePageBody", %card_id, %note_page_id, "Executing application command");
+        }
+        Command::DeleteNotePage {
+            card_id,
+            note_page_id,
+        } => {
+            info!(command = "DeleteNotePage", %card_id, %note_page_id, "Executing application command");
+        }
+        Command::SetDueDate { card_id, due_date } => {
+            info!(command = "SetDueDate", %card_id, %due_date, "Executing application command");
+        }
+        Command::ClearDueDate { card_id } => {
+            info!(command = "ClearDueDate", %card_id, "Executing application command");
+        }
+        Command::CreateLabelDefinition { .. } => {
+            info!(
+                command = "CreateLabelDefinition",
+                "Executing application command"
+            );
+        }
+        Command::DeleteLabelDefinition { label_id } => {
+            info!(command = "DeleteLabelDefinition", %label_id, "Executing application command");
+        }
+        Command::SetCardLabels { card_id, label_ids } => {
+            info!(command = "SetCardLabels", %card_id, label_count = label_ids.len(), "Executing application command");
+        }
+        Command::CreateRuleDefinition { .. } => {
+            info!(
+                command = "CreateRuleDefinition",
+                "Executing application command"
+            );
+        }
+        Command::DeleteRuleDefinition { rule_id } => {
+            info!(command = "DeleteRuleDefinition", %rule_id, "Executing application command");
+        }
+        Command::SetCardRules { card_id, rule_ids } => {
+            info!(command = "SetCardRules", %card_id, rule_count = rule_ids.len(), "Executing application command");
         }
         Command::DeleteCard { id, strategy } => {
             info!(
@@ -313,6 +524,13 @@ fn log_command_start(command: &Command) {
                 "Executing application command"
             );
         }
+        Command::ReorderRootCards { ordered_ids } => {
+            info!(
+                command = "ReorderRootCards",
+                root_count = ordered_ids.len(),
+                "Executing application command"
+            );
+        }
     }
 }
 
@@ -321,6 +539,18 @@ fn command_name(command: &Command) -> &'static str {
         Command::CreateRootCard { .. } => "CreateRootCard",
         Command::CreateChildCard { .. } => "CreateChildCard",
         Command::RenameCard { .. } => "RenameCard",
+        Command::AddNotePage { .. } => "AddNotePage",
+        Command::RenameNotePage { .. } => "RenameNotePage",
+        Command::SaveNotePageBody { .. } => "SaveNotePageBody",
+        Command::DeleteNotePage { .. } => "DeleteNotePage",
+        Command::SetDueDate { .. } => "SetDueDate",
+        Command::ClearDueDate { .. } => "ClearDueDate",
+        Command::CreateLabelDefinition { .. } => "CreateLabelDefinition",
+        Command::DeleteLabelDefinition { .. } => "DeleteLabelDefinition",
+        Command::SetCardLabels { .. } => "SetCardLabels",
+        Command::CreateRuleDefinition { .. } => "CreateRuleDefinition",
+        Command::DeleteRuleDefinition { .. } => "DeleteRuleDefinition",
+        Command::SetCardRules { .. } => "SetCardRules",
         Command::DeleteCard { .. } => "DeleteCard",
         Command::MoveCardToBucket { .. } => "MoveCardToBucket",
         Command::ReparentCard { .. } => "ReparentCard",
@@ -329,6 +559,7 @@ fn command_name(command: &Command) -> &'static str {
         Command::RemoveBucket { .. } => "RemoveBucket",
         Command::ReorderBuckets { .. } => "ReorderBuckets",
         Command::ReorderChildren { .. } => "ReorderChildren",
+        Command::ReorderRootCards { .. } => "ReorderRootCards",
     }
 }
 
@@ -374,5 +605,29 @@ mod tests {
 
         let view = build_board_view(root_id, &reg).unwrap();
         assert_eq!(view.columns.len(), 2);
+    }
+
+    #[test]
+    fn evaluate_card_rules_matches_bucket_trigger() {
+        let mut reg = CardRegistry::new();
+        let card_id = reg.create_root_card("Root".into()).unwrap();
+        let bucket_id = reg.get_card(card_id).unwrap().buckets()[0].id();
+        let rule_id = reg
+            .create_rule_definition(
+                "Bucket popup".into(),
+                RuleTrigger::MovedToBucket(bucket_id),
+                RuleAction::ShowPopup {
+                    title: "Moved".into(),
+                    message: "Card changed bucket".into(),
+                },
+            )
+            .unwrap();
+        reg.set_card_rules(card_id, vec![rule_id]).unwrap();
+
+        let matches =
+            evaluate_card_rules(card_id, CardRuleEvent::MovedToBucket(bucket_id), &reg).unwrap();
+
+        assert_eq!(matches.len(), 1);
+        assert_eq!(matches[0].popup.title, "Moved");
     }
 }

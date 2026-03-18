@@ -1,6 +1,9 @@
 use crate::domain::card::{Card, UNASSIGNED_BUCKET_NAME};
+use crate::domain::due_date::DueDate;
 use crate::domain::error::DomainError;
-use crate::domain::id::{BucketId, CardId};
+use crate::domain::id::{BucketId, CardId, LabelId, NotePageId, RuleId};
+use crate::domain::label::{LabelColor, LabelDefinition};
+use crate::domain::rule::{RuleAction, RuleDefinition, RuleTrigger};
 use std::collections::{HashMap, HashSet};
 
 use serde::{Deserialize, Serialize};
@@ -9,6 +12,12 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CardRegistry {
     store: HashMap<CardId, Card>,
+    #[serde(default)]
+    root_order: Vec<CardId>,
+    #[serde(default)]
+    label_definitions: Vec<LabelDefinition>,
+    #[serde(default)]
+    rule_definitions: Vec<RuleDefinition>,
 }
 
 /// The strategy to use when deleting a card that has children.
@@ -33,6 +42,9 @@ impl CardRegistry {
     pub fn new() -> Self {
         Self {
             store: HashMap::new(),
+            root_order: Vec::new(),
+            label_definitions: Vec::new(),
+            rule_definitions: Vec::new(),
         }
     }
 
@@ -52,13 +64,25 @@ impl CardRegistry {
 
     /// Returns a list of all root cards (cards with no parent).
     pub fn get_root_cards(&self) -> Vec<&Card> {
-        let mut roots: Vec<&Card> = self
+        let mut roots = Vec::new();
+        let mut seen = HashSet::new();
+
+        for root_id in &self.root_order {
+            if let Some(card) = self.store.get(root_id) {
+                if card.parent_id().is_none() && seen.insert(*root_id) {
+                    roots.push(card);
+                }
+            }
+        }
+
+        let mut remaining_roots: Vec<&Card> = self
             .store
             .values()
-            .filter(|card| card.parent_id().is_none())
+            .filter(|card| card.parent_id().is_none() && seen.insert(card.id()))
             .collect();
-        // Since we don't have a stable root ordering yet, sort by ID for determinism
-        roots.sort_by_key(|c| c.id());
+        remaining_roots.sort_by_key(|card| card.id());
+        roots.extend(remaining_roots);
+
         roots
     }
 
@@ -71,6 +95,14 @@ impl CardRegistry {
             children.push(child);
         }
         Ok(children)
+    }
+
+    pub fn label_definitions(&self) -> &[LabelDefinition] {
+        &self.label_definitions
+    }
+
+    pub fn rule_definitions(&self) -> &[RuleDefinition] {
+        &self.rule_definitions
     }
 
     /// Returns the children of a card grouped by their assigned buckets.
@@ -116,6 +148,7 @@ impl CardRegistry {
     /// Validates the registry after deserialization or other full-state restore operations.
     pub fn validate(&self) -> Result<(), DomainError> {
         let mut referenced_children = HashSet::new();
+        let mut actual_roots = HashSet::new();
 
         for (card_id, card) in &self.store {
             if card.id() != *card_id {
@@ -132,6 +165,8 @@ impl CardRegistry {
             }
 
             validate_bucket_layout(card)?;
+            validate_note_pages(card)?;
+            validate_card_assignments(card, &self.label_definitions, &self.rule_definitions)?;
 
             match (card.parent_id(), card.bucket_id()) {
                 (None, None) => {}
@@ -209,6 +244,7 @@ impl CardRegistry {
         for (card_id, card) in &self.store {
             match card.parent_id() {
                 None => {
+                    actual_roots.insert(*card_id);
                     if referenced_children.contains(card_id) {
                         return Err(corrupt_state(format!(
                             "Root card {card_id} must not be referenced as a child"
@@ -225,6 +261,8 @@ impl CardRegistry {
             }
         }
 
+        validate_root_order(&self.root_order, &actual_roots)?;
+
         Ok(())
     }
 
@@ -237,6 +275,7 @@ impl CardRegistry {
         let card = Card::new_root(title)?;
         let id = card.id();
         self.store.insert(id, card);
+        self.root_order.push(id);
         Ok(id)
     }
 
@@ -274,6 +313,176 @@ impl CardRegistry {
         self.get_card_mut(id)?.rename(title)
     }
 
+    pub fn add_note_page(
+        &mut self,
+        card_id: CardId,
+        title: String,
+    ) -> Result<NotePageId, DomainError> {
+        self.get_card_mut(card_id)?.add_note_page(title)
+    }
+
+    pub fn rename_note_page(
+        &mut self,
+        card_id: CardId,
+        note_page_id: NotePageId,
+        title: String,
+    ) -> Result<(), DomainError> {
+        self.get_card_mut(card_id)?
+            .rename_note_page(note_page_id, title)
+    }
+
+    pub fn save_note_page_body(
+        &mut self,
+        card_id: CardId,
+        note_page_id: NotePageId,
+        body: String,
+    ) -> Result<(), DomainError> {
+        self.get_card_mut(card_id)?
+            .save_note_page_body(note_page_id, body)
+    }
+
+    pub fn delete_note_page(
+        &mut self,
+        card_id: CardId,
+        note_page_id: NotePageId,
+    ) -> Result<(), DomainError> {
+        self.get_card_mut(card_id)?.delete_note_page(note_page_id)
+    }
+
+    pub fn set_due_date(&mut self, card_id: CardId, due_date: DueDate) -> Result<(), DomainError> {
+        self.get_card_mut(card_id)?.set_due_date(Some(due_date));
+        Ok(())
+    }
+
+    pub fn clear_due_date(&mut self, card_id: CardId) -> Result<(), DomainError> {
+        self.get_card_mut(card_id)?.set_due_date(None);
+        Ok(())
+    }
+
+    pub fn create_label_definition(
+        &mut self,
+        name: String,
+        color: LabelColor,
+    ) -> Result<LabelId, DomainError> {
+        if self
+            .label_definitions
+            .iter()
+            .any(|label| label.name().eq_ignore_ascii_case(name.trim()))
+        {
+            return Err(DomainError::InvalidOperation(format!(
+                "A label named '{}' already exists",
+                name.trim()
+            )));
+        }
+
+        let definition = LabelDefinition::new(name, color)?;
+        let id = definition.id();
+        self.label_definitions.push(definition);
+        Ok(id)
+    }
+
+    pub fn delete_label_definition(&mut self, label_id: LabelId) -> Result<(), DomainError> {
+        let original_len = self.label_definitions.len();
+        self.label_definitions
+            .retain(|label| label.id() != label_id);
+        if self.label_definitions.len() == original_len {
+            return Err(DomainError::InvalidOperation(format!(
+                "Label definition not found: {label_id}"
+            )));
+        }
+
+        for card in self.store.values_mut() {
+            card.remove_label_assignment(label_id);
+        }
+        Ok(())
+    }
+
+    pub fn set_card_labels(
+        &mut self,
+        card_id: CardId,
+        label_ids: Vec<LabelId>,
+    ) -> Result<(), DomainError> {
+        let valid_ids: HashSet<LabelId> = self
+            .label_definitions
+            .iter()
+            .map(|label| label.id())
+            .collect();
+        let mut unique = Vec::new();
+        let mut seen = HashSet::new();
+        for label_id in label_ids {
+            if !valid_ids.contains(&label_id) {
+                return Err(DomainError::InvalidOperation(format!(
+                    "Label definition not found: {label_id}"
+                )));
+            }
+            if seen.insert(label_id) {
+                unique.push(label_id);
+            }
+        }
+        self.get_card_mut(card_id)?.clear_label_assignments(unique);
+        Ok(())
+    }
+
+    pub fn create_rule_definition(
+        &mut self,
+        name: String,
+        trigger: RuleTrigger,
+        action: RuleAction,
+    ) -> Result<RuleId, DomainError> {
+        if self
+            .rule_definitions
+            .iter()
+            .any(|rule| rule.name().eq_ignore_ascii_case(name.trim()))
+        {
+            return Err(DomainError::InvalidOperation(format!(
+                "A rule named '{}' already exists",
+                name.trim()
+            )));
+        }
+        let definition = RuleDefinition::new(name, trigger, action)?;
+        let id = definition.id();
+        self.rule_definitions.push(definition);
+        Ok(id)
+    }
+
+    pub fn delete_rule_definition(&mut self, rule_id: RuleId) -> Result<(), DomainError> {
+        let original_len = self.rule_definitions.len();
+        self.rule_definitions.retain(|rule| rule.id() != rule_id);
+        if self.rule_definitions.len() == original_len {
+            return Err(DomainError::InvalidOperation(format!(
+                "Rule definition not found: {rule_id}"
+            )));
+        }
+
+        for card in self.store.values_mut() {
+            card.remove_rule_assignment(rule_id);
+        }
+        Ok(())
+    }
+
+    pub fn set_card_rules(
+        &mut self,
+        card_id: CardId,
+        rule_ids: Vec<RuleId>,
+    ) -> Result<(), DomainError> {
+        let valid_ids: HashSet<RuleId> =
+            self.rule_definitions.iter().map(|rule| rule.id()).collect();
+        let mut unique = Vec::new();
+        let mut seen = HashSet::new();
+        for rule_id in rule_ids {
+            if !valid_ids.contains(&rule_id) {
+                return Err(DomainError::InvalidOperation(format!(
+                    "Rule definition not found: {rule_id}"
+                )));
+            }
+            if seen.insert(rule_id) {
+                unique.push(rule_id);
+            }
+        }
+        self.get_card_mut(card_id)?.clear_rule_assignments(unique);
+        Ok(())
+    }
+
     pub fn add_bucket(&mut self, card_id: CardId, name: String) -> Result<BucketId, DomainError> {
         self.get_card_mut(card_id)?.add_bucket(name)
     }
@@ -302,6 +511,19 @@ impl CardRegistry {
         ordered_ids: Vec<CardId>,
     ) -> Result<(), DomainError> {
         self.get_card_mut(card_id)?.reorder_children(ordered_ids)
+    }
+
+    pub fn reorder_root_cards(&mut self, ordered_ids: Vec<CardId>) -> Result<(), DomainError> {
+        let actual_roots: HashSet<CardId> = self
+            .store
+            .values()
+            .filter(|card| card.parent_id().is_none())
+            .map(|card| card.id())
+            .collect();
+
+        validate_complete_root_order(&ordered_ids, &actual_roots)?;
+        self.root_order = ordered_ids;
+        Ok(())
     }
 
     // -------------------------------------------------------------------------
@@ -463,6 +685,7 @@ impl CardRegistry {
 
         // Finally, remove the card
         self.store.remove(&card_id);
+        self.root_order.retain(|root_id| *root_id != card_id);
         Ok(())
     }
 }
@@ -506,6 +729,67 @@ fn validate_bucket_layout(card: &Card) -> Result<(), DomainError> {
     Ok(())
 }
 
+fn validate_note_pages(card: &Card) -> Result<(), DomainError> {
+    let mut ids = HashSet::new();
+    for note in card.notes() {
+        if note.title().trim().is_empty() {
+            return Err(corrupt_state(format!(
+                "Card {} contains a note page with a blank title",
+                card.id()
+            )));
+        }
+        if !ids.insert(note.id()) {
+            return Err(corrupt_state(format!(
+                "Card {} contains duplicate note page id {}",
+                card.id(),
+                note.id()
+            )));
+        }
+    }
+    Ok(())
+}
+
+fn validate_card_assignments(
+    card: &Card,
+    labels: &[LabelDefinition],
+    rules: &[RuleDefinition],
+) -> Result<(), DomainError> {
+    let valid_label_ids: HashSet<LabelId> = labels.iter().map(|label| label.id()).collect();
+    let valid_rule_ids: HashSet<RuleId> = rules.iter().map(|rule| rule.id()).collect();
+    let mut seen_labels = HashSet::new();
+    for label_id in card.label_ids() {
+        if !valid_label_ids.contains(label_id) {
+            return Err(corrupt_state(format!(
+                "Card {} references missing label definition {label_id}",
+                card.id()
+            )));
+        }
+        if !seen_labels.insert(*label_id) {
+            return Err(corrupt_state(format!(
+                "Card {} references duplicate label definition {label_id}",
+                card.id()
+            )));
+        }
+    }
+
+    let mut seen_rules = HashSet::new();
+    for rule_id in card.rule_ids() {
+        if !valid_rule_ids.contains(rule_id) {
+            return Err(corrupt_state(format!(
+                "Card {} references missing rule definition {rule_id}",
+                card.id()
+            )));
+        }
+        if !seen_rules.insert(*rule_id) {
+            return Err(corrupt_state(format!(
+                "Card {} references duplicate rule definition {rule_id}",
+                card.id()
+            )));
+        }
+    }
+    Ok(())
+}
+
 fn validate_parent_chain(registry: &CardRegistry, card_id: CardId) -> Result<(), DomainError> {
     let mut current_parent = registry
         .store
@@ -533,6 +817,43 @@ fn validate_parent_chain(registry: &CardRegistry, card_id: CardId) -> Result<(),
     Ok(())
 }
 
+fn validate_root_order(
+    ordered_ids: &[CardId],
+    actual_roots: &HashSet<CardId>,
+) -> Result<(), DomainError> {
+    let mut seen = HashSet::new();
+    for root_id in ordered_ids {
+        if !actual_roots.contains(root_id) {
+            return Err(corrupt_state(format!(
+                "Persisted root ordering references non-root card {root_id}"
+            )));
+        }
+
+        if !seen.insert(*root_id) {
+            return Err(corrupt_state(format!(
+                "Persisted root ordering contains duplicate root card {root_id}"
+            )));
+        }
+    }
+
+    Ok(())
+}
+
+fn validate_complete_root_order(
+    ordered_ids: &[CardId],
+    actual_roots: &HashSet<CardId>,
+) -> Result<(), DomainError> {
+    validate_root_order(ordered_ids, actual_roots)?;
+
+    if ordered_ids.len() != actual_roots.len() {
+        return Err(DomainError::InvalidOperation(
+            "Root reorder list must include every root card exactly once".to_string(),
+        ));
+    }
+
+    Ok(())
+}
+
 fn corrupt_state(message: impl Into<String>) -> DomainError {
     DomainError::InvalidOperation(message.into())
 }
@@ -547,6 +868,7 @@ mod tests {
         let root_id = reg.create_root_card("Root".into()).unwrap();
 
         assert_eq!(reg.get_root_cards().len(), 1);
+        assert_eq!(reg.get_root_cards()[0].id(), root_id);
         let root = reg.get_card(root_id).unwrap();
         let bucket_id = root.buckets()[0].id();
 
@@ -799,5 +1121,50 @@ mod tests {
             reg.validate(),
             Err(DomainError::InvalidOperation(message)) if message.contains("parent cycle")
         ));
+    }
+
+    #[test]
+    fn test_reorder_root_cards_persists_custom_order() {
+        let mut reg = CardRegistry::new();
+        let first_id = reg.create_root_card("First".into()).unwrap();
+        let second_id = reg.create_root_card("Second".into()).unwrap();
+        let third_id = reg.create_root_card("Third".into()).unwrap();
+
+        reg.reorder_root_cards(vec![third_id, first_id, second_id])
+            .unwrap();
+
+        let ordered_ids: Vec<CardId> = reg.get_root_cards().iter().map(|card| card.id()).collect();
+        assert_eq!(ordered_ids, vec![third_id, first_id, second_id]);
+    }
+
+    #[test]
+    fn test_validate_rejects_duplicate_root_order_entries() {
+        let mut reg = CardRegistry::new();
+        let first_id = reg.create_root_card("First".into()).unwrap();
+        reg.create_root_card("Second".into()).unwrap();
+
+        reg.root_order = vec![first_id, first_id];
+
+        assert!(matches!(
+            reg.validate(),
+            Err(DomainError::InvalidOperation(message))
+                if message.contains("duplicate root card")
+        ));
+    }
+
+    #[test]
+    fn test_validate_allows_legacy_registry_without_root_order() {
+        let mut reg = CardRegistry::new();
+        let first_id = reg.create_root_card("First".into()).unwrap();
+        let second_id = reg.create_root_card("Second".into()).unwrap();
+
+        reg.root_order.clear();
+
+        assert!(reg.validate().is_ok());
+
+        let ordered_ids: Vec<CardId> = reg.get_root_cards().iter().map(|card| card.id()).collect();
+        let mut expected = vec![first_id, second_id];
+        expected.sort();
+        assert_eq!(ordered_ids, expected);
     }
 }
