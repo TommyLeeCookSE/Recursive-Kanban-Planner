@@ -1,7 +1,7 @@
 use crate::domain::card::{Card, UNASSIGNED_BUCKET_NAME};
 use crate::domain::error::DomainError;
 use crate::domain::id::{BucketId, CardId};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use serde::{Deserialize, Serialize};
 
@@ -111,6 +111,121 @@ impl CardRegistry {
         }
 
         Ok(projection)
+    }
+
+    /// Validates the registry after deserialization or other full-state restore operations.
+    pub fn validate(&self) -> Result<(), DomainError> {
+        let mut referenced_children = HashSet::new();
+
+        for (card_id, card) in &self.store {
+            if card.id() != *card_id {
+                return Err(corrupt_state(format!(
+                    "Registry key {card_id} does not match card id {}",
+                    card.id()
+                )));
+            }
+
+            if card.title().trim().is_empty() {
+                return Err(corrupt_state(format!(
+                    "Card {card_id} has a blank title in persisted state"
+                )));
+            }
+
+            validate_bucket_layout(card)?;
+
+            match (card.parent_id(), card.bucket_id()) {
+                (None, None) => {}
+                (None, Some(bucket_id)) => {
+                    return Err(corrupt_state(format!(
+                        "Root card {card_id} cannot reference bucket {bucket_id}"
+                    )));
+                }
+                (Some(parent_id), Some(bucket_id)) => {
+                    let parent = self.store.get(&parent_id).ok_or_else(|| {
+                        corrupt_state(format!(
+                            "Card {card_id} references missing parent {parent_id}"
+                        ))
+                    })?;
+
+                    if !parent.children_ids().contains(card_id) {
+                        return Err(corrupt_state(format!(
+                            "Parent {parent_id} is missing child reference to {card_id}"
+                        )));
+                    }
+
+                    if !parent
+                        .buckets()
+                        .iter()
+                        .any(|bucket| bucket.id() == bucket_id)
+                    {
+                        return Err(corrupt_state(format!(
+                            "Card {card_id} references bucket {bucket_id} that does not exist on parent {parent_id}"
+                        )));
+                    }
+                }
+                (Some(parent_id), None) => {
+                    return Err(corrupt_state(format!(
+                        "Child card {card_id} under parent {parent_id} is missing a bucket assignment"
+                    )));
+                }
+            }
+
+            let mut local_children = HashSet::new();
+            for child_id in card.children_ids() {
+                if *child_id == *card_id {
+                    return Err(corrupt_state(format!(
+                        "Card {card_id} cannot reference itself as a child"
+                    )));
+                }
+
+                if !local_children.insert(*child_id) {
+                    return Err(corrupt_state(format!(
+                        "Card {card_id} contains duplicate child reference {child_id}"
+                    )));
+                }
+
+                if !referenced_children.insert(*child_id) {
+                    return Err(corrupt_state(format!(
+                        "Child card {child_id} is referenced by more than one parent"
+                    )));
+                }
+
+                let child = self.store.get(child_id).ok_or_else(|| {
+                    corrupt_state(format!(
+                        "Card {card_id} references missing child {child_id}"
+                    ))
+                })?;
+
+                if child.parent_id() != Some(*card_id) {
+                    return Err(corrupt_state(format!(
+                        "Child {child_id} does not point back to parent {card_id}"
+                    )));
+                }
+            }
+
+            validate_parent_chain(self, *card_id)?;
+        }
+
+        for (card_id, card) in &self.store {
+            match card.parent_id() {
+                None => {
+                    if referenced_children.contains(card_id) {
+                        return Err(corrupt_state(format!(
+                            "Root card {card_id} must not be referenced as a child"
+                        )));
+                    }
+                }
+                Some(_) => {
+                    if !referenced_children.contains(card_id) {
+                        return Err(corrupt_state(format!(
+                            "Non-root card {card_id} is not referenced by its parent"
+                        )));
+                    }
+                }
+            }
+        }
+
+        Ok(())
     }
 
     // -------------------------------------------------------------------------
@@ -352,6 +467,76 @@ impl CardRegistry {
     }
 }
 
+fn validate_bucket_layout(card: &Card) -> Result<(), DomainError> {
+    let mut bucket_ids = HashSet::new();
+    let mut bucket_names = HashSet::new();
+    let mut unassigned_count = 0;
+
+    for bucket in card.buckets() {
+        if !bucket_ids.insert(bucket.id()) {
+            return Err(corrupt_state(format!(
+                "Card {} contains duplicate bucket id {}",
+                card.id(),
+                bucket.id()
+            )));
+        }
+
+        let normalized_name = bucket.name().to_ascii_lowercase();
+        if !bucket_names.insert(normalized_name) {
+            return Err(corrupt_state(format!(
+                "Card {} contains duplicate bucket name '{}'",
+                card.id(),
+                bucket.name()
+            )));
+        }
+
+        if bucket.name() == UNASSIGNED_BUCKET_NAME {
+            unassigned_count += 1;
+        }
+    }
+
+    if unassigned_count != 1 {
+        return Err(corrupt_state(format!(
+            "Card {} must contain exactly one '{}' bucket",
+            card.id(),
+            UNASSIGNED_BUCKET_NAME
+        )));
+    }
+
+    Ok(())
+}
+
+fn validate_parent_chain(registry: &CardRegistry, card_id: CardId) -> Result<(), DomainError> {
+    let mut current_parent = registry
+        .store
+        .get(&card_id)
+        .ok_or_else(|| corrupt_state(format!("Card {card_id} is missing from the registry")))?
+        .parent_id();
+    let mut seen = HashSet::new();
+
+    while let Some(parent_id) = current_parent {
+        if !seen.insert(parent_id) {
+            return Err(corrupt_state(format!(
+                "Card {card_id} participates in a parent cycle involving {parent_id}"
+            )));
+        }
+
+        let parent = registry.store.get(&parent_id).ok_or_else(|| {
+            corrupt_state(format!(
+                "Card {card_id} references missing ancestor {parent_id}"
+            ))
+        })?;
+
+        current_parent = parent.parent_id();
+    }
+
+    Ok(())
+}
+
+fn corrupt_state(message: impl Into<String>) -> DomainError {
+    DomainError::InvalidOperation(message.into())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -550,6 +735,69 @@ mod tests {
         assert!(matches!(
             reg.board_projection(root_id),
             Err(DomainError::BucketNotFound(_))
+        ));
+    }
+
+    #[test]
+    fn test_validate_rejects_duplicate_child_references() {
+        let mut reg = CardRegistry::new();
+        let root_id = reg.create_root_card("Root".into()).unwrap();
+        let bucket_id = reg.get_card(root_id).unwrap().buckets()[0].id();
+        let child_id = reg
+            .create_child_card("Child".into(), root_id, bucket_id)
+            .unwrap();
+
+        reg.get_card_mut(root_id).unwrap().add_child(child_id);
+
+        assert!(matches!(
+            reg.validate(),
+            Err(DomainError::InvalidOperation(message))
+                if message.contains("duplicate child reference")
+        ));
+    }
+
+    #[test]
+    fn test_validate_rejects_parent_child_mismatch() {
+        let mut reg = CardRegistry::new();
+        let root_id = reg.create_root_card("Root".into()).unwrap();
+        let bucket_id = reg.get_card(root_id).unwrap().buckets()[0].id();
+        let child_id = reg
+            .create_child_card("Child".into(), root_id, bucket_id)
+            .unwrap();
+
+        reg.get_card_mut(child_id).unwrap().set_parent(None);
+
+        assert!(matches!(
+            reg.validate(),
+            Err(DomainError::InvalidOperation(message))
+                if message.contains("missing child reference")
+                    || message.contains("does not point back to parent")
+                    || message.contains("Root card")
+                    || message.contains("not referenced by its parent")
+        ));
+    }
+
+    #[test]
+    fn test_validate_rejects_cycle() {
+        let mut reg = CardRegistry::new();
+        let root_id = reg.create_root_card("Root".into()).unwrap();
+        let bucket_id = reg.get_card(root_id).unwrap().buckets()[0].id();
+        let child_id = reg
+            .create_child_card("Child".into(), root_id, bucket_id)
+            .unwrap();
+        let child_bucket_id = reg.get_card(child_id).unwrap().buckets()[0].id();
+
+        reg.get_card_mut(root_id)
+            .unwrap()
+            .set_parent(Some(child_id));
+        reg.get_card_mut(root_id)
+            .unwrap()
+            .set_bucket(Some(child_bucket_id));
+        reg.get_card_mut(child_id).unwrap().add_child(root_id);
+
+        assert!(matches!(
+            reg.validate(),
+            Err(DomainError::InvalidOperation(message)) if message.contains("parent cycle")
         ));
     }
 }

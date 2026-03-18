@@ -43,7 +43,7 @@ impl JsonRepository {
         let payload_bytes = json.len();
         info!(payload_bytes, "Deserializing registry from JSON");
 
-        serde_json::from_str(json).map_err(|e| {
+        let registry: CardRegistry = serde_json::from_str(json).map_err(|e| {
             let error = DomainError::InvalidOperation(format!(
                 "Failed to deserialize registry from JSON: {e}"
             ));
@@ -54,7 +54,19 @@ impl JsonRepository {
                 format!("Registry deserialization failed: {error}"),
             );
             error
-        })
+        })?;
+
+        registry.validate().map_err(|error| {
+            error!(payload_bytes, error = %error, "Registry validation failed after deserialization");
+            record_diagnostic(
+                Level::ERROR,
+                "persistence",
+                format!("Registry validation failed after deserialization: {error}"),
+            );
+            error
+        })?;
+
+        Ok(registry)
     }
 }
 
@@ -142,6 +154,34 @@ impl LocalStorageRepository {
             Ok(None)
         }
     }
+
+    /// Clears the saved registry from `localStorage`.
+    pub fn clear_local_storage() -> Result<(), DomainError> {
+        info!(
+            storage_key = Self::STORAGE_KEY,
+            "Clearing registry from localStorage"
+        );
+        let window = web_sys::window().ok_or_else(|| {
+            DomainError::InvalidOperation("Failed to access global window object".into())
+        })?;
+
+        let storage = window
+            .local_storage()
+            .map_err(|_| DomainError::InvalidOperation("Failed to access local_storage".into()))?
+            .ok_or_else(|| {
+                DomainError::InvalidOperation("local_storage is not available".into())
+            })?;
+
+        storage.remove_item(Self::STORAGE_KEY).map_err(|_| {
+            DomainError::InvalidOperation("Failed to clear local_storage".into())
+        })?;
+
+        info!(
+            storage_key = Self::STORAGE_KEY,
+            "Cleared registry from localStorage"
+        );
+        Ok(())
+    }
 }
 
 /// A small platform-aware persistence facade used by the interface layer.
@@ -194,6 +234,16 @@ impl AppPersistence {
         LocalStorageRepository::save_to_local_storage(registry)
     }
 
+    /// Clears the registry for the current platform.
+    #[cfg(target_arch = "wasm32")]
+    pub fn clear_registry() -> Result<(), DomainError> {
+        info!(
+            platform = "web",
+            "Delegating persistence clear to browser storage"
+        );
+        LocalStorageRepository::clear_local_storage()
+    }
+
     /// Saves the registry for the current platform.
     #[cfg(not(target_arch = "wasm32"))]
     pub fn save_registry(_registry: &CardRegistry) -> Result<(), DomainError> {
@@ -205,6 +255,21 @@ impl AppPersistence {
             Level::ERROR,
             "persistence",
             format!("Persistence save unsupported: {error}"),
+        );
+        Err(error)
+    }
+
+    /// Clears the registry for the current platform.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn clear_registry() -> Result<(), DomainError> {
+        let error = DomainError::InvalidOperation(
+            "Persistence is not yet supported on this platform".into(),
+        );
+        error!(platform = crate::infrastructure::logging::target_name(), error = %error, "Persistence clear unsupported on this platform");
+        record_diagnostic(
+            Level::ERROR,
+            "persistence",
+            format!("Persistence clear unsupported: {error}"),
         );
         Err(error)
     }
@@ -235,6 +300,37 @@ mod tests {
         );
     }
 
+    #[test]
+    fn test_deserialize_registry_rejects_blank_titles() {
+        let mut original = CardRegistry::new();
+        original.create_root_card("My Project".into()).unwrap();
+
+        let json = JsonRepository::serialize_registry(&original).expect("Serialization failed");
+        let tampered = json.replacen("\"title\": \"My Project\"", "\"title\": \"   \"", 1);
+
+        assert!(matches!(
+            JsonRepository::deserialize_registry(&tampered),
+            Err(DomainError::InvalidOperation(message))
+                if message.contains("blank title")
+        ));
+    }
+
+    #[test]
+    fn test_deserialize_registry_rejects_missing_unassigned_bucket() {
+        let mut original = CardRegistry::new();
+        let root_id = original.create_root_card("My Project".into()).unwrap();
+        original.add_bucket(root_id, "In Progress".into()).unwrap();
+
+        let json = JsonRepository::serialize_registry(&original).expect("Serialization failed");
+        let tampered = json.replacen("\"name\": \"Unassigned\"", "\"name\": \"Backlog\"", 1);
+
+        assert!(matches!(
+            JsonRepository::deserialize_registry(&tampered),
+            Err(DomainError::InvalidOperation(message))
+                if message.contains("exactly one 'Unassigned' bucket")
+        ));
+    }
+
     #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn test_app_persistence_non_web_load_is_explicitly_unsupported() {
@@ -250,6 +346,15 @@ mod tests {
         let registry = CardRegistry::new();
         assert!(matches!(
             AppPersistence::save_registry(&registry),
+            Err(DomainError::InvalidOperation(_))
+        ));
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn test_app_persistence_non_web_clear_is_explicitly_unsupported() {
+        assert!(matches!(
+            AppPersistence::clear_registry(),
             Err(DomainError::InvalidOperation(_))
         ));
     }
