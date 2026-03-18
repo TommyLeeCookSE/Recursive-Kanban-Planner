@@ -1,4 +1,3 @@
-pub mod board;
-pub mod card;
+pub mod card_item;
 pub mod layout;
 pub mod modal;

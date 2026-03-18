@@ -118,8 +118,35 @@ pub fn execute(command: Command, registry: &mut CardRegistry) -> Result<(), Doma
             );
         }
     }
-
     result
+}
+
+/// Executes a command and automatically handles error logging and diagnostic recording.
+///
+/// Use this in the interface layer to avoid duplicating error handling logic.
+pub fn execute_and_log(
+    command: Command,
+    registry: &mut CardRegistry,
+    label: &str,
+) -> Result<(), DomainError> {
+    let command_name = command_name(&command);
+    match execute(command, registry) {
+        Ok(()) => Ok(()),
+        Err(err) => {
+            error!(
+                layer = label,
+                command = command_name,
+                error = %err,
+                "Command execution failed"
+            );
+            record_diagnostic(
+                Level::ERROR,
+                label,
+                format!("Action '{command_name}' failed in {label}: {err}"),
+            );
+            Err(err)
+        }
+    }
 }
 
 /// A read-only projection of a single card's board, used for UI rendering.
