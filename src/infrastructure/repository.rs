@@ -172,9 +172,9 @@ impl LocalStorageRepository {
                 DomainError::InvalidOperation("local_storage is not available".into())
             })?;
 
-        storage.remove_item(Self::STORAGE_KEY).map_err(|_| {
-            DomainError::InvalidOperation("Failed to clear local_storage".into())
-        })?;
+        storage
+            .remove_item(Self::STORAGE_KEY)
+            .map_err(|_| DomainError::InvalidOperation("Failed to clear local_storage".into()))?;
 
         info!(
             storage_key = Self::STORAGE_KEY,

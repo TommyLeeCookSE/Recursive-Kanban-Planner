@@ -1,8 +1,10 @@
 use crate::domain::registry::CardRegistry;
+#[cfg(target_arch = "wasm32")]
 use crate::infrastructure::repository::{AppPersistence, JsonRepository};
 use crate::interface::Route;
 use crate::interface::components::modal::ModalType;
 use dioxus::prelude::*;
+use dioxus_router::Navigator;
 #[cfg(target_arch = "wasm32")]
 use js_sys::Array;
 #[cfg(target_arch = "wasm32")]
@@ -25,8 +27,8 @@ use web_sys::{Blob, HtmlAnchorElement, HtmlInputElement, Url};
 pub fn NavbarLayout() -> Element {
     let mut is_dark = use_context::<Signal<bool>>();
     let mut active_modal = use_context::<Signal<Option<ModalType>>>();
-    let mut registry = use_context::<Signal<CardRegistry>>();
-    let mut persistence_warning = use_context::<Signal<Option<String>>>();
+    let registry = use_context::<Signal<CardRegistry>>();
+    let persistence_warning = use_context::<Signal<Option<String>>>();
     let nav = navigator();
 
     rsx! {
@@ -57,8 +59,8 @@ pub fn NavbarLayout() -> Element {
                 div { class: "flex items-center gap-4",
                     div { class: "hidden md:flex items-center gap-2 pr-4 border-r border-gray-100 dark:border-gray-800",
                         {render_export_button(registry, persistence_warning)}
-                        {render_import_button(registry, active_modal, persistence_warning, nav.clone())}
-                        {render_clear_cache_button(registry, active_modal, persistence_warning, nav.clone())}
+                        {render_import_button(registry, active_modal, persistence_warning, nav)}
+                        {render_clear_cache_button(registry, active_modal, persistence_warning, nav)}
                     }
                     if cfg!(target_arch = "wasm32") {
                         span { class: "text-[9px] font-black uppercase tracking-[0.3em] text-gray-300 dark:text-gray-700",
@@ -93,13 +95,13 @@ fn render_export_button(
     #[cfg(target_arch = "wasm32")]
     {
         let mut persistence_warning = persistence_warning;
-        let registry_snapshot = registry.read().clone();
         return rsx! {
             button {
                 class: "rounded-2xl px-4 py-2 text-xs font-black uppercase tracking-widest text-gray-500 hover:text-sunfire dark:text-gray-400 dark:hover:text-sunfire transition-colors",
                 title: "Download a JSON backup of your workspace",
                 onclick: move |_| {
-                    match export_registry_snapshot(&registry_snapshot) {
+                    let snapshot = registry.read().clone();
+                    match export_registry_snapshot(&snapshot) {
                         Ok(()) => persistence_warning.set(None),
                         Err(error) => persistence_warning.set(Some(error.to_string())),
                     }
@@ -113,7 +115,7 @@ fn render_export_button(
     {
         let _ = registry;
         let _ = persistence_warning;
-        rsx! { disabled_utility_button("Export", "Export is available on web builds only") }
+        disabled_utility_button("Export", "Export is available on web builds only")
     }
 }
 
@@ -125,7 +127,6 @@ fn render_import_button(
 ) -> Element {
     #[cfg(target_arch = "wasm32")]
     {
-        let mut persistence_warning = persistence_warning;
         return rsx! {
             button {
                 class: "rounded-2xl px-4 py-2 text-xs font-black uppercase tracking-widest text-gray-500 hover:text-sunfire dark:text-gray-400 dark:hover:text-sunfire transition-colors",
@@ -149,7 +150,7 @@ fn render_import_button(
         let _ = active_modal;
         let _ = persistence_warning;
         let _ = nav;
-        rsx! { disabled_utility_button("Import", "Import is available on web builds only") }
+        disabled_utility_button("Import", "Import is available on web builds only")
     }
 }
 
@@ -191,10 +192,11 @@ fn render_clear_cache_button(
         let _ = active_modal;
         let _ = persistence_warning;
         let _ = nav;
-        rsx! { disabled_utility_button("Clear Cache", "Clear Cache is available on web builds only") }
+        disabled_utility_button("Clear Cache", "Clear Cache is available on web builds only")
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn disabled_utility_button(label: &str, title: &str) -> Element {
     rsx! {
         button {
@@ -210,7 +212,9 @@ fn disabled_utility_button(label: &str, title: &str) -> Element {
 }
 
 #[cfg(target_arch = "wasm32")]
-fn export_registry_snapshot(registry: &CardRegistry) -> Result<(), crate::domain::error::DomainError> {
+fn export_registry_snapshot(
+    registry: &CardRegistry,
+) -> Result<(), crate::domain::error::DomainError> {
     let json = JsonRepository::serialize_registry(registry)?;
     let document = web_sys::window()
         .and_then(|window| window.document())
@@ -223,14 +227,10 @@ fn export_registry_snapshot(registry: &CardRegistry) -> Result<(), crate::domain
     let data = Array::new();
     data.push(&wasm_bindgen::JsValue::from_str(&json));
     let blob = Blob::new_with_str_sequence(&data).map_err(|_| {
-        crate::domain::error::DomainError::InvalidOperation(
-            "Failed to prepare export blob".into(),
-        )
+        crate::domain::error::DomainError::InvalidOperation("Failed to prepare export blob".into())
     })?;
     let url = Url::create_object_url_with_blob(&blob).map_err(|_| {
-        crate::domain::error::DomainError::InvalidOperation(
-            "Failed to create export URL".into(),
-        )
+        crate::domain::error::DomainError::InvalidOperation("Failed to create export URL".into())
     })?;
 
     let anchor: HtmlAnchorElement = document
@@ -307,50 +307,54 @@ fn begin_import_flow(
         let mut persistence_warning = persistence_warning;
         let nav = nav.clone();
 
-        let onload = Closure::<dyn FnMut(_)>::wrap(Box::new(move |_event: web_sys::ProgressEvent| {
-            let result = match reader_for_load.result() {
-                Ok(result) => result,
-                Err(_) => {
-                    persistence_warning.set(Some("Failed to read the selected import file".into()));
+        let onload =
+            Closure::<dyn FnMut(_)>::wrap(Box::new(move |_event: web_sys::ProgressEvent| {
+                let result = match reader_for_load.result() {
+                    Ok(result) => result,
+                    Err(_) => {
+                        persistence_warning
+                            .set(Some("Failed to read the selected import file".into()));
+                        return;
+                    }
+                };
+
+                let Some(json) = result.as_string() else {
+                    persistence_warning.set(Some("Import file could not be read as text".into()));
+                    return;
+                };
+
+                let confirmed = web_sys::window()
+                    .and_then(|window| {
+                        window
+                            .confirm_with_message(
+                                "Importing will replace the current workspace. Continue?",
+                            )
+                            .ok()
+                    })
+                    .unwrap_or(false);
+
+                if !confirmed {
                     return;
                 }
-            };
 
-            let Some(json) = result.as_string() else {
-                persistence_warning.set(Some("Import file could not be read as text".into()));
-                return;
-            };
-
-            let confirmed = web_sys::window()
-                .and_then(|window| {
-                    window
-                        .confirm_with_message(
-                            "Importing will replace the current workspace. Continue?",
-                        )
-                        .ok()
-                })
-                .unwrap_or(false);
-
-            if !confirmed {
-                return;
-            }
-
-            match JsonRepository::deserialize_registry(&json) {
-                Ok(imported_registry) => {
-                    registry.set(imported_registry);
-                    active_modal.set(None);
-                    persistence_warning.set(None);
-                    nav.push(Route::Home {});
+                match JsonRepository::deserialize_registry(&json) {
+                    Ok(imported_registry) => {
+                        registry.set(imported_registry);
+                        active_modal.set(None);
+                        persistence_warning.set(None);
+                        nav.push(Route::Home {});
+                    }
+                    Err(error) => persistence_warning.set(Some(error.to_string())),
                 }
-                Err(error) => persistence_warning.set(Some(error.to_string())),
-            }
-        }));
+            }));
 
         reader.set_onloadend(Some(onload.as_ref().unchecked_ref()));
         onload.forget();
 
         if reader.read_as_text(&file).is_err() {
-            persistence_warning.set(Some("Failed to begin reading the selected import file".into()));
+            persistence_warning.set(Some(
+                "Failed to begin reading the selected import file".into(),
+            ));
         }
     }));
 
@@ -360,8 +364,7 @@ fn begin_import_flow(
 }
 
 #[cfg(target_arch = "wasm32")]
-fn clear_workspace_with_confirmation(
-) -> Result<bool, crate::domain::error::DomainError> {
+fn clear_workspace_with_confirmation() -> Result<bool, crate::domain::error::DomainError> {
     let window = web_sys::window().ok_or_else(|| {
         crate::domain::error::DomainError::InvalidOperation(
             "Failed to access browser window for clear-cache confirmation".into(),
@@ -369,9 +372,7 @@ fn clear_workspace_with_confirmation(
     })?;
 
     let confirmed = window
-        .confirm_with_message(
-            "This will clear saved board data and reset the workspace. Continue?",
-        )
+        .confirm_with_message("This will clear saved board data and reset the workspace. Continue?")
         .map_err(|_| {
             crate::domain::error::DomainError::InvalidOperation(
                 "Failed to show clear-cache confirmation dialog".into(),
