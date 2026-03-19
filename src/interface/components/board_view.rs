@@ -111,19 +111,21 @@ fn render_board_header(
 
 fn render_board_grid(child_models: Vec<CardDisplayData>, context: BoardRenderContext) -> Element {
     rsx! {
-        div { class: "flex flex-col gap-4 lg:gap-6",
+        div { class: "flex flex-wrap items-stretch gap-4 lg:gap-6",
             if child_models.is_empty() {
                 {render_empty_drop_zone(context.clone())}
             } else {
-                {render_card_drop_zone(0, true, context.clone())}
                 div {
-                    class: "grid gap-4 lg:gap-6",
-                    style: "grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));",
+                    class: "flex flex-wrap items-stretch gap-4 lg:gap-6",
                     for (index, card) in child_models.iter().cloned().enumerate() {
-                        {render_card_item(card, index, context.clone())}
+                        {render_card_slot(
+                            card,
+                            index,
+                            index + 1 == child_models.len(),
+                            context.clone(),
+                        )}
                     }
                 }
-                {render_card_drop_zone(child_models.len(), true, context)}
             }
         }
     }
@@ -184,7 +186,29 @@ fn render_empty_drop_zone(context: BoardRenderContext) -> Element {
     }
 }
 
-fn render_card_item(card: CardDisplayData, index: usize, context: BoardRenderContext) -> Element {
+fn render_card_slot(
+    card: CardDisplayData,
+    index: usize,
+    is_last: bool,
+    context: BoardRenderContext,
+) -> Element {
+    rsx! {
+        div {
+            class: "flex min-w-[18rem] flex-[1_1_18rem] items-stretch gap-2 lg:gap-3",
+            {render_card_drop_zone(index, false, context.clone(), true)}
+            div { class: "min-w-0 flex-1",
+                {render_card_item(card, context.clone())}
+            }
+            if is_last {
+                {render_card_drop_zone(index + 1, false, context, true)}
+            } else {
+                div { class: "w-0 shrink-0" }
+            }
+        }
+    }
+}
+
+fn render_card_item(card: CardDisplayData, context: BoardRenderContext) -> Element {
     let card_id = card.id;
     let mut active_modal = context.active_modal;
     let mut card_drop_index = context.drag.card_drop_index;
@@ -195,7 +219,6 @@ fn render_card_item(card: CardDisplayData, index: usize, context: BoardRenderCon
         div {
             key: "{card_id}",
             class: "flex min-w-0 flex-col gap-3",
-            {render_card_drop_zone(index, false, context.clone())}
             CardItem {
                 title: card.title,
                 subtitle: format!("{} nested items", card.nested_item_count),
@@ -242,7 +265,12 @@ fn render_card_item(card: CardDisplayData, index: usize, context: BoardRenderCon
     }
 }
 
-fn render_card_drop_zone(index: usize, emphasized: bool, context: BoardRenderContext) -> Element {
+fn render_card_drop_zone(
+    index: usize,
+    emphasized: bool,
+    context: BoardRenderContext,
+    side_oriented: bool,
+) -> Element {
     let board_id = context.board_id;
     let registry = context.registry;
     let warning_message = context.warning_message;
@@ -264,6 +292,8 @@ fn render_card_drop_zone(index: usize, emphasized: bool, context: BoardRenderCon
         div {
             class: if emphasized {
                 "{class_name} min-h-[3.25rem] rounded-2xl"
+            } else if side_oriented {
+                "{class_name} h-full min-h-[12rem] w-5 shrink-0 self-stretch rounded-full sm:w-6"
             } else {
                 "{class_name} h-4 rounded-full"
             },

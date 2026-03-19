@@ -45,9 +45,9 @@ pub fn Home() -> Element {
     };
 
     render_board_screen(
-        screen_data.board_title,
+        screen_data.board_title.clone(),
         None,
-        "Workspace".to_string(),
+        screen_data.board_title,
         screen_data.board_due_date,
         screen_data.child_cards,
         render_context,

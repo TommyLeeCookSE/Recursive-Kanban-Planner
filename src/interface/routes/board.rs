@@ -132,7 +132,7 @@ fn load_board_state<'a>(
                 parent.title().to_string(),
             )
         }
-        None => (None, "Workspace".to_string()),
+        None => (None, view.card.title().to_string()),
     };
 
     Ok(BoardScreenState {
