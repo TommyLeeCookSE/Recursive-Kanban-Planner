@@ -40,17 +40,6 @@ pub fn NavbarLayout() -> Element {
                                 "Kanban"
                             }
                         }
-                        button {
-                            class: "app-button-primary inline-flex items-center gap-2 px-4 py-2.5 sm:px-6",
-                            onclick: move |_| active_modal.set(Some(ModalType::CreateCard {
-                                parent_id: None,
-                                bucket_id: None,
-                            })),
-                            title: "Create a new board",
-                            "aria-label": "New Board",
-                            span { class: "text-lg", "+" }
-                            span { class: "hidden sm:inline", "New Board" }
-                        }
                     }
 
                     div { class: "flex min-w-0 flex-wrap items-center justify-end gap-2 sm:gap-3",

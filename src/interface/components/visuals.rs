@@ -133,7 +133,7 @@ pub fn toolbar_button_label_classes() -> &'static str {
 }
 
 pub fn toolbar_button_mobile_icon_classes() -> &'static str {
-    "text-lg leading-none sm:hidden"
+    "text-lg leading-none"
 }
 
 pub fn render_plus_icon() -> Element {

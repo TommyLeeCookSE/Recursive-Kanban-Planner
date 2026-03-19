@@ -1,3 +1,4 @@
+pub mod board_view;
 pub mod card_item;
 pub mod layout;
 pub mod modal;

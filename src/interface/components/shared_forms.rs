@@ -20,12 +20,18 @@ pub fn SelectorSection(
     title: String,
     action_label: String,
     on_action: EventHandler<()>,
+    #[props(default)] title_icon: Option<Element>,
     children: Element,
 ) -> Element {
     rsx! {
         div { class: "flex flex-col gap-4",
             div { class: "flex items-center justify-between gap-4",
-                label { class: "app-kicker", "{title}" }
+                label { class: "app-kicker flex items-center gap-2",
+                    if let Some(icon) = title_icon {
+                        span { class: "shrink-0", {icon} }
+                    }
+                    "{title}"
+                }
                 button {
                     class: "app-button-secondary px-4 py-2 text-xs",
                     onclick: move |_| on_action.call(()),

@@ -10,6 +10,7 @@ use crate::interface::components::shared_forms::{
     CheckboxOptionRow, SelectorSection, build_create_card_command, inline_error, toggle_id,
     user_message_for_command_error,
 };
+use crate::interface::components::visuals::{render_book_icon, render_label_icon};
 use dioxus::prelude::*;
 use tracing::{Level, warn};
 
@@ -148,6 +149,7 @@ pub fn EditCardModal(
                     title: "Labels".to_string(),
                     action_label: "Manage Labels".to_string(),
                     on_action: move |_| active_modal.set(Some(ModalType::ManageLabels {})),
+                    title_icon: Some(render_label_icon()),
                     if label_definitions.is_empty() {
                         p { class: "app-text-muted text-sm", "No labels created yet." }
                     } else {
@@ -167,6 +169,7 @@ pub fn EditCardModal(
                     title: "Rules".to_string(),
                     action_label: "Manage Rules".to_string(),
                     on_action: move |_| active_modal.set(Some(ModalType::ManageRules {})),
+                    title_icon: Some(render_book_icon()),
                     if rule_definitions.is_empty() {
                         p { class: "app-text-muted text-sm", "No rules created yet." }
                     } else {

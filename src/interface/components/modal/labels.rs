@@ -7,7 +7,7 @@ use crate::interface::components::shared_forms::{
     CheckboxOptionRow, SelectorSection, inline_error, parse_label_color, toggle_id,
     user_message_for_command_error,
 };
-use crate::interface::components::visuals::render_label_chip;
+use crate::interface::components::visuals::{render_label_chip, render_label_icon};
 use dioxus::prelude::*;
 
 #[component]
@@ -46,6 +46,7 @@ pub fn CardLabelsModal(
                     title: "Assigned Labels".to_string(),
                     action_label: "Manage Labels".to_string(),
                     on_action: move |_| active_modal.set(Some(ModalType::ManageLabels {})),
+                    title_icon: Some(render_label_icon()),
                     if label_definitions.is_empty() {
                         p { class: "app-text-muted text-sm", "No labels created yet." }
                     } else {
