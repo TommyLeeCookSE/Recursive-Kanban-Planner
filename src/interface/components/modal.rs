@@ -41,7 +41,12 @@ pub fn Modal(on_close: EventHandler<()>, title: String, children: Element) -> El
                 onclick: |e| e.stop_propagation(),
                 div { class: "flex items-center justify-between border-b px-6 py-4", style: "border-color: var(--app-border);",
                     h2 { class: "app-text-primary text-lg font-bold", "{title}" }
-                    button { class: "app-button-ghost p-2", onclick: move |_| on_close.call(()), "X" }
+                    button {
+                        class: "app-button-ghost p-2",
+                        title: "Close dialog",
+                        onclick: move |_| on_close.call(()),
+                        "X"
+                    }
                 }
                 div { class: "p-6", {children} }
             }

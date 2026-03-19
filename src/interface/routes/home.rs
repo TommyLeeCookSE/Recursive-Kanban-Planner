@@ -71,6 +71,7 @@ pub fn Home() -> Element {
                 }
                 button {
                     class: "app-button-primary px-8 py-4",
+                    title: "Create a new root board",
                     onclick: move |_| active_modal.set(Some(ModalType::CreateCard {
                         parent_id: None,
                         bucket_id: None,
@@ -90,6 +91,7 @@ pub fn Home() -> Element {
                     }
                     button {
                         class: "app-button-secondary px-8 py-4",
+                        title: "Create your first board",
                         onclick: move |_| active_modal.set(Some(ModalType::CreateCard {
                             parent_id: None,
                             bucket_id: None,

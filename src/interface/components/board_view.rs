@@ -62,8 +62,8 @@ pub(crate) fn render_board_screen(
                 board_due_date,
                 render_context.clone(),
             )}
-            div { class: "flex-grow overflow-x-auto px-6 py-10 lg:px-12",
-                div { class: "flex min-w-max gap-4 lg:gap-8", style: "align-items: stretch;",
+            div { class: "flex-grow overflow-x-hidden px-6 py-10 lg:px-12",
+                div { class: "flex flex-wrap items-stretch gap-4 lg:gap-8",
                     for (index, column) in column_models.iter().cloned().enumerate() {
                         {render_bucket_drop_zone(
                             render_context.board_id,
@@ -150,7 +150,7 @@ fn render_column(column: ColumnRenderModel, context: BoardRenderContext) -> Elem
     let can_delete_bucket = bucket_name != UNASSIGNED_BUCKET_NAME;
     let can_rename_bucket = can_delete_bucket;
     let bucket_name_for_delete = bucket_name.clone();
-    let column_class = "app-column-surface group flex max-h-full w-80 flex-shrink-0 flex-col rounded-[2rem] p-5 transition-all hover:border-sunfire/30";
+    let column_class = "app-column-surface group flex max-h-full min-w-[18rem] basis-[20rem] flex-1 flex-col rounded-[2rem] p-5 transition-all hover:border-sunfire/30";
 
     rsx! {
         div {

@@ -44,6 +44,9 @@ pub fn CardItem(
     #[props(default)]
     on_delete: Option<EventHandler<()>>,
 ) -> Element {
+    let card_title_for_open = title.clone();
+    let card_title_for_delete = title.clone();
+
     rsx! {
         article {
             class: if draggable {
@@ -65,6 +68,7 @@ pub fn CardItem(
 
             button {
                 class: "flex-grow w-full rounded-t-[1.75rem] p-6 text-left outline-none transition-colors focus:ring-2 focus:ring-sunfire/30",
+                title: "Open {card_title_for_open}",
                 onclick: move |_| on_open.call(()),
                 h3 { class: "app-text-primary h-12 overflow-hidden text-lg font-semibold transition-colors group-hover:text-sunfire line-clamp-2",
                     "{title}"
@@ -106,7 +110,7 @@ pub fn CardItem(
                                 draggable: false,
                                 onclick: move |_| {
                                     if confirm_destructive_action(&format!(
-                                        "Delete the card '{title}' and all of its descendants?"
+                                        "Delete the card '{card_title_for_delete}' and all of its descendants?"
                                     )) {
                                         delete_handler.call(());
                                     }
@@ -117,6 +121,7 @@ pub fn CardItem(
                         if let Some(rename_handler) = on_rename {
                             button {
                                 class: "{surface_action_button_classes()}",
+                                title: "Rename this card",
                                 draggable: false,
                                 onclick: move |_| rename_handler.call(()),
                                 "Edit"

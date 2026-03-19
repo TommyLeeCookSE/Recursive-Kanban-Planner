@@ -36,9 +36,15 @@ pub fn CardModal(
                     {inline_error(message)}
                 }
                 div { class: "flex justify-end gap-2",
-                    button { class: "app-button-ghost px-4 py-2", onclick: move |_| on_close.call(()), "Cancel" }
+                    button {
+                        class: "app-button-ghost px-4 py-2",
+                        title: "Cancel card creation",
+                        onclick: move |_| on_close.call(()),
+                        "Cancel"
+                    }
                     button {
                         class: "app-button-primary px-6 py-3 disabled:opacity-50",
+                        title: "Create this card",
                         disabled: input_title().trim().is_empty(),
                         onclick: move |_| {
                             let trimmed_title = input_title().trim().to_string();
@@ -131,9 +137,15 @@ pub fn EditCardModal(
                 if let Some(message) = error_message() { {inline_error(message)} }
 
                 div { class: "flex justify-end gap-2",
-                    button { class: "app-button-ghost px-4 py-2", onclick: move |_| on_close.call(()), "Cancel" }
+                    button {
+                        class: "app-button-ghost px-4 py-2",
+                        title: "Cancel editing this card",
+                        onclick: move |_| on_close.call(()),
+                        "Cancel"
+                    }
                     button {
                         class: "app-button-primary px-6 py-3 disabled:opacity-50",
+                        title: "Save card changes",
                         disabled: input_title().trim().is_empty(),
                         onclick: move |_| {
                             let due_date_value = if due_date_input().trim().is_empty() {

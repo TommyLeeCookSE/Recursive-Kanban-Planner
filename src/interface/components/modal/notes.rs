@@ -61,6 +61,7 @@ pub fn NotesModal(
                     }
                     button {
                         class: "app-button-secondary w-full px-4 py-2 text-sm",
+                        title: "Add a new note page",
                         onclick: move |_| {
                             let title = new_page_title().trim().to_string();
                             let mut reg = registry.write();
@@ -84,6 +85,7 @@ pub fn NotesModal(
                         for note in current_notes.iter().cloned() {
                             button {
                                 class: if Some(note.id()) == selected_note_id() { "app-button-primary w-full px-4 py-2 text-left text-sm" } else { "app-button-secondary w-full px-4 py-2 text-left text-sm" },
+                                title: "Open note page {note.title()}",
                                 onclick: move |_| {
                                     selected_note_id.set(Some(note.id()));
                                     title_input.set(note.title().to_string());
@@ -112,6 +114,7 @@ pub fn NotesModal(
                         div { class: "flex flex-wrap justify-end gap-2",
                             button {
                                 class: "app-button-secondary px-4 py-2",
+                                title: "Save this note page",
                                 onclick: move |_| {
                                     let Some(note_id) = selected_note_id() else { return; };
                                     let mut reg = registry.write();
@@ -133,6 +136,7 @@ pub fn NotesModal(
                             }
                             button {
                                 class: "app-danger-button px-4 py-2",
+                                title: "Delete this note page",
                                 onclick: move |_| {
                                     let Some(note_id) = selected_note_id() else { return; };
                                     let mut reg = registry.write();
