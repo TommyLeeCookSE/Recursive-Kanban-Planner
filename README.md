@@ -90,7 +90,7 @@ This app can be hosted as a static GitHub Pages site using a custom GitHub Actio
 
 What makes that work:
 
-- `Dioxus.toml` sets `base_path = "Recursive-Kanban-Planner"` so the app loads correctly from the repository subpath.
+- The GitHub Pages workflow builds with `--base-path Recursive-Kanban-Planner` so the deployed app loads correctly from the repository subpath.
 - The workflow builds the web bundle, then uploads the generated `public/` directory from Dioxus as the Pages site root.
 - A copied `404.html` and optional `CNAME` file live inside that `public/` directory so the Dioxus router and custom domains keep working.
 
@@ -102,7 +102,7 @@ To publish it:
 
 If GitHub Pages ever starts showing the repository `README.md` instead of the app, the site has usually been switched back to legacy branch publishing (`main` / `/`). Change it back to `GitHub Actions`.
 
-If you rename the repository, update the `base_path` in [Dioxus.toml](Dioxus.toml) to match the new repo slug.
+If you rename the repository, update the `--base-path Recursive-Kanban-Planner` value in [.github/workflows/github-pages.yml](.github/workflows/github-pages.yml) to match the new repo slug.
 
 ## Persistence
 

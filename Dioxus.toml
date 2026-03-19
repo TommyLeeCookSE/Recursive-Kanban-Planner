@@ -4,8 +4,6 @@ default_platform = "web"
 
 [web.app]
 title = "Kanban Planner"
-# GitHub Pages serves project sites from /<repo-name>/, so this must match the repo slug.
-base_path = "Recursive-Kanban-Planner"
 
 [web.resource]
 dev = {}
