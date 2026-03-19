@@ -15,7 +15,7 @@
 **Status:** CLOSED
 **Resolution:** 
 - Introduced `--app-drop-*` CSS variables in both `.theme-dark` and `.theme-light`.
-- Updated `render_bucket_drop_zone`, `render_card_drop_zone`, and `render_root_drop_zone` to use these variables.
+- Updated the shared drop-zone render helpers in the interface layer to use these variables.
 - Standardized transition effects to `transition-all`.
 
 ## Issue #15: Context Ambiguity and Drop Here Visibility

@@ -1,19 +1,13 @@
 use crate::application::CardPreviewView;
 use crate::domain::card::Card;
 use crate::domain::id::CardId;
+use crate::interface::app::DraggedItemKind;
 use dioxus::prelude::*;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum DropZoneKind {
-    Root,
-    Bucket,
+    Board,
     Card,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct CardPreviewDisplaySection {
-    pub bucket_name: String,
-    pub items: Vec<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -23,22 +17,15 @@ pub struct CardDisplayData {
     pub nested_item_count: usize,
     pub due_date: Option<String>,
     pub is_overdue: bool,
-    pub preview_sections: Vec<CardPreviewDisplaySection>,
+    pub preview_items: Vec<String>,
 }
 
 pub fn build_card_display(card: &Card, preview_view: Option<&CardPreviewView>) -> CardDisplayData {
-    let preview_sections = preview_view
+    let preview_items = preview_view
         .map(|view| {
-            view.sections
+            view.children
                 .iter()
-                .map(|section| CardPreviewDisplaySection {
-                    bucket_name: section.bucket.name().to_string(),
-                    items: section
-                        .cards
-                        .iter()
-                        .map(|child| child.title().to_string())
-                        .collect(),
-                })
+                .map(|child| child.title().to_string())
                 .collect()
         })
         .unwrap_or_default();
@@ -49,34 +36,44 @@ pub fn build_card_display(card: &Card, preview_view: Option<&CardPreviewView>) -
         nested_item_count: card.children_ids().len(),
         due_date: card.due_date().map(|due| due.to_string()),
         is_overdue: card.due_date().map(|due| due.is_overdue()).unwrap_or(false),
-        preview_sections,
+        preview_items,
     }
 }
 
-pub fn drop_zone_classes(kind: DropZoneKind, is_active: bool, is_dragging: bool) -> &'static str {
-    match (kind, is_active, is_dragging) {
-        (DropZoneKind::Bucket, true, _) => {
-            "app-drop-zone app-drop-zone--bucket app-drop-zone--active"
+pub fn drop_zone_classes(
+    kind: DropZoneKind,
+    is_active: bool,
+    dragged_item_kind: DraggedItemKind,
+) -> &'static str {
+    let dragged_class = match dragged_item_kind {
+        DraggedItemKind::None => {
+            return match kind {
+                DropZoneKind::Board => "app-drop-zone app-drop-zone--board app-drop-zone--hidden",
+                DropZoneKind::Card => "app-drop-zone app-drop-zone--card app-drop-zone--hidden",
+            };
         }
-        (DropZoneKind::Bucket, false, true) => {
-            "app-drop-zone app-drop-zone--bucket app-drop-zone--dragging"
+        DraggedItemKind::Card => match kind {
+            DropZoneKind::Card => "app-drop-zone app-drop-zone--card",
+            DropZoneKind::Board => "app-drop-zone app-drop-zone--board",
+        },
+    };
+
+    match (kind, is_active) {
+        (DropZoneKind::Card, true) => "app-drop-zone app-drop-zone--card app-drop-zone--active",
+        (DropZoneKind::Card, false) => {
+            if dragged_item_kind == DraggedItemKind::Card {
+                "app-drop-zone app-drop-zone--card app-drop-zone--dragging"
+            } else {
+                dragged_class
+            }
         }
-        (DropZoneKind::Bucket, false, false) => {
-            "app-drop-zone app-drop-zone--bucket app-drop-zone--hidden"
-        }
-        (DropZoneKind::Card, true, _) => "app-drop-zone app-drop-zone--card app-drop-zone--active",
-        (DropZoneKind::Card, false, true) => {
-            "app-drop-zone app-drop-zone--card app-drop-zone--dragging"
-        }
-        (DropZoneKind::Card, false, false) => {
-            "app-drop-zone app-drop-zone--card app-drop-zone--hidden"
-        }
-        (DropZoneKind::Root, true, _) => "app-drop-zone app-drop-zone--root app-drop-zone--active",
-        (DropZoneKind::Root, false, true) => {
-            "app-drop-zone app-drop-zone--root app-drop-zone--dragging"
-        }
-        (DropZoneKind::Root, false, false) => {
-            "app-drop-zone app-drop-zone--root app-drop-zone--hidden"
+        (DropZoneKind::Board, true) => "app-drop-zone app-drop-zone--board app-drop-zone--active",
+        (DropZoneKind::Board, false) => {
+            if dragged_item_kind == DraggedItemKind::Card {
+                "app-drop-zone app-drop-zone--board app-drop-zone--dragging"
+            } else {
+                dragged_class
+            }
         }
     }
 }

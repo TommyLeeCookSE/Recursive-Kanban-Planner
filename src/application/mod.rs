@@ -1,34 +1,19 @@
-use crate::domain::bucket::Bucket;
 use crate::domain::card::Card;
 use crate::domain::due_date::DueDate;
 use crate::domain::error::DomainError;
-use crate::domain::id::{BucketId, CardId, NotePageId};
+use crate::domain::id::{CardId, NotePageId};
 use crate::domain::registry::{CardRegistry, DeleteStrategy};
 use crate::infrastructure::logging::record_diagnostic;
-use std::collections::HashMap;
-use tracing::{Level, error, info};
+use tracing::{Level, error, info, trace};
 
-/// Application layer commands that can be executed against the domain.
-///
-/// # Examples
-///
-/// ```rust
-/// use kanban_planner::application::Command;
-///
-/// let command = Command::CreateRootCard {
-///     title: "Roadmap".to_string(),
-/// };
-/// assert!(matches!(command, Command::CreateRootCard { .. }));
-/// ```
 #[derive(Debug)]
 pub enum Command {
-    CreateRootCard {
+    CreateWorkspaceChildCard {
         title: String,
     },
     CreateChildCard {
         title: String,
         parent_id: CardId,
-        bucket_id: BucketId,
     },
     RenameCard {
         id: CardId,
@@ -63,84 +48,32 @@ pub enum Command {
         id: CardId,
         strategy: DeleteStrategy,
     },
-    MoveCardToBucket {
-        card_id: CardId,
-        bucket_id: BucketId,
-    },
     ReparentCard {
         card_id: CardId,
         new_parent_id: CardId,
     },
-    AddBucket {
-        card_id: CardId,
-        name: String,
-    },
-    RenameBucket {
-        card_id: CardId,
-        bucket_id: BucketId,
-        new_name: String,
-    },
-    RemoveBucket {
-        card_id: CardId,
-        bucket_id: BucketId,
-    },
-    ReorderBuckets {
-        card_id: CardId,
-        ordered_ids: Vec<BucketId>,
-    },
     ReorderChildren {
-        card_id: CardId,
+        parent_id: CardId,
         ordered_ids: Vec<CardId>,
     },
-    ReorderRootCards {
-        ordered_ids: Vec<CardId>,
-    },
-    /// Drops a card into a specific bucket at a given index on its parent board.
-    DropCardAtPosition {
-        board_id: CardId,
+    DropChildAtPosition {
+        parent_id: CardId,
         card_id: CardId,
-        target_bucket_id: BucketId,
         target_index: usize,
     },
 }
 
-/// Executes a command against the card registry.
-///
-/// The application layer owns command start, success, and failure logging.
-/// Callers should surface user-facing state as needed, but should not duplicate
-/// command failure logs around this function.
-///
-/// # Examples
-///
-/// ```rust
-/// use kanban_planner::application::{Command, execute};
-/// use kanban_planner::domain::registry::CardRegistry;
-///
-/// let mut registry = CardRegistry::new();
-/// execute(
-///     Command::CreateRootCard {
-///         title: "Workspace".to_string(),
-///     },
-///     &mut registry,
-/// )?;
-/// assert_eq!(registry.get_root_cards().len(), 1);
-/// # Ok::<(), kanban_planner::domain::error::DomainError>(())
-/// ```
 pub fn execute(command: Command, registry: &mut CardRegistry) -> Result<(), DomainError> {
     log_command_start(&command);
     let command_label = command_name(&command);
 
     let result = match command {
-        Command::CreateRootCard { title } => {
-            registry.create_root_card(title)?;
+        Command::CreateWorkspaceChildCard { title } => {
+            registry.create_workspace_child_card(title)?;
             Ok(())
         }
-        Command::CreateChildCard {
-            title,
-            parent_id,
-            bucket_id,
-        } => {
-            registry.create_child_card(title, parent_id, bucket_id)?;
+        Command::CreateChildCard { title, parent_id } => {
+            registry.create_child_card(title, parent_id)?;
             Ok(())
         }
         Command::RenameCard { id, title } => registry.rename_card(id, title),
@@ -165,38 +98,19 @@ pub fn execute(command: Command, registry: &mut CardRegistry) -> Result<(), Doma
         Command::SetDueDate { card_id, due_date } => registry.set_due_date(card_id, due_date),
         Command::ClearDueDate { card_id } => registry.clear_due_date(card_id),
         Command::DeleteCard { id, strategy } => registry.delete_card(id, strategy),
-        Command::MoveCardToBucket { card_id, bucket_id } => {
-            registry.move_card_to_bucket(card_id, bucket_id)
-        }
         Command::ReparentCard {
             card_id,
             new_parent_id,
         } => registry.reparent_card(card_id, new_parent_id),
-        Command::AddBucket { card_id, name } => {
-            registry.add_bucket(card_id, name)?;
-            Ok(())
-        }
-        Command::RenameBucket {
-            card_id,
-            bucket_id,
-            new_name,
-        } => registry.rename_bucket(card_id, bucket_id, new_name),
-        Command::RemoveBucket { card_id, bucket_id } => registry.remove_bucket(card_id, bucket_id),
-        Command::ReorderBuckets {
-            card_id,
-            ordered_ids,
-        } => registry.reorder_buckets(card_id, ordered_ids),
         Command::ReorderChildren {
-            card_id,
+            parent_id,
             ordered_ids,
-        } => registry.reorder_children(card_id, ordered_ids),
-        Command::ReorderRootCards { ordered_ids } => registry.reorder_root_cards(ordered_ids),
-        Command::DropCardAtPosition {
-            board_id,
+        } => registry.reorder_children(parent_id, ordered_ids),
+        Command::DropChildAtPosition {
+            parent_id,
             card_id,
-            target_bucket_id,
             target_index,
-        } => apply_card_drop_internal(registry, board_id, card_id, target_bucket_id, target_index),
+        } => apply_child_drop_internal(registry, parent_id, card_id, target_index),
     };
 
     match &result {
@@ -214,131 +128,55 @@ pub fn execute(command: Command, registry: &mut CardRegistry) -> Result<(), Doma
             );
         }
     }
+
     result
 }
 
-/// A read-only projection of a single card's board, used for UI rendering.
-///
-/// # Examples
-///
-/// ```ignore
-/// // BoardView is returned by build_board_view(...) and then consumed by the UI.
-/// ```
 pub struct BoardView<'a> {
     pub card: &'a Card,
-    pub columns: Vec<ColumnView<'a>>,
+    pub children: Vec<&'a Card>,
 }
 
-/// A single column in a [`BoardView`].
-///
-/// # Examples
-///
-/// ```ignore
-/// // ColumnView is produced as part of a BoardView projection.
-/// ```
-pub struct ColumnView<'a> {
-    pub bucket: &'a Bucket,
-    pub cards: Vec<&'a Card>,
-}
-
-/// A single bucket group in an inline card preview.
-#[derive(Debug)]
-pub struct CardPreviewSection<'a> {
-    pub bucket: &'a Bucket,
-    pub cards: Vec<&'a Card>,
-}
-
-/// A read-only preview of a card's immediate children grouped by bucket.
 #[derive(Debug)]
 pub struct CardPreviewView<'a> {
     pub card: &'a Card,
-    pub sections: Vec<CardPreviewSection<'a>>,
+    pub children: Vec<&'a Card>,
 }
 
-/// Builds a [`BoardView`] for a given card.
-///
-/// If the card has an "Unassigned" bucket that is empty, it is omitted from the view
-/// to reduce visual clutter on highly organized boards.
-///
-/// # Examples
-///
-/// ```rust
-/// use kanban_planner::application::build_board_view;
-/// use kanban_planner::domain::registry::CardRegistry;
-///
-/// let mut registry = CardRegistry::new();
-/// let board_id = registry.create_root_card("Workspace".to_string())?;
-/// let view = build_board_view(board_id, &registry)?;
-///
-/// assert_eq!(view.card.id(), board_id);
-/// # Ok::<(), kanban_planner::domain::error::DomainError>(())
-/// ```
 pub fn build_board_view(
     card_id: CardId,
     registry: &CardRegistry,
-) -> Result<BoardView, DomainError> {
-    info!(%card_id, "Building board view");
-    let card = registry.get_card(card_id)?;
-    let projection = registry.board_projection(card_id)?;
-
-    let mut columns = Vec::new();
-    let bucket_count = card.buckets().len();
-
-    for bucket in card.buckets() {
-        let cards = projection.get(&bucket.id()).cloned().unwrap_or_default();
-
-        // Skip "Unassigned" column if it's empty AND not the only column
-        if bucket.name() == crate::domain::card::UNASSIGNED_BUCKET_NAME
-            && cards.is_empty()
-            && bucket_count > 1
-        {
-            continue;
-        }
-
-        columns.push(ColumnView { bucket, cards });
-    }
-
-    Ok(BoardView { card, columns })
+) -> Result<BoardView<'_>, DomainError> {
+    trace!(%card_id, "Building board view");
+    Ok(BoardView {
+        card: registry.get_card(card_id)?,
+        children: registry.get_children(card_id)?,
+    })
 }
 
-/// Builds an inline preview of a card's immediate children grouped by bucket.
-///
-/// Empty buckets are omitted from the preview to keep the UI compact.
 pub fn build_card_preview_view(
     card_id: CardId,
     registry: &CardRegistry,
-) -> Result<CardPreviewView, DomainError> {
-    info!(%card_id, "Building card preview view");
-    let card = registry.get_card(card_id)?;
-    let projection = registry.board_projection(card_id)?;
-
-    let mut sections = Vec::new();
-    for bucket in card.buckets() {
-        let cards = projection.get(&bucket.id()).cloned().unwrap_or_default();
-        if cards.is_empty() {
-            continue;
-        }
-
-        sections.push(CardPreviewSection { bucket, cards });
-    }
-
-    Ok(CardPreviewView { card, sections })
+) -> Result<CardPreviewView<'_>, DomainError> {
+    trace!(%card_id, "Building card preview view");
+    Ok(CardPreviewView {
+        card: registry.get_card(card_id)?,
+        children: registry.get_children(card_id)?,
+    })
 }
 
 fn log_command_start(command: &Command) {
     match command {
-        Command::CreateRootCard { .. } => {
-            info!(command = "CreateRootCard", "Executing application command");
+        Command::CreateWorkspaceChildCard { .. } => {
+            info!(
+                command = "CreateWorkspaceChildCard",
+                "Executing application command"
+            );
         }
-        Command::CreateChildCard {
-            parent_id,
-            bucket_id,
-            ..
-        } => {
+        Command::CreateChildCard { parent_id, .. } => {
             info!(
                 command = "CreateChildCard",
                 %parent_id,
-                %bucket_id,
                 "Executing application command"
             );
         }
@@ -382,14 +220,6 @@ fn log_command_start(command: &Command) {
                 "Executing application command"
             );
         }
-        Command::MoveCardToBucket { card_id, bucket_id } => {
-            info!(
-                command = "MoveCardToBucket",
-                %card_id,
-                %bucket_id,
-                "Executing application command"
-            );
-        }
         Command::ReparentCard {
             card_id,
             new_parent_id,
@@ -401,124 +231,54 @@ fn log_command_start(command: &Command) {
                 "Executing application command"
             );
         }
-        Command::AddBucket { card_id, .. } => {
-            info!(command = "AddBucket", %card_id, "Executing application command");
-        }
-        Command::RenameBucket {
-            card_id, bucket_id, ..
-        } => {
-            info!(
-                command = "RenameBucket",
-                %card_id,
-                %bucket_id,
-                "Executing application command"
-            );
-        }
-        Command::RemoveBucket { card_id, bucket_id } => {
-            info!(
-                command = "RemoveBucket",
-                %card_id,
-                %bucket_id,
-                "Executing application command"
-            );
-        }
-        Command::ReorderBuckets {
-            card_id,
-            ordered_ids,
-        } => {
-            info!(
-                command = "ReorderBuckets",
-                %card_id,
-                bucket_count = ordered_ids.len(),
-                "Executing application command"
-            );
-        }
         Command::ReorderChildren {
-            card_id,
+            parent_id,
             ordered_ids,
         } => {
             info!(
                 command = "ReorderChildren",
-                %card_id,
+                %parent_id,
                 child_count = ordered_ids.len(),
                 "Executing application command"
             );
         }
-        Command::ReorderRootCards { ordered_ids } => {
+        Command::DropChildAtPosition { .. } => {
             info!(
-                command = "ReorderRootCards",
-                root_count = ordered_ids.len(),
-                "Executing application command"
-            );
-        }
-        Command::DropCardAtPosition { .. } => {
-            info!(
-                command = "DropCardAtPosition",
+                command = "DropChildAtPosition",
                 "Executing application command"
             );
         }
     }
 }
 
-fn apply_card_drop_internal(
+fn apply_child_drop_internal(
     registry: &mut CardRegistry,
-    board_id: CardId,
+    parent_id: CardId,
     card_id: CardId,
-    target_bucket_id: BucketId,
     target_index: usize,
 ) -> Result<(), DomainError> {
-    let board = registry.get_card(board_id)?;
-    let bucket_order: Vec<BucketId> = board.buckets().iter().map(|bucket| bucket.id()).collect();
-    let child_order = board.children_ids().to_vec();
+    let parent = registry.get_card(parent_id)?;
+    if !parent.children_ids().contains(&card_id) {
+        return Err(DomainError::InvalidOperation(format!(
+            "Card {card_id} is not a child of parent {parent_id}"
+        )));
+    }
 
-    let mut cards_by_bucket: HashMap<BucketId, Vec<CardId>> = bucket_order
+    let mut reordered_children: Vec<CardId> = parent
+        .children_ids()
         .iter()
         .copied()
-        .map(|bucket_id| (bucket_id, Vec::new()))
+        .filter(|child_id| *child_id != card_id)
         .collect();
-    let mut current_bucket_id = None;
+    let insertion_index = target_index.min(reordered_children.len());
+    reordered_children.insert(insertion_index, card_id);
 
-    for child_id in child_order {
-        let child = registry.get_card(child_id)?;
-        let bucket_id = child.bucket_id().ok_or_else(|| {
-            DomainError::InvalidOperation(format!(
-                "Child card {child_id} is missing its bucket assignment"
-            ))
-        })?;
-
-        if child_id == card_id {
-            current_bucket_id = Some(bucket_id);
-            continue;
-        }
-
-        cards_by_bucket.entry(bucket_id).or_default().push(child_id);
-    }
-
-    let _current_bucket_id = current_bucket_id.ok_or(DomainError::CardNotFound(card_id))?;
-    let target_cards = cards_by_bucket
-        .get_mut(&target_bucket_id)
-        .ok_or(DomainError::BucketNotFound(target_bucket_id))?;
-    let insertion_index = target_index.min(target_cards.len());
-    target_cards.insert(insertion_index, card_id);
-
-    // If bucket changed, update it first
-    if current_bucket_id != Some(target_bucket_id) {
-        registry.move_card_to_bucket(card_id, target_bucket_id)?;
-    }
-
-    let mut reordered_children = Vec::new();
-    for bucket_id in bucket_order {
-        if let Some(cards) = cards_by_bucket.get(&bucket_id) {
-            reordered_children.extend(cards.iter().copied());
-        }
-    }
-
-    registry.reorder_children(board_id, reordered_children)
+    registry.reorder_children(parent_id, reordered_children)
 }
 
 fn command_name(command: &Command) -> &'static str {
     match command {
-        Command::CreateRootCard { .. } => "CreateRootCard",
+        Command::CreateWorkspaceChildCard { .. } => "CreateWorkspaceChildCard",
         Command::CreateChildCard { .. } => "CreateChildCard",
         Command::RenameCard { .. } => "RenameCard",
         Command::AddNotePage { .. } => "AddNotePage",
@@ -528,131 +288,93 @@ fn command_name(command: &Command) -> &'static str {
         Command::SetDueDate { .. } => "SetDueDate",
         Command::ClearDueDate { .. } => "ClearDueDate",
         Command::DeleteCard { .. } => "DeleteCard",
-        Command::MoveCardToBucket { .. } => "MoveCardToBucket",
         Command::ReparentCard { .. } => "ReparentCard",
-        Command::AddBucket { .. } => "AddBucket",
-        Command::RenameBucket { .. } => "RenameBucket",
-        Command::RemoveBucket { .. } => "RemoveBucket",
-        Command::ReorderBuckets { .. } => "ReorderBuckets",
         Command::ReorderChildren { .. } => "ReorderChildren",
-        Command::ReorderRootCards { .. } => "ReorderRootCards",
-        Command::DropCardAtPosition { .. } => "DropCardAtPosition",
+        Command::DropChildAtPosition { .. } => "DropChildAtPosition",
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::card::UNASSIGNED_BUCKET_NAME;
 
     #[test]
-    fn test_execute_create_root() {
-        let mut reg = CardRegistry::new();
+    fn test_execute_create_workspace_child() {
+        let mut registry = CardRegistry::new();
         execute(
-            Command::CreateRootCard {
-                title: "Root".into(),
+            Command::CreateWorkspaceChildCard {
+                title: "Top Level Board".into(),
             },
-            &mut reg,
+            &mut registry,
         )
         .unwrap();
-        assert_eq!(reg.get_root_cards().len(), 1);
+
+        assert_eq!(registry.workspace_child_count(), 1);
     }
 
     #[test]
-    fn test_board_view_shows_unassigned_if_only_bucket() {
-        let mut reg = CardRegistry::new();
-        let root_id = reg.create_root_card("Root".into()).unwrap();
-
-        // Root has ONLY Unassigned. It should show up even if empty.
-        let view = build_board_view(root_id, &reg).unwrap();
-        assert_eq!(view.columns.len(), 1);
-        assert_eq!(view.columns[0].bucket.name(), UNASSIGNED_BUCKET_NAME);
-
-        // Now add another bucket. NOW Unassigned should hide (since it's empty).
-        reg.add_bucket(root_id, "Todo".into()).unwrap();
-        let view = build_board_view(root_id, &reg).unwrap();
-        assert_eq!(view.columns.len(), 1);
-        assert_eq!(view.columns[0].bucket.name(), "Todo");
-
-        // Add a card to Unassigned. Now both should show.
-        let root = reg.get_card(root_id).unwrap();
-        let unassigned_id = root.buckets()[0].id(); // Unassigned is at index 0 by default.
-        reg.create_child_card("Child".into(), root_id, unassigned_id)
+    fn test_board_view_returns_ordered_children() {
+        let mut registry = CardRegistry::new();
+        let workspace_id = registry.workspace_card_id().unwrap();
+        let first_id = registry
+            .create_child_card("First".into(), workspace_id)
+            .unwrap();
+        let second_id = registry
+            .create_child_card("Second".into(), workspace_id)
             .unwrap();
 
-        let view = build_board_view(root_id, &reg).unwrap();
-        assert_eq!(view.columns.len(), 2);
+        let view = build_board_view(workspace_id, &registry).unwrap();
+        let ids: Vec<CardId> = view.children.iter().map(|card| card.id()).collect();
+        assert_eq!(ids, vec![first_id, second_id]);
     }
 
     #[test]
-    fn test_card_preview_groups_children_by_bucket() {
-        let mut reg = CardRegistry::new();
-        let root_id = reg.create_root_card("Root".into()).unwrap();
-        let extra_bucket_id = reg.add_bucket(root_id, "Doing".into()).unwrap();
-        let third_bucket_id = reg.add_bucket(root_id, "Done".into()).unwrap();
-        let unassigned_id = reg.get_card(root_id).unwrap().buckets()[0].id();
-
-        reg.create_child_card("Alpha".into(), root_id, extra_bucket_id)
+    fn test_card_preview_returns_immediate_children_only() {
+        let mut registry = CardRegistry::new();
+        let workspace_id = registry.workspace_card_id().unwrap();
+        let project_id = registry
+            .create_child_card("Project".into(), workspace_id)
             .unwrap();
-        reg.create_child_card("Beta".into(), root_id, unassigned_id)
+        let task_id = registry
+            .create_child_card("Task".into(), project_id)
             .unwrap();
 
-        let preview = build_card_preview_view(root_id, &reg).unwrap();
-
-        assert_eq!(preview.card.id(), root_id);
-        assert_eq!(preview.sections.len(), 2);
-        assert_eq!(preview.sections[0].bucket.id(), unassigned_id);
-        assert_eq!(preview.sections[0].cards[0].title(), "Beta");
-        assert_eq!(preview.sections[1].bucket.id(), extra_bucket_id);
-        assert_eq!(preview.sections[1].cards[0].title(), "Alpha");
-        assert!(
-            preview
-                .sections
-                .iter()
-                .all(|section| section.bucket.id() != third_bucket_id),
-            "Empty buckets should be omitted from card previews"
-        );
+        let preview = build_card_preview_view(project_id, &registry).unwrap();
+        assert_eq!(preview.card.id(), project_id);
+        assert_eq!(preview.children.len(), 1);
+        assert_eq!(preview.children[0].id(), task_id);
     }
 
     #[test]
-    fn test_execute_drop_card_at_position() {
-        let mut reg = CardRegistry::new();
-        let board_id = reg.create_root_card("Board".into()).unwrap();
-        let b1_id = reg.get_card(board_id).unwrap().buckets()[0].id(); // Unassigned
-        let b2_id = reg.add_bucket(board_id, "Bucket 2".into()).unwrap();
+    fn test_execute_drop_child_at_position() {
+        let mut registry = CardRegistry::new();
+        let workspace_id = registry.workspace_card_id().unwrap();
+        let first = registry
+            .create_child_card("First".into(), workspace_id)
+            .unwrap();
+        let second = registry
+            .create_child_card("Second".into(), workspace_id)
+            .unwrap();
+        let third = registry
+            .create_child_card("Third".into(), workspace_id)
+            .unwrap();
 
-        let c1 = reg.create_child_card("C1".into(), board_id, b1_id).unwrap();
-        let c2 = reg.create_child_card("C2".into(), board_id, b1_id).unwrap();
-        let c3 = reg.create_child_card("C3".into(), board_id, b2_id).unwrap();
-
-        // Initial order: C1, C2 (b1), C3 (b2)
-        assert_eq!(
-            reg.get_card(board_id).unwrap().children_ids(),
-            &[c1, c2, c3]
-        );
-
-        // Drop C1 into b2 at index 0 (before C3)
         execute(
-            Command::DropCardAtPosition {
-                board_id,
-                card_id: c1,
-                target_bucket_id: b2_id,
+            Command::DropChildAtPosition {
+                parent_id: workspace_id,
+                card_id: third,
                 target_index: 0,
             },
-            &mut reg,
+            &mut registry,
         )
         .unwrap();
 
-        // New order should be: C2 (b1), C1 (b2), C3 (b2)
-        // Wait, the logic preserves bucket order from the board.
-        // Board has [b1, b2].
-        // b1 has [C2].
-        // b2 has [C1, C3].
-        // So global order should be [C2, C1, C3].
-        assert_eq!(
-            reg.get_card(board_id).unwrap().children_ids(),
-            &[c2, c1, c3]
-        );
-        assert_eq!(reg.get_card(c1).unwrap().bucket_id(), Some(b2_id));
+        let ids: Vec<CardId> = registry
+            .get_children(workspace_id)
+            .unwrap()
+            .iter()
+            .map(|card| card.id())
+            .collect();
+        assert_eq!(ids, vec![third, first, second]);
     }
 }

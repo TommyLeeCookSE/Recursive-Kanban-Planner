@@ -1,6 +1,6 @@
 use crate::application::{Command, execute};
 use crate::domain::due_date::DueDate;
-use crate::domain::id::{BucketId, CardId};
+use crate::domain::id::CardId;
 use crate::domain::registry::CardRegistry;
 use crate::infrastructure::logging::record_diagnostic;
 use crate::interface::components::modal::Modal;
@@ -14,7 +14,6 @@ use tracing::{Level, warn};
 pub fn CardModal(
     on_close: EventHandler<()>,
     parent_id: Option<CardId>,
-    bucket_id: Option<BucketId>,
     registry: Signal<CardRegistry>,
 ) -> Element {
     let mut input_title = use_signal(String::new);
@@ -23,7 +22,7 @@ pub fn CardModal(
     rsx! {
         Modal {
             on_close: move |_| on_close.call(()),
-            title: if parent_id.is_some() { "New Child Card" } else { "New Root Board" },
+            title: if parent_id.is_some() { "New Card" } else { "New Board" },
             div { class: "flex flex-col gap-4",
                 input {
                     class: "app-input",
@@ -48,13 +47,12 @@ pub fn CardModal(
                         disabled: input_title().trim().is_empty(),
                         onclick: move |_| {
                             let trimmed_title = input_title().trim().to_string();
-                            let command = match build_create_card_command(trimmed_title, parent_id, bucket_id) {
+                            let command = match build_create_card_command(trimmed_title, parent_id) {
                                 Ok(command) => command,
                                 Err(error_value) => {
                                     let user_message = user_message_for_command_error(&error_value);
                                     warn!(
                                         parent_id = ?parent_id,
-                                        bucket_id = ?bucket_id,
                                         error = %error_value,
                                         "Card modal rejected invalid create-card context"
                                     );
@@ -75,7 +73,7 @@ pub fn CardModal(
                                 }
                             }
                         },
-                        "Create Item"
+                        "Create Card"
                     }
                 }
             }
@@ -116,7 +114,7 @@ pub fn EditCardModal(
     rsx! {
         Modal {
             on_close: move |_| on_close.call(()),
-            title: "Edit Item",
+            title: "Edit Card",
             div { class: "flex flex-col gap-4",
                 label { class: "app-kicker", "Title" }
                 input {

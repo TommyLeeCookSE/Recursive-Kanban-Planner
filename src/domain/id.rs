@@ -2,7 +2,7 @@
 //!
 //! This module defines the strict, type-safe generic identifiers for the Kanban Planner.
 //!
-//! By wrapping the internal `Ulid` generation in specific tuple structs (`CardId`, `BucketId`),
+//! By wrapping the internal `Ulid` generation in specific tuple structs (`CardId`, `NotePageId`),
 //! we utilize the Rust Newtype pattern. This prevents logic bugs where IDs of different entities
 //! are accidentally swapped during function calls.
 //!
@@ -64,56 +64,6 @@ impl FromStr for CardId {
     }
 }
 
-/// Unique identifier for a Bucket (column) in a Card's board.
-///
-/// Wraps a ULID to ensure type safety.
-///
-/// # Examples
-///
-/// ```
-/// use kanban_planner::domain::id::BucketId;
-///
-/// let bucket_id = BucketId::new();
-/// println!("Generated Bucket ID: {}", bucket_id);
-/// ```
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
-pub struct BucketId(Ulid);
-
-impl BucketId {
-    /// Generates a new unique BucketId using the current time.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use kanban_planner::domain::id::BucketId;
-    ///
-    /// let bucket_id = BucketId::new();
-    /// ```
-    pub fn new() -> Self {
-        Self(Ulid::new())
-    }
-}
-
-impl Default for BucketId {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl fmt::Display for BucketId {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-impl FromStr for BucketId {
-    type Err = ulid::DecodeError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(Self(Ulid::from_str(s)?))
-    }
-}
-
 /// Unique identifier for a note page stored on a card.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct NotePageId(Ulid);
@@ -158,12 +108,6 @@ mod tests {
 
         // Ensure display format matches the inner ULID string format
         assert_eq!(id1.to_string(), id1.0.to_string());
-    }
-
-    #[test]
-    fn test_bucket_id_generation_and_display() {
-        let id = BucketId::new();
-        assert_eq!(id.to_string(), id.0.to_string());
     }
 
     #[test]

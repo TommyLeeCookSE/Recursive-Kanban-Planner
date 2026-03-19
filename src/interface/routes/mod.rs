@@ -17,7 +17,7 @@ pub mod home;
 /// let route = Route::Home {};
 /// assert!(matches!(route, Route::Home {}));
 /// ```
-#[derive(Clone, Routable, Debug, PartialEq)]
+#[derive(Clone, Routable, Debug, PartialEq, Eq)]
 #[rustfmt::skip]
 pub enum Route {
     #[layout(NavbarLayout)]

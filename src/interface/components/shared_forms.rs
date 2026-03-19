@@ -1,8 +1,7 @@
 use crate::application::Command;
 use crate::domain::due_date::DueDate;
 use crate::domain::error::DomainError;
-use crate::domain::id::{BucketId, CardId};
-use crate::domain::registry::CardRegistry;
+use crate::domain::id::CardId;
 use dioxus::prelude::*;
 
 pub fn inline_error(message: String) -> Element {
@@ -94,63 +93,10 @@ where
 pub fn build_create_card_command(
     title: String,
     parent_id: Option<CardId>,
-    bucket_id: Option<BucketId>,
 ) -> Result<Command, DomainError> {
     match parent_id {
-        Some(parent_id) => {
-            let bucket_id = bucket_id.ok_or_else(|| {
-                DomainError::InvalidOperation(
-                    "Unable to create a child card because no destination column was selected."
-                        .to_string(),
-                )
-            })?;
-
-            Ok(Command::CreateChildCard {
-                title,
-                parent_id,
-                bucket_id,
-            })
-        }
-        None => Ok(Command::CreateRootCard { title }),
-    }
-}
-
-pub fn collect_bucket_choices(registry: &CardRegistry) -> Vec<(String, String)> {
-    let mut choices = Vec::new();
-    for root in registry.get_root_cards() {
-        collect_bucket_choices_for_card(
-            root.id(),
-            root.title().to_string(),
-            registry,
-            &mut choices,
-        );
-    }
-    choices
-}
-
-fn collect_bucket_choices_for_card(
-    card_id: CardId,
-    card_title: String,
-    registry: &CardRegistry,
-    choices: &mut Vec<(String, String)>,
-) {
-    if let Ok(card) = registry.get_card(card_id) {
-        for bucket in card.buckets() {
-            choices.push((
-                bucket.id().to_string(),
-                format!("{card_title} / {}", bucket.name()),
-            ));
-        }
-        for child_id in card.children_ids() {
-            if let Ok(child) = registry.get_card(*child_id) {
-                collect_bucket_choices_for_card(
-                    child.id(),
-                    child.title().to_string(),
-                    registry,
-                    choices,
-                );
-            }
-        }
+        Some(parent_id) => Ok(Command::CreateChildCard { title, parent_id }),
+        None => Ok(Command::CreateWorkspaceChildCard { title }),
     }
 }
 

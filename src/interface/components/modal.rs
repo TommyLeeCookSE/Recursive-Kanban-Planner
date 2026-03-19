@@ -1,33 +1,17 @@
-use crate::domain::id::{BucketId, CardId};
+use crate::domain::id::CardId;
 use dioxus::prelude::*;
 
-mod bucket;
 mod card;
 mod notes;
 
-pub use bucket::{BucketModal, EditBucketModal};
 pub use card::{CardModal, EditCardModal};
 pub use notes::NotesModal;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum ModalType {
-    CreateCard {
-        parent_id: Option<CardId>,
-        bucket_id: Option<BucketId>,
-    },
-    EditCard {
-        id: CardId,
-    },
-    CreateBucket {
-        card_id: CardId,
-    },
-    EditBucket {
-        card_id: CardId,
-        bucket_id: BucketId,
-    },
-    CardNotes {
-        card_id: CardId,
-    },
+    CreateCard { parent_id: Option<CardId> },
+    EditCard { id: CardId },
+    CardNotes { card_id: CardId },
 }
 
 #[component]

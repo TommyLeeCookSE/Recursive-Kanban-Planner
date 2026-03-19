@@ -2,9 +2,7 @@ use crate::domain::registry::CardRegistry;
 use crate::infrastructure::logging::record_diagnostic;
 use crate::infrastructure::repository::AppPersistence;
 use crate::interface::Route;
-use crate::interface::components::modal::{
-    BucketModal, CardModal, EditBucketModal, EditCardModal, ModalType, NotesModal,
-};
+use crate::interface::components::modal::{CardModal, EditCardModal, ModalType, NotesModal};
 use dioxus::prelude::*;
 use tracing::{Level, info, warn};
 
@@ -13,6 +11,13 @@ pub struct IsDark(pub bool);
 
 #[derive(Clone, Copy, Default)]
 pub struct IsDragging(pub bool);
+
+#[derive(Clone, Copy, Default, PartialEq, Eq)]
+pub enum DraggedItemKind {
+    #[default]
+    None,
+    Card,
+}
 
 /// The root application component.
 ///
@@ -34,7 +39,7 @@ pub fn App() -> Element {
         let initial = match AppPersistence::load_registry() {
             Ok(Some(registry)) => {
                 info!(
-                    root_count = registry.get_root_cards().len(),
+                    workspace_child_count = registry.workspace_child_count(),
                     "Initialized registry from persistence"
                 );
                 registry
@@ -63,6 +68,7 @@ pub fn App() -> Element {
     // Global modal state.
     let mut active_modal = use_context_provider(|| Signal::new(None::<ModalType>));
     let _is_dragging = use_context_provider(|| Signal::new(IsDragging(false)));
+    let _dragged_item_kind = use_context_provider(|| Signal::new(DraggedItemKind::None));
 
     let shell_class = if is_dark().0 {
         "app-shell theme-dark dark"
@@ -70,10 +76,11 @@ pub fn App() -> Element {
         "app-shell theme-light"
     };
 
-    // Side effect: Save to persistence whenever the registry changes.
+    // Side effect: Save to persistence only when the registry snapshot changes.
+    let registry_snapshot = registry.read().clone();
     let mut save_warning = persistence_warning;
-    use_effect(move || {
-        if let Err(error) = AppPersistence::save_registry(&registry.read()) {
+    use_effect(use_reactive!(|(registry_snapshot,)| {
+        if let Err(error) = AppPersistence::save_registry(&registry_snapshot) {
             warn!(error = %error, "Persistence save failed while app state changed");
             record_diagnostic(
                 Level::WARN,
@@ -82,7 +89,7 @@ pub fn App() -> Element {
             );
             save_warning.set(Some(error.to_string()));
         }
-    });
+    }));
 
     rsx! {
         div { class: "{shell_class}",
@@ -103,31 +110,11 @@ pub fn App() -> Element {
             // Modal Overlay Dispatcher
             if let Some(modal) = active_modal() {
                 match modal {
-                    ModalType::CreateCard { parent_id, bucket_id } => {
+                    ModalType::CreateCard { parent_id } => {
                         rsx! {
                             CardModal {
                                 on_close: move |_| active_modal.set(None),
                                 parent_id,
-                                bucket_id,
-                                registry,
-                            }
-                        }
-                    },
-                    ModalType::CreateBucket { card_id } => {
-                        rsx! {
-                            BucketModal {
-                                on_close: move |_| active_modal.set(None),
-                                card_id,
-                                registry,
-                            }
-                        }
-                    },
-                    ModalType::EditBucket { card_id, bucket_id } => {
-                        rsx! {
-                            EditBucketModal {
-                                on_close: move |_| active_modal.set(None),
-                                card_id,
-                                bucket_id,
                                 registry,
                             }
                         }

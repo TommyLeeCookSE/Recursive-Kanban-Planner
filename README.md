@@ -1,21 +1,20 @@
 # Recursive Kanban Planner
 
-Recursive Kanban Planner is a local-first Kanban application built with Rust and Dioxus. The core idea is simple: every task is a card, and every card can open into its own board.
+Recursive Kanban Planner is a local-first planning app built with Rust and Dioxus. The core idea is simple: every board is a card, and every card can open into its own board.
 
 ## Concept
 
-- Nested boards let any card become a planning surface for its own child cards.
-- Recursive structure keeps high-level boards clean while detailed work lives deeper in the tree.
+- The workspace is the single top-level card.
+- Every other board is a normal child card beneath it.
+- Cards can show their immediate children as compact previews.
+- Notes and due dates are built in.
 - Clean Architecture keeps domain rules, application commands, infrastructure, and UI concerns separated.
 
 ## Current MVP
 
-- Root boards and nested child cards
-- Per-card bucket management
+- Workspace card plus nested child cards
 - Card create, edit, move, reparent, and delete flows
-- Bucket create, rename, remove, reorder, and drag-and-drop flows
-- Drag-and-drop for cards, buckets, and root boards
-- Inline child previews on cards grouped by bucket name
+- Immediate child previews on cards
 - Notebook-style notes with titled plain-text pages on each card
 - Date-only due dates with overdue card styling
 - Browser persistence through `localStorage`
@@ -25,7 +24,7 @@ Recursive Kanban Planner is a local-first Kanban application built with Rust and
 
 ## Verified Status
 
-Validated in this worktree on 2026-03-18:
+Validated in this worktree on 2026-03-19:
 
 ```bash
 cargo test
@@ -109,7 +108,7 @@ Browser builds save automatically to `localStorage`.
 
 Native builds currently fall back to in-memory state and show a warning banner because a desktop/mobile persistence backend has not been implemented yet.
 
-The top navigation now includes working `Export`, `Import`, and `Clear Cache` actions for web builds. Import replaces the active workspace only after the snapshot is validated.
+The top navigation includes working `Export`, `Import`, and `Clear Cache` actions for web builds. Import replaces the active workspace only after the snapshot is validated.
 
 ## Architecture
 
@@ -122,10 +121,10 @@ See [docs/design_document.md](docs/design_document.md) for the detailed architec
 
 ## Suggested Next Stages
 
-1. Polish the new notebook, due-date, label, and rule UI so dense cards stay easy to scan.
-2. Expand rule actions beyond popups once the event model feels stable.
-3. Add richer label and rule management ergonomics, including search/filtering for larger workspaces.
-4. Implement a native persistence backend for desktop/mobile targets.
+1. Polish card density, spacing, and the child-preview experience.
+2. Add richer search and filtering for larger workspaces.
+3. Implement a native persistence backend for desktop/mobile targets.
+4. Consider collaboration once the single-user card tree feels stable.
 
 ## License
 

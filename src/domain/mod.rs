@@ -1,4 +1,3 @@
-pub mod bucket;
 pub mod card;
 pub mod due_date;
 pub mod error;

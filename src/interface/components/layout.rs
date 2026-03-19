@@ -92,21 +92,44 @@ pub fn NavbarLayout() -> Element {
 /// }
 /// ```
 #[component]
-pub fn TopBar(title: String, back_route: Route, back_label: String, children: Element) -> Element {
+pub fn TopBar(
+    title: String,
+    back_route: Option<Route>,
+    back_label: String,
+    children: Element,
+) -> Element {
+    let back_button = if let Some(route) = back_route {
+        rsx! {
+            button {
+                class: "app-button-secondary inline-flex min-h-[3.25rem] max-w-full items-center justify-center gap-2 rounded-2xl px-3 py-3 text-sm font-black sm:min-w-[12rem] sm:px-6 sm:text-base group",
+                onclick: move |_| {
+                    navigator().push(route.clone());
+                },
+                title: "Back to {back_label}",
+                "aria-label": "Back to {back_label}",
+                span { class: "inline-flex shrink-0 items-center justify-center text-lg leading-none transform transition-transform group-hover:-translate-x-1", {render_back_icon()} }
+                span { class: "hidden truncate sm:inline", "Back to: {back_label}" }
+            }
+        }
+    } else {
+        rsx! {
+            button {
+                class: "app-button-secondary inline-flex min-h-[3.25rem] max-w-full items-center justify-center gap-2 rounded-2xl px-3 py-3 text-sm font-black opacity-50 sm:min-w-[12rem] sm:px-6 sm:text-base",
+                disabled: true,
+                title: "Back to {back_label}",
+                "aria-label": "Back to {back_label}",
+                "aria-disabled": "true",
+                span { class: "inline-flex shrink-0 items-center justify-center text-lg leading-none", {render_back_icon()} }
+                span { class: "hidden truncate sm:inline", "Back to: {back_label}" }
+            }
+        }
+    };
+
     rsx! {
         div { class: "app-panel border-b px-4 py-6 sm:px-6 lg:px-12",
             div { class: "grid w-full grid-cols-[minmax(0,auto)_minmax(0,1fr)_minmax(0,auto)] items-center gap-3 sm:gap-4 lg:gap-8",
                 div { class: "min-w-0 justify-self-start",
-                    button {
-                        class: "app-button-secondary inline-flex min-h-[3.25rem] max-w-full items-center justify-center gap-2 rounded-2xl px-3 py-3 text-sm font-black sm:min-w-[12rem] sm:px-6 sm:text-base group",
-                        onclick: move |_| {
-                            navigator().push(back_route.clone());
-                        },
-                        title: "Back to {back_label}",
-                        "aria-label": "Back to {back_label}",
-                        span { class: "inline-flex shrink-0 items-center justify-center text-lg leading-none transform transition-transform group-hover:-translate-x-1", {render_back_icon()} }
-                        span { class: "hidden truncate sm:inline", "Back to: {back_label}" }
-                    }
+                    {back_button}
                 }
 
                 div { class: "min-w-0 px-2 text-center justify-self-center",

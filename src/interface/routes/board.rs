@@ -1,44 +1,63 @@
-use crate::application::{BoardView, build_board_view, build_card_preview_view};
+use crate::application::{build_board_view, build_card_preview_view};
 use crate::domain::error::DomainError;
 use crate::domain::id::CardId;
 use crate::domain::registry::CardRegistry;
 use crate::infrastructure::logging::record_diagnostic;
 use crate::interface::Route;
-use crate::interface::app::IsDragging;
+use crate::interface::app::{DraggedItemKind, IsDragging};
 use crate::interface::components::board_view::{
-    BoardDragSignals, BoardRenderContext, ColumnRenderModel, render_board_screen,
+    BoardDragSignals, BoardRenderContext, render_board_screen,
 };
 use crate::interface::components::modal::ModalType;
 use crate::interface::components::visuals::build_card_display;
 use dioxus::prelude::*;
 use tracing::{Level, error};
 
-struct BoardScreenState<'a> {
-    view: BoardView<'a>,
-    back_route: Route,
+#[derive(Clone, PartialEq, Eq)]
+struct BoardScreenData {
+    board_title: String,
+    board_due_date: String,
+    back_route: Option<Route>,
     back_label: String,
+    child_cards: Vec<crate::interface::components::visuals::CardDisplayData>,
 }
 
-/// Renders a single board and its buckets for the selected card.
-///
-/// # Examples
-///
-/// ```ignore
-/// rsx! {
-///     Board { card_id: board_id }
-/// }
-/// ```
 #[component]
 pub fn Board(card_id: CardId) -> Element {
     let registry = use_context::<Signal<CardRegistry>>();
     let active_modal = use_context::<Signal<Option<ModalType>>>();
     let warning_message = use_context::<Signal<Option<String>>>();
     let is_dragging = use_context::<Signal<IsDragging>>();
-    let bucket_drop_index = use_signal(|| None::<usize>);
-    let card_drop_target = use_signal(|| None::<(crate::domain::id::BucketId, usize)>);
+    let dragged_item_kind = use_context::<Signal<DraggedItemKind>>();
+    let card_drop_index = use_signal(|| None::<usize>);
 
     let reg_guard = registry.read();
-    let board_state = match load_board_state(card_id, &reg_guard) {
+    let Some(screen_data) = build_board_screen_data(card_id, &reg_guard) else {
+        return render_board_load_error();
+    };
+
+    let render_context = BoardRenderContext {
+        board_id: card_id,
+        registry,
+        active_modal,
+        warning_message,
+        drag: BoardDragSignals { card_drop_index },
+        dragged_item_kind,
+        is_dragging,
+    };
+
+    render_board_screen(
+        screen_data.board_title,
+        screen_data.back_route,
+        screen_data.back_label,
+        screen_data.board_due_date,
+        screen_data.child_cards,
+        render_context,
+    )
+}
+
+fn build_board_screen_data(card_id: CardId, registry: &CardRegistry) -> Option<BoardScreenData> {
+    let board_state = match load_board_state(card_id, registry) {
         Ok(state) => state,
         Err(error_value) => {
             error!(%card_id, error = %error_value, "Board route failed to load board state");
@@ -47,71 +66,56 @@ pub fn Board(card_id: CardId) -> Element {
                 "board-route",
                 format!("Board load failed for {card_id}: {error_value}"),
             );
-            return render_board_load_error();
+            return None;
         }
     };
 
-    let board_id = card_id;
-    let board_title = board_state.view.card.title().to_string();
     let board_display = build_card_display(board_state.view.card, None);
     let board_due_date = board_display
         .due_date
         .as_deref()
         .unwrap_or("None")
         .to_string();
-    let column_models = board_state
-        .view
-        .columns
-        .iter()
-        .map(|column| {
-            let cards = column
-                .cards
-                .iter()
-                .map(|card| {
-                    let preview_view = build_card_preview_view(card.id(), &reg_guard)?;
-                    Ok(build_card_display(card, Some(&preview_view)))
-                })
-                .collect::<Result<Vec<_>, DomainError>>()?;
 
-            Ok(ColumnRenderModel {
-                bucket_id: column.bucket.id(),
-                bucket_name: column.bucket.name().to_string(),
-                cards,
-            })
+    let child_cards = match board_state
+        .view
+        .children
+        .iter()
+        .map(|card| {
+            let preview_view = build_card_preview_view(card.id(), registry)?;
+            Ok(build_card_display(card, Some(&preview_view)))
         })
-        .collect::<Result<Vec<_>, DomainError>>();
-    let column_models = match column_models {
-        Ok(models) => models,
+        .collect::<Result<Vec<_>, DomainError>>()
+    {
+        Ok(cards) => cards,
         Err(error_value) => {
-            error!(%board_id, error = %error_value, "Board route failed while building card previews");
+            error!(
+                %card_id,
+                error = %error_value,
+                "Board route failed while building card previews"
+            );
             record_diagnostic(
                 Level::ERROR,
                 "board-route",
-                format!("Board preview load failed for {board_id}: {error_value}"),
+                format!("Board preview load failed for {card_id}: {error_value}"),
             );
-            return render_board_load_error();
+            return None;
         }
     };
-    let render_context = BoardRenderContext {
-        board_id,
-        registry,
-        active_modal,
-        warning_message,
-        drag: BoardDragSignals {
-            bucket_drop_index,
-            card_drop_target,
-        },
-        is_dragging,
-    };
 
-    render_board_screen(
-        board_title,
-        board_state.back_route,
-        board_state.back_label,
+    Some(BoardScreenData {
+        board_title: board_state.view.card.title().to_string(),
         board_due_date,
-        column_models,
-        render_context,
-    )
+        back_route: board_state.back_route,
+        back_label: board_state.back_label,
+        child_cards,
+    })
+}
+
+struct BoardScreenState<'a> {
+    view: crate::application::BoardView<'a>,
+    back_route: Option<Route>,
+    back_label: String,
 }
 
 fn load_board_state<'a>(
@@ -124,11 +128,11 @@ fn load_board_state<'a>(
         Some(parent_id) => {
             let parent = registry.get_card(parent_id)?;
             (
-                Route::Board { card_id: parent_id },
+                Some(Route::Board { card_id: parent_id }),
                 parent.title().to_string(),
             )
         }
-        None => (Route::Home {}, "Workspace".to_string()),
+        None => (None, "Workspace".to_string()),
     };
 
     Ok(BoardScreenState {

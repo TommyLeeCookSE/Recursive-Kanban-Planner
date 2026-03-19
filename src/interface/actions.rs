@@ -1,10 +1,10 @@
 use crate::application::{Command, execute};
 use crate::domain::error::DomainError;
-use crate::domain::id::{BucketId, CardId};
+use crate::domain::id::CardId;
 use crate::domain::registry::CardRegistry;
 use crate::domain::registry::DeleteStrategy;
 use crate::infrastructure::logging::record_diagnostic;
-use crate::interface::app::IsDragging;
+use crate::interface::app::{DraggedItemKind, IsDragging};
 use dioxus::prelude::*;
 use std::str::FromStr;
 use tracing::{Level, info, warn};
@@ -158,12 +158,15 @@ pub fn prime_drag_session(
     event: &DragEvent,
     log_target: &'static str,
     payload: impl Into<String>,
+    dragged_item_kind: DraggedItemKind,
+    mut dragged_item_kind_signal: Signal<DraggedItemKind>,
     mut is_dragging: Signal<IsDragging>,
 ) {
     let payload = payload.into();
     let data_transfer = event.data().data_transfer();
 
     is_dragging.set(IsDragging(true));
+    dragged_item_kind_signal.set(dragged_item_kind);
 
     if let Err(error) = data_transfer.clear_data(None) {
         warn!(
@@ -202,18 +205,6 @@ pub fn prime_drop_target(event: &DragEvent) {
     event.data().data_transfer().set_drop_effect("move");
 }
 
-pub fn dragged_root_card_id(event: &DragEvent, log_target: &'static str) -> Option<CardId> {
-    let payload = read_drag_payload(event, log_target)?;
-    let raw_id = payload.strip_prefix("root-card:")?;
-    parse_card_id(raw_id, log_target, &payload)
-}
-
-pub fn dragged_bucket_id(event: &DragEvent, log_target: &'static str) -> Option<BucketId> {
-    let payload = read_drag_payload(event, log_target)?;
-    let raw_id = payload.strip_prefix("bucket:")?.split(':').next()?;
-    parse_bucket_id(raw_id, log_target, &payload)
-}
-
 pub fn dragged_card_id(event: &DragEvent, log_target: &'static str) -> Option<CardId> {
     let payload = read_drag_payload(event, log_target)?;
     let raw_id = payload.strip_prefix("card:")?.split(':').next()?;
@@ -244,22 +235,6 @@ fn parse_card_id(raw_id: &str, log_target: &'static str, payload: &str) -> Optio
             Level::WARN,
             log_target,
             format!("Failed to parse card drag payload '{payload}'"),
-        );
-        None
-    })
-}
-
-fn parse_bucket_id(raw_id: &str, log_target: &'static str, payload: &str) -> Option<BucketId> {
-    BucketId::from_str(raw_id).ok().or_else(|| {
-        warn!(
-            ui_target = log_target,
-            payload = %payload,
-            "Failed to parse bucket drag payload"
-        );
-        record_diagnostic(
-            Level::WARN,
-            log_target,
-            format!("Failed to parse bucket drag payload '{payload}'"),
         );
         None
     })

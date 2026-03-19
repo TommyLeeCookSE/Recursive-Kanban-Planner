@@ -1,24 +1,12 @@
-use crate::domain::id::{BucketId, CardId};
+use crate::domain::id::CardId;
 
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
 pub enum DomainError {
     #[error("Card not found: {0}")]
     CardNotFound(CardId),
 
-    #[error("Bucket not found: {0}")]
-    BucketNotFound(BucketId),
-
-    #[error("Duplicate bucket ID during reorder: {0}")]
-    DuplicateBucketId(BucketId),
-
     #[error("Card title cannot be empty or blank")]
     EmptyTitle,
-
-    #[error("A bucket named '{0}' already exists on this card")]
-    DuplicateBucketName(String),
-
-    #[error("Cannot delete a non-empty bucket; reassign or delete its cards first")]
-    BucketNotEmpty,
 
     #[error("Cannot delete a card that still has children; choose a DeleteStrategy")]
     CardHasChildren,
@@ -28,4 +16,7 @@ pub enum DomainError {
 
     #[error("Invalid operation: {0}")]
     InvalidOperation(String),
+
+    #[error("Incompatible legacy data: {0}")]
+    IncompatibleLegacyData(String),
 }

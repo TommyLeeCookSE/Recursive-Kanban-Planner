@@ -17,8 +17,8 @@ We optimize for:
 ## Project Overview
 
 Recursive Kanban Planner is a local-first planning tool where everything is a `Card`.
-There are no separate task, project, or board entities. A card can contain child cards,
-and opening a card means viewing that card's board.
+The workspace is the single top-level card, and every other board is a normal child card.
+There are no separate bucket, task, or project entities.
 
 Stack:
 
@@ -32,7 +32,7 @@ Stack:
 
 ## Current Implementation Status
 
-Last reconciled: 2026-03-18
+Last reconciled: 2026-03-19
 
 Current validation state:
 
@@ -46,21 +46,20 @@ Implemented in the current worktree:
 
 | Item | File | Notes |
 | :--- | :--- | :--- |
-| `CardId`, `BucketId`, and feature id newtypes | `src/domain/id.rs` | ULID-backed ids for cards, buckets, and notes |
-| `Bucket` entity | `src/domain/bucket.rs` | Private fields and controlled mutators |
+| `CardId` and feature id newtypes | `src/domain/id.rs` | ULID-backed ids for cards, notes, and rules |
 | `Card` entity | `src/domain/card.rs` | Local invariants enforced inside the entity, including notes and due dates |
 | `NotePage`, `DueDate` | `src/domain/` | Feature-specific value objects and definitions |
 | `DomainError` | `src/domain/error.rs` | Typed domain errors throughout the domain/application layers |
-| `CardRegistry` and `DeleteStrategy` | `src/domain/registry.rs` | Cross-card invariant boundary plus bucket and tree management |
+| `CardRegistry` | `src/domain/registry.rs` | Cross-card invariant boundary plus ordered tree management |
 | `Command` dispatcher | `src/application/mod.rs` | `execute` owns command lifecycle logging |
-| `BoardView`, `ColumnView`, and rule evaluation | `src/application/mod.rs` | Read-only UI projections plus popup trigger evaluation |
+| `BoardView`, `CardPreviewView`, and rule evaluation | `src/application/mod.rs` | Read-only UI projections plus popup trigger evaluation |
 | JSON persistence | `src/infrastructure/repository.rs` | Serialize/deserialize full registry state |
 | Browser persistence | `src/infrastructure/repository.rs` | `localStorage` on `wasm32` |
 | `AppPersistence` facade | `src/infrastructure/repository.rs` | Explicit browser-first persistence boundary |
 | Runtime logging | `src/infrastructure/logging.rs` | `tracing`, diagnostics buffer, native/web setup |
 | Dioxus shell and routing | `src/interface/` | App shell, routes, modal system, board/home views |
-| `TopBar`, `CardItem`, modal flows | `src/interface/components/` | Create/edit card, notes, and bucket UI |
-| Deterministic child-card creation | `src/interface/components/modal.rs` | Child creation requires a real bucket id |
+| `TopBar`, `CardItem`, modal flows | `src/interface/components/` | Create/edit card, notes, and settings UI |
+| Deterministic child-card creation | `src/interface/components/modal.rs` | Child creation requires a real parent card |
 | Fail-loud board fallback | `src/interface/routes/board.rs` | Board load preserves the real `DomainError` for logs |
 | Public API docs with examples | `src/application/`, `src/infrastructure/`, `src/interface/` | Public entry points now have `# Examples` blocks |
 
@@ -75,26 +74,32 @@ Recent binding decisions already implemented:
 
 1. Same-parent reparenting is a no-op.
 2. Registry read-path corruption fails loudly.
-3. Child-card creation in the UI must never synthesize a fallback `BucketId`.
+3. Child-card creation in the UI must never synthesize a fallback id.
 4. The board route must keep the underlying `DomainError` for logs and show a user-safe fallback.
 5. Command lifecycle logging belongs to `application::execute`.
 
 ---
 
-## Core Concept: Cards And Buckets
+## Core Concept: Cards Only
 
-The current shipped model is intentionally recursive, but it is not cards-only.
+The current shipped model is intentionally recursive and card-only.
 
 - `Card` is the primary planning item and board owner.
-- `Bucket` is a column owned by a card.
-- Opening a card means viewing that card's buckets and child cards.
+- A card's children are ordered child cards, not bucket columns.
+- Opening a card means viewing that card's immediate children.
 
-Cards still form a strict tree:
+Cards form a strict tree:
 
-- Root cards have `parent_id: None`.
-- Non-root cards have both `parent_id: Some(...)` and `bucket_id: Some(...)`.
+- The workspace card has `parent_id: None`.
+- Nested cards have `parent_id: Some(...)`.
 - Depth is unlimited.
 - Navigation means entering a card and viewing that card's board.
+
+Child previews are compact and shallow:
+
+- a card shows only its immediate children
+- previews are rendered as small card boxes or chips
+- recursive preview nesting is intentionally limited to one level in the UI
 
 ---
 
@@ -108,24 +113,10 @@ This section is the source-of-truth contract for the implemented domain layer.
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
 pub enum DomainError {
     CardNotFound(CardId),
-    BucketNotFound(BucketId),
-    DuplicateBucketId(BucketId),
     EmptyTitle,
-    DuplicateBucketName(String),
-    BucketNotEmpty,
-    CardHasChildren,
     CycleDetected,
     InvalidOperation(String),
-}
-```
-
-### `DeleteStrategy`
-
-```rust
-pub enum DeleteStrategy {
-    Reject,
-    CascadeDelete,
-    ReparentToGrandparent,
+    IncompatibleLegacyData(String),
 }
 ```
 
@@ -137,46 +128,18 @@ pub struct CardRegistry { /* store is private */ }
 impl CardRegistry {
     pub fn new() -> Self;
 
-    pub fn create_root_card(&mut self, title: String) -> Result<CardId, DomainError>;
-    pub fn create_child_card(
-        &mut self,
-        title: String,
-        parent_id: CardId,
-        bucket_id: BucketId,
-    ) -> Result<CardId, DomainError>;
-
+    pub fn workspace_card(&self) -> Result<&Card, DomainError>;
+    pub fn workspace_card_id(&self) -> Result<CardId, DomainError>;
     pub fn get_card(&self, id: CardId) -> Result<&Card, DomainError>;
-    pub fn get_root_cards(&self) -> Vec<&Card>;
     pub fn get_children(&self, parent_id: CardId) -> Result<Vec<&Card>, DomainError>;
-    pub fn board_projection(
-        &self,
-        card_id: CardId,
-    ) -> Result<HashMap<BucketId, Vec<&Card>>, DomainError>;
+    pub fn board_projection(&self, card_id: CardId) -> Result<Vec<&Card>, DomainError>;
 
+    pub fn create_workspace_child_card(&mut self, title: String) -> Result<CardId, DomainError>;
+    pub fn create_child_card(&mut self, title: String, parent_id: CardId) -> Result<CardId, DomainError>;
     pub fn rename_card(&mut self, id: CardId, title: String) -> Result<(), DomainError>;
-    pub fn add_bucket(&mut self, card_id: CardId, name: String) -> Result<BucketId, DomainError>;
-    pub fn reorder_buckets(
-        &mut self,
-        card_id: CardId,
-        ordered_ids: Vec<BucketId>,
-    ) -> Result<(), DomainError>;
-    pub fn move_card_to_bucket(
-        &mut self,
-        card_id: CardId,
-        bucket_id: BucketId,
-    ) -> Result<(), DomainError>;
-    pub fn remove_bucket(&mut self, card_id: CardId, bucket_id: BucketId)
-        -> Result<(), DomainError>;
-    pub fn reparent_card(
-        &mut self,
-        card_id: CardId,
-        new_parent_id: CardId,
-    ) -> Result<(), DomainError>;
-    pub fn delete_card(
-        &mut self,
-        card_id: CardId,
-        strategy: DeleteStrategy,
-    ) -> Result<(), DomainError>;
+    pub fn reparent_card(&mut self, card_id: CardId, new_parent_id: CardId) -> Result<(), DomainError>;
+    pub fn reorder_children(&mut self, parent_id: CardId, ordered_ids: Vec<CardId>) -> Result<(), DomainError>;
+    pub fn delete_card(&mut self, card_id: CardId, strategy: DeleteStrategy) -> Result<(), DomainError>;
 }
 ```
 
@@ -189,20 +152,18 @@ impl CardRegistry {
 These do not require cross-card lookup:
 
 - Title must be non-empty in constructors and `rename`
-- Bucket names must be unique per card
-- Bucket reorder must reject duplicates, omissions, and unknown ids
-- The "Unassigned" bucket cannot be removed
+- Child reorder must reject duplicates, omissions, and unknown ids
+- Notes and due dates validate their own local shape
 
 ### `CardRegistry` owns cross-card invariants
 
 These require looking across cards:
 
+- Workspace card must exist before board projections are used
 - Parent card must exist before creating a child
-- Child `bucket_id` must belong to the parent card
 - Reparenting must reject cycles
-- Removing a bucket must fail while children still reference it
 - Delete strategies must be enforced at the registry level
-- Same-parent reparenting must return `Ok(())` without mutating ordering or bucket assignment
+- Same-parent reparenting must return `Ok(())` without mutating ordering
 - Corrupt read paths must fail loudly rather than skipping data or silently falling back
 
 ---
@@ -216,7 +177,6 @@ It must preserve:
 
 - child ordering
 - `parent_id`
-- `bucket_id`
 
 Regression test:
 
@@ -227,17 +187,17 @@ Regression test:
 The registry fails loudly if:
 
 - a parent references a missing child card
-- a child points to a bucket that does not belong to the parent board
+- a child tree is corrupt during readback or projection
 
 Error shapes:
 
 - `DomainError::CardNotFound`
-- `DomainError::BucketNotFound`
+- `DomainError::InvalidOperation`
 
 Regression tests:
 
 - `test_get_children_fails_on_missing_child`
-- `test_board_projection_fails_on_unknown_bucket`
+- `test_board_projection_fails_on_corrupt_tree`
 
 ### Interface determinism
 
@@ -245,10 +205,10 @@ The interface layer must not invent domain identifiers.
 
 Current enforced behavior:
 
-- child-card creation without a selected bucket is rejected before any command is built
+- child-card creation without a selected parent is rejected before any command is built
 - the modal stays open and shows inline validation feedback
 - the application layer remains the single owner of command logging
-- note-open, note-close, and moved-to-bucket events are routed through a shared popup-rule dispatcher
+- note-open and note-close events are routed through a shared popup-rule dispatcher
 
 ### Board route failure handling
 
@@ -267,8 +227,8 @@ The persistence boundary validates deserialized registry state before it is acce
 Current enforced behavior:
 
 - malformed or tampered snapshots are rejected during JSON load/import
-- legacy snapshots without newer optional fields still load through serde defaults
-- workspace-level label and rule definitions must stay consistent with per-card assignments
+- legacy bucket-based snapshots are treated as incompatible and reset to a clean workspace
+- workspace data is normalized to the current card-only shape before the UI uses it
 
 ---
 
@@ -278,8 +238,9 @@ Current enforced behavior:
 src/
 |- domain/          <- Pure domain logic, no I/O
 |  |- id.rs
-|  |- bucket.rs
 |  |- card.rs
+|  |- due_date.rs
+|  |- note.rs
 |  |- error.rs
 |  |- registry.rs
 |  `- mod.rs
@@ -309,11 +270,11 @@ Layer responsibilities:
 - `src/interface/tailwind.css` is the editable source of truth for theme and UI styling.
 - `assets/app.css` is generated output and should be refreshed with `npm run build:css`.
 - `npm run check:css` validates that the generated stylesheet matches the committed asset.
-- Theme, drop-zone, and surface classes should be defined semantically so both light and dark modes stay in sync.
+- Theme, surface, and action classes should be defined semantically so both light and dark modes stay in sync.
 
 ### Browser Smoke Coverage
 
-- `tests/smoke.spec.ts` provides a small Playwright smoke test for app boot, board creation, bucket creation, bucket rename exposure, theme toggle, and top-nav utility visibility.
+- `tests/smoke.spec.ts` provides a small Playwright smoke test for app boot, workspace creation, card creation, child preview visibility, theme toggle, and top-nav utility visibility.
 - The smoke test is intended as a fast regression check, not a full end-to-end suite.
 - `npm run smoke` runs the CSS parity check and then the smoke suite.
 
@@ -355,20 +316,10 @@ Ownership rules:
 
 ---
 
-## Bucket Validation Rules
-
-1. `add_bucket(name)` rejects duplicate names on the same card.
-2. `remove_bucket(id)` rejects removal of the Unassigned bucket.
-3. `remove_bucket(id)` also rejects deletion while any child card still references that bucket.
-4. `reorder_buckets(ids)` rejects duplicate ids, unknown ids, and omissions.
-
----
-
 ## Ordering Strategy
 
-- Bucket order is the order of `Vec<Bucket>` on the parent card.
 - Child order is the order of `Vec<CardId>` on the parent card.
-- Root-card order is persisted explicitly in `CardRegistry`.
+- The workspace card is the single top-level card in the tree.
 
 No extra ordering fields are used.
 
@@ -387,36 +338,31 @@ No extra ordering fields are used.
 
 - Click a card to drill into that card's board
 - Use the `Back` control to move exactly one level up
+- The workspace back button is visible but disabled
 - No breadcrumb tree in MVP
 - Web builds expose working export/import/clear-cache controls
-- Workspace-level label and rule managers live in the top navigation
 
 ### Board behavior
 
-- Horizontal scrolling for board columns
-- Vertical scrolling inside columns
-- `CardItem` supports open, edit, delete, notes, due-date, label, and rule-aware display
-- Cards and buckets support drag-and-drop reordering
-- Root cards on Home support drag-and-drop reordering
-- Cards may move between buckets inside the same board only
+- The board uses a wrapping grid instead of horizontal scrolling
+- Vertical scrolling is allowed inside the viewport
+- `CardItem` supports open, edit, delete, notes, due-date, and preview display
+- Cards may move within their parent ordering
+- Cards may move between parents only when the UI explicitly supports it
 
 ### Modal behavior
 
 - Background blur
 - Create card
 - Edit card
-- Create bucket
 - Notebook-style notes modal
-- Workspace label manager
-- Workspace rule manager
-- Inline validation if a child card is missing destination bucket context
+- Inline validation when required parent context is missing
 
 ### Error behavior
 
 - Board load errors render a user-safe fallback panel
 - Persistence failures surface a visible warning banner
 - Command failures are logged in the application layer and surfaced in the relevant modal when appropriate
-- Rule-triggered popups are queued FIFO so multiple matches do not collide
 
 ---
 
@@ -428,7 +374,6 @@ No extra ordering fields are used.
 - Native desktop/mobile persistence
 - Recurrence
 - Templates
-- Event hooks beyond note-open, note-close, and bucket-entry popup behavior
 - Multi-user features
 - Permissions
 - Analytics
@@ -439,15 +384,14 @@ No extra ordering fields are used.
 
 ### Stage 1: UI polish
 
-- Refine drag/drop affordances now that cards can display more metadata
+- Refine drag/drop affordances now that cards carry more metadata
 - Improve dense-card readability across light and dark themes
 - Tighten modal spacing and settings ergonomics
 
-### Stage 2: Rule expansion
+### Stage 2: Search and navigation
 
-- Add more rule actions once popup-only behavior feels stable
-- Consider rule filters or workspace-level enable/disable states
-- Evaluate whether rules need auditability or a recent-events panel
+- Add search and filtering once large workspaces become hard to scan
+- Consider shortcuts or quick-open behavior for deep trees
 
 ### Stage 3: Native persistence
 

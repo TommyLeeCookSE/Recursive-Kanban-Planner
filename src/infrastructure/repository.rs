@@ -1,34 +1,38 @@
 use crate::domain::error::DomainError;
 use crate::domain::registry::CardRegistry;
 use crate::infrastructure::logging::record_diagnostic;
-use tracing::{Level, error, info};
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
+use tracing::{Level, error, info, warn};
 
-/// A repository that serializes and deserializes the full Kanban board state to JSON.
-///
-/// # Examples
-///
-/// ```rust
-/// use kanban_planner::domain::registry::CardRegistry;
-/// use kanban_planner::infrastructure::repository::JsonRepository;
-///
-/// let registry = CardRegistry::new();
-/// let json = JsonRepository::serialize_registry(&registry)?;
-/// let restored = JsonRepository::deserialize_registry(&json)?;
-/// assert_eq!(restored.get_root_cards().len(), 0);
-/// # Ok::<(), kanban_planner::domain::error::DomainError>(())
-/// ```
+const CURRENT_SCHEMA_VERSION: u8 = 2;
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+struct PersistedRegistry {
+    schema_version: u8,
+    registry: CardRegistry,
+}
+
 pub struct JsonRepository;
 
 impl JsonRepository {
-    /// Serializes the `CardRegistry` to a pretty-printed JSON string.
     pub fn serialize_registry(registry: &CardRegistry) -> Result<String, DomainError> {
-        let root_count = registry.get_root_cards().len();
-        info!(root_count, "Serializing registry to JSON");
+        let workspace_child_count = registry.workspace_child_count();
+        info!(workspace_child_count, "Serializing registry to JSON");
 
-        serde_json::to_string_pretty(registry).map_err(|e| {
+        let persisted = PersistedRegistry {
+            schema_version: CURRENT_SCHEMA_VERSION,
+            registry: registry.clone(),
+        };
+
+        serde_json::to_string_pretty(&persisted).map_err(|e| {
             let error =
                 DomainError::InvalidOperation(format!("Failed to serialize registry to JSON: {e}"));
-            error!(root_count, error = %error, "Registry serialization failed");
+            error!(
+                workspace_child_count,
+                error = %error,
+                "Registry serialization failed"
+            );
             record_diagnostic(
                 Level::ERROR,
                 "persistence",
@@ -38,59 +42,83 @@ impl JsonRepository {
         })
     }
 
-    /// Deserializes a robust JSON string back into a `CardRegistry`.
     pub fn deserialize_registry(json: &str) -> Result<CardRegistry, DomainError> {
         let payload_bytes = json.len();
         info!(payload_bytes, "Deserializing registry from JSON");
 
-        let registry: CardRegistry = serde_json::from_str(json).map_err(|e| {
-            let error = DomainError::InvalidOperation(format!(
-                "Failed to deserialize registry from JSON: {e}"
-            ));
-            error!(payload_bytes, error = %error, "Registry deserialization failed");
-            record_diagnostic(
-                Level::ERROR,
-                "persistence",
-                format!("Registry deserialization failed: {error}"),
-            );
-            error
-        })?;
+        let value: Value = match serde_json::from_str(json) {
+            Ok(value) => value,
+            Err(error_value) => {
+                return Err(deserialization_error(
+                    payload_bytes,
+                    format!("Failed to deserialize registry from JSON: {error_value}"),
+                ));
+            }
+        };
 
-        registry.validate().map_err(|error| {
-            error!(payload_bytes, error = %error, "Registry validation failed after deserialization");
-            record_diagnostic(
-                Level::ERROR,
-                "persistence",
-                format!("Registry validation failed after deserialization: {error}"),
-            );
-            error
-        })?;
+        if contains_legacy_bucket_model(&value) {
+            return Err(deserialization_error(
+                payload_bytes,
+                "Older bucket-based data is incompatible with the card-only model.".to_string(),
+            ));
+        }
+
+        let registry = match value.get("schema_version") {
+            Some(schema_version_value) => {
+                let Some(schema_version) =
+                    schema_version_value.as_u64().map(|version| version as u8)
+                else {
+                    return Err(deserialization_error(
+                        payload_bytes,
+                        "Persisted schema version must be a positive integer".to_string(),
+                    ));
+                };
+
+                if schema_version != CURRENT_SCHEMA_VERSION {
+                    return Err(deserialization_error(
+                        payload_bytes,
+                        format!("Unsupported persisted schema version {schema_version}"),
+                    ));
+                }
+
+                match serde_json::from_value::<PersistedRegistry>(value) {
+                    Ok(persisted) => persisted.registry,
+                    Err(error_value) => {
+                        return Err(deserialization_error(
+                            payload_bytes,
+                            format!("Failed to decode persisted registry payload: {error_value}"),
+                        ));
+                    }
+                }
+            }
+            None => {
+                return Err(deserialization_error(
+                    payload_bytes,
+                    "Persisted registry is missing the schema envelope".to_string(),
+                ));
+            }
+        };
+
+        if let Err(error_value) = registry.validate() {
+            return Err(deserialization_error(
+                payload_bytes,
+                format!("Registry validation failed after deserialization: {error_value}"),
+            ));
+        }
 
         Ok(registry)
     }
 }
 
-/// A repository that saves and loads the JSON state to/from the browser's `localStorage`.
-///
-/// Note: This only works in environments where `web_sys::window()` is fully available,
-/// such as a browser-hosted `wasm32` build.
-///
-/// # Examples
-///
-/// ```ignore
-/// let registry = kanban_planner::domain::registry::CardRegistry::new();
-/// kanban_planner::infrastructure::repository::LocalStorageRepository::save_to_local_storage(&registry)?;
-/// ```
 pub struct LocalStorageRepository;
 
 impl LocalStorageRepository {
     const STORAGE_KEY: &'static str = "kanban_planner_state";
 
-    /// Saves the registry to `localStorage`.
     pub fn save_to_local_storage(registry: &CardRegistry) -> Result<(), DomainError> {
         info!(
             storage_key = Self::STORAGE_KEY,
-            root_count = registry.get_root_cards().len(),
+            workspace_child_count = registry.workspace_child_count(),
             "Saving registry to localStorage"
         );
         let json = JsonRepository::serialize_registry(registry)?;
@@ -117,7 +145,6 @@ impl LocalStorageRepository {
         Ok(())
     }
 
-    /// Loads the registry from `localStorage`. Returns `None` if no state was found.
     pub fn load_from_local_storage() -> Result<Option<CardRegistry>, DomainError> {
         info!(
             storage_key = Self::STORAGE_KEY,
@@ -142,7 +169,7 @@ impl LocalStorageRepository {
             let registry = JsonRepository::deserialize_registry(&json)?;
             info!(
                 storage_key = Self::STORAGE_KEY,
-                root_count = registry.get_root_cards().len(),
+                workspace_child_count = registry.workspace_child_count(),
                 "Loaded registry from localStorage"
             );
             Ok(Some(registry))
@@ -155,7 +182,6 @@ impl LocalStorageRepository {
         }
     }
 
-    /// Clears the saved registry from `localStorage`.
     pub fn clear_local_storage() -> Result<(), DomainError> {
         info!(
             storage_key = Self::STORAGE_KEY,
@@ -184,21 +210,9 @@ impl LocalStorageRepository {
     }
 }
 
-/// A small platform-aware persistence facade used by the interface layer.
-///
-/// # Examples
-///
-/// ```ignore
-/// match kanban_planner::infrastructure::repository::AppPersistence::load_registry() {
-///     Ok(Some(_registry)) => {}
-///     Ok(None) => {}
-///     Err(error) => eprintln!("{error}"),
-/// }
-/// ```
 pub struct AppPersistence;
 
 impl AppPersistence {
-    /// Loads the registry for the current platform.
     #[cfg(target_arch = "wasm32")]
     pub fn load_registry() -> Result<Option<CardRegistry>, DomainError> {
         info!(
@@ -208,7 +222,6 @@ impl AppPersistence {
         LocalStorageRepository::load_from_local_storage()
     }
 
-    /// Loads the registry for the current platform.
     #[cfg(not(target_arch = "wasm32"))]
     pub fn load_registry() -> Result<Option<CardRegistry>, DomainError> {
         let error = DomainError::InvalidOperation(
@@ -223,18 +236,16 @@ impl AppPersistence {
         Err(error)
     }
 
-    /// Saves the registry for the current platform.
     #[cfg(target_arch = "wasm32")]
     pub fn save_registry(registry: &CardRegistry) -> Result<(), DomainError> {
         info!(
             platform = "web",
-            root_count = registry.get_root_cards().len(),
+            workspace_child_count = registry.workspace_child_count(),
             "Delegating persistence save to browser storage"
         );
         LocalStorageRepository::save_to_local_storage(registry)
     }
 
-    /// Clears the registry for the current platform.
     #[cfg(target_arch = "wasm32")]
     pub fn clear_registry() -> Result<(), DomainError> {
         info!(
@@ -244,7 +255,6 @@ impl AppPersistence {
         LocalStorageRepository::clear_local_storage()
     }
 
-    /// Saves the registry for the current platform.
     #[cfg(not(target_arch = "wasm32"))]
     pub fn save_registry(_registry: &CardRegistry) -> Result<(), DomainError> {
         let error = DomainError::InvalidOperation(
@@ -259,7 +269,6 @@ impl AppPersistence {
         Err(error)
     }
 
-    /// Clears the registry for the current platform.
     #[cfg(not(target_arch = "wasm32"))]
     pub fn clear_registry() -> Result<(), DomainError> {
         let error = DomainError::InvalidOperation(
@@ -275,59 +284,94 @@ impl AppPersistence {
     }
 }
 
+fn contains_legacy_bucket_model(value: &Value) -> bool {
+    match value {
+        Value::Object(map) => {
+            map.contains_key("bucket_id")
+                || map.contains_key("buckets")
+                || map.values().any(contains_legacy_bucket_model)
+        }
+        Value::Array(values) => values.iter().any(contains_legacy_bucket_model),
+        _ => false,
+    }
+}
+
+fn deserialization_error(payload_bytes: usize, reason: String) -> DomainError {
+    let error_value = DomainError::IncompatibleLegacyData(reason.clone());
+    warn!(payload_bytes, error = %error_value, "Rejecting incompatible persisted state");
+    record_diagnostic(
+        Level::WARN,
+        "persistence",
+        format!("Persisted state was rejected: {reason}"),
+    );
+    error_value
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn test_roundtrip_integration() {
-        // create -> serialize -> deserialize -> verify full structural equality
         let mut original = CardRegistry::new();
-        let root_id = original.create_root_card("My Project".into()).unwrap();
-        let bucket_id = original.add_bucket(root_id, "In Progress".into()).unwrap();
+        let workspace_id = original.workspace_card_id().unwrap();
+        let project_id = original
+            .create_child_card("My Project".into(), workspace_id)
+            .unwrap();
         original
-            .create_child_card("My Task".into(), root_id, bucket_id)
+            .create_child_card("My Task".into(), project_id)
             .unwrap();
 
         let json = JsonRepository::serialize_registry(&original).expect("Serialization failed");
-
         let deserialized =
             JsonRepository::deserialize_registry(&json).expect("Deserialization failed");
 
-        assert_eq!(
-            original, deserialized,
-            "Deserialized registry does not match original"
-        );
+        assert_eq!(original, deserialized);
     }
 
     #[test]
     fn test_deserialize_registry_rejects_blank_titles() {
         let mut original = CardRegistry::new();
-        original.create_root_card("My Project".into()).unwrap();
+        let workspace_id = original.workspace_card_id().unwrap();
+        original
+            .create_child_card("My Project".into(), workspace_id)
+            .unwrap();
 
         let json = JsonRepository::serialize_registry(&original).expect("Serialization failed");
         let tampered = json.replacen("\"title\": \"My Project\"", "\"title\": \"   \"", 1);
 
         assert!(matches!(
             JsonRepository::deserialize_registry(&tampered),
-            Err(DomainError::InvalidOperation(message))
-                if message.contains("blank title")
+            Err(DomainError::IncompatibleLegacyData(_))
         ));
     }
 
     #[test]
-    fn test_deserialize_registry_rejects_missing_unassigned_bucket() {
-        let mut original = CardRegistry::new();
-        let root_id = original.create_root_card("My Project".into()).unwrap();
-        original.add_bucket(root_id, "In Progress".into()).unwrap();
-
-        let json = JsonRepository::serialize_registry(&original).expect("Serialization failed");
-        let tampered = json.replacen("\"name\": \"Unassigned\"", "\"name\": \"Backlog\"", 1);
+    fn test_deserialize_registry_rejects_legacy_bucket_payload() {
+        let legacy_json = r#"{
+  "store": {
+    "01ARZ3NDEKTSV4RRFFQ69G5FAV": {
+      "id": "01ARZ3NDEKTSV4RRFFQ69G5FAV",
+      "title": "Legacy",
+      "parent_id": null,
+      "children_ids": [],
+      "bucket_id": null,
+      "buckets": []
+    }
+  }
+}"#;
 
         assert!(matches!(
-            JsonRepository::deserialize_registry(&tampered),
-            Err(DomainError::InvalidOperation(message))
-                if message.contains("exactly one 'Unassigned' bucket")
+            JsonRepository::deserialize_registry(legacy_json),
+            Err(DomainError::IncompatibleLegacyData(_))
+        ));
+    }
+
+    #[test]
+    fn test_deserialize_registry_rejects_invalid_json_payload() {
+        assert!(matches!(
+            JsonRepository::deserialize_registry("{ definitely not json }"),
+            Err(DomainError::IncompatibleLegacyData(_))
         ));
     }
 

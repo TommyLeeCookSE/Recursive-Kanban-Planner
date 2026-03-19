@@ -1,7 +1,6 @@
 use crate::interface::components::shared_forms::confirm_destructive_action;
 use crate::interface::components::visuals::{
-    CardPreviewDisplaySection, render_trash_icon, surface_action_button_classes,
-    surface_destructive_icon_button_classes,
+    render_trash_icon, surface_action_button_classes, surface_destructive_icon_button_classes,
 };
 use dioxus::prelude::*;
 
@@ -31,7 +30,7 @@ pub fn CardItem(
     subtitle: String,
     #[props(default)] due_date: Option<String>,
     #[props(default)] is_overdue: bool,
-    #[props(default)] preview_sections: Vec<CardPreviewDisplaySection>,
+    #[props(default)] preview_items: Vec<String>,
     #[props(default = false)] draggable: bool,
     /// Triggered when the main body of the card is clicked.
     on_open: EventHandler<()>,
@@ -49,25 +48,25 @@ pub fn CardItem(
 
     rsx! {
         article {
-            class: if draggable {
-                "app-card-surface group flex cursor-grab flex-col rounded-[1.75rem] transition-all hover:border-sunfire/50 hover:-translate-y-0.5 active:cursor-grabbing"
-            } else {
-                "app-card-surface group flex flex-col rounded-[1.75rem] transition-all hover:border-sunfire/50 hover:-translate-y-0.5"
-            },
-            draggable: draggable,
-            ondragstart: move |event| {
-                if let Some(handler) = &on_drag_start {
-                    handler.call(event);
-                }
-            },
-            ondragend: move |event| {
-                if let Some(handler) = &on_drag_end {
-                    handler.call(event);
-                }
-            },
+            class: "app-card-surface group flex flex-col rounded-[1.75rem] transition-all hover:border-sunfire/50 hover:-translate-y-0.5",
 
             button {
-                class: "flex-grow w-full rounded-t-[1.75rem] p-6 text-left outline-none transition-colors focus:ring-2 focus:ring-sunfire/30",
+                class: if draggable {
+                    "flex-grow w-full cursor-grab rounded-t-[1.75rem] p-6 text-left outline-none transition-colors focus:ring-2 focus:ring-sunfire/30 active:cursor-grabbing"
+                } else {
+                    "flex-grow w-full rounded-t-[1.75rem] p-6 text-left outline-none transition-colors focus:ring-2 focus:ring-sunfire/30"
+                },
+                draggable: draggable,
+                ondragstart: move |event| {
+                    if let Some(handler) = &on_drag_start {
+                        handler.call(event);
+                    }
+                },
+                ondragend: move |event| {
+                    if let Some(handler) = &on_drag_end {
+                        handler.call(event);
+                    }
+                },
                 title: "Open {card_title_for_open}",
                 onclick: move |_| on_open.call(()),
                 h3 { class: "app-text-primary h-12 overflow-hidden text-lg font-semibold transition-colors group-hover:text-sunfire line-clamp-2",
@@ -82,18 +81,12 @@ pub fn CardItem(
                         "Due {due_date}"
                     }
                 }
-                if !preview_sections.is_empty() {
+                if !preview_items.is_empty() {
                     div { class: "app-card-preview mt-5",
-                        for section in preview_sections {
-                            div { class: "app-card-preview-section",
-                                p { class: "app-card-preview-header",
-                                    "{section.bucket_name}"
-                                }
-                                ul { class: "app-card-preview-list",
-                                    for item in section.items {
-                                        li { class: "app-card-preview-item", "{item}" }
-                                    }
-                                }
+                        p { class: "app-card-preview-header", "Contains" }
+                        div { class: "mt-3 flex flex-wrap gap-2",
+                            for item in preview_items {
+                                span { class: "app-card-preview-item rounded-xl border px-3 py-2 text-xs font-semibold", "{item}" }
                             }
                         }
                     }

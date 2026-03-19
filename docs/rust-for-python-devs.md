@@ -1,7 +1,7 @@
 # Rust for Python Developers
 
-This guide is a short, practical map from Python ideas to the Rust patterns used in this repository.
-It is written to help you read the codebase with less friction, not to teach every Rust feature at once.
+This guide maps common Python ideas to the Rust patterns used in this repository.
+It is meant to help you read the codebase with less friction, not to teach every Rust feature at once.
 
 ## How To Read The App
 
@@ -30,7 +30,7 @@ That path shows the layers from domain rules to user interface.
 | Optional value | `Option<T>` |
 | Module/package | `mod` and `pub mod` |
 | Decorators / dataclass helpers | `#[derive(...)]` |
-| Type aliases that matter | Newtypes like `CardId`, `BucketId` |
+| Type aliases that matter | Newtypes like `CardId` and `NotePageId` |
 | GUI callbacks | Dioxus event handlers |
 
 ## Structs And Impl Blocks
@@ -55,7 +55,7 @@ That design helps the domain layer keep invariants inside the type itself.
 
 ### Why Private Fields Matter
 
-In this project, `Card`, `Bucket`, and `CardRegistry` protect their own rules.
+In this project, `Card`, `CardRegistry`, and the application command layer protect their own rules.
 You usually do not mutate fields directly from the UI.
 Instead, you call a method or application command that validates the change first.
 
@@ -65,12 +65,11 @@ One of the most useful Rust patterns in this codebase is the newtype.
 
 ```rust
 pub struct CardId(Ulid);
-pub struct BucketId(Ulid);
 pub struct NotePageId(Ulid);
 ```
 
 These all wrap the same underlying `Ulid` type, but Rust treats them as distinct types.
-That prevents bugs where a function accidentally receives a bucket id when it wanted a card id.
+That prevents bugs where a function accidentally receives the wrong kind of identifier.
 
 Python can pass the wrong value into a function at runtime.
 Rust tries to catch that at compile time.
@@ -82,7 +81,7 @@ They can hold data, which makes them perfect for commands, states, and UI modes.
 
 ```rust
 pub enum ModalType {
-    CreateCard { parent_id: Option<CardId>, bucket_id: Option<BucketId> },
+    CreateCard { parent_id: Option<CardId> },
     EditCard { id: CardId },
 }
 ```
@@ -91,7 +90,7 @@ To use an enum, you usually `match` on it:
 
 ```rust
 match modal {
-    ModalType::CreateCard { parent_id, bucket_id } => { /* ... */ }
+    ModalType::CreateCard { parent_id } => { /* ... */ }
     ModalType::EditCard { id } => { /* ... */ }
 }
 ```
@@ -107,9 +106,8 @@ This is one of the most common patterns in the app shell and modal system.
 
 The project uses it for:
 
-- root vs nested cards
+- workspace vs nested cards
 - optional due dates
-- optional bucket assignment
 - optional selected modal state
 
 Example:
@@ -144,8 +142,7 @@ The app has many user-editable states:
 
 - empty titles
 - invalid card reparenting
-- duplicate bucket names
-- missing children
+- missing cards after load
 - invalid persisted JSON
 
 Returning `Result` makes those failure paths explicit.
@@ -327,11 +324,12 @@ That path is the fastest way to understand how a click becomes a state change.
 ## Short Glossary
 
 - `Card` - the primary recursive planning item
-- `Bucket` - a column inside a card's board
 - `CardRegistry` - the workspace-wide state container
 - `Command` - a mutation request handled by the application layer
 - `ModalType` - UI state describing which modal is open
 - `DomainError` - typed validation or invariant failure
+- `BoardView` - the ordered child-card projection for a board
+- `CardPreviewView` - the immediate child preview for a card
 
 ## Suggested Practice
 

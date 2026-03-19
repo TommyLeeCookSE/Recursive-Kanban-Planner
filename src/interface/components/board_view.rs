@@ -1,31 +1,26 @@
 use crate::application::Command;
-use crate::domain::card::UNASSIGNED_BUCKET_NAME;
-use crate::domain::id::{BucketId, CardId};
+use crate::domain::id::CardId;
 use crate::domain::registry::CardRegistry;
 use crate::infrastructure::logging::record_diagnostic;
 use crate::interface::Route;
 use crate::interface::actions::{
-    ReorderFeedbackContext, delete_card_with_feedback, execute_command_with_feedback,
-    execute_reorder_with_feedback, prime_drag_session, prime_drop_target,
+    delete_card_with_feedback, execute_command_with_feedback, prime_drag_session, prime_drop_target,
 };
-use crate::interface::app::IsDragging;
+use crate::interface::app::{DraggedItemKind, IsDragging};
 use crate::interface::components::card_item::CardItem;
 use crate::interface::components::layout::TopBar;
 use crate::interface::components::modal::ModalType;
-use crate::interface::components::shared_forms::confirm_destructive_action;
 use crate::interface::components::visuals::{
     CardDisplayData, DropZoneKind, drop_zone_classes, render_note_icon, render_plus_icon,
-    render_settings_icon, render_trash_icon, surface_action_button_classes,
-    surface_destructive_icon_button_classes, surface_icon_button_classes,
-    toolbar_action_icon_classes, toolbar_button_classes, toolbar_button_label_classes,
+    render_settings_icon, toolbar_action_icon_classes, toolbar_button_classes,
+    toolbar_button_label_classes,
 };
 use dioxus::prelude::*;
 use tracing::{Level, info};
 
 #[derive(Clone, Copy)]
 pub(crate) struct BoardDragSignals {
-    pub bucket_drop_index: Signal<Option<usize>>,
-    pub card_drop_target: Signal<Option<(BucketId, usize)>>,
+    pub card_drop_index: Signal<Option<usize>>,
 }
 
 #[derive(Clone)]
@@ -35,22 +30,16 @@ pub(crate) struct BoardRenderContext {
     pub active_modal: Signal<Option<ModalType>>,
     pub warning_message: Signal<Option<String>>,
     pub drag: BoardDragSignals,
+    pub dragged_item_kind: Signal<DraggedItemKind>,
     pub is_dragging: Signal<IsDragging>,
-}
-
-#[derive(Clone)]
-pub(crate) struct ColumnRenderModel {
-    pub bucket_id: BucketId,
-    pub bucket_name: String,
-    pub cards: Vec<CardDisplayData>,
 }
 
 pub(crate) fn render_board_screen(
     board_title: String,
-    back_route: Route,
+    back_route: Option<Route>,
     back_label: String,
     board_due_date: String,
-    column_models: Vec<ColumnRenderModel>,
+    child_models: Vec<CardDisplayData>,
     render_context: BoardRenderContext,
 ) -> Element {
     rsx! {
@@ -63,27 +52,7 @@ pub(crate) fn render_board_screen(
                 render_context.clone(),
             )}
             div { class: "flex-grow overflow-x-hidden px-6 py-10 lg:px-12",
-                div { class: "flex flex-wrap items-stretch gap-4 lg:gap-8",
-                    for (index, column) in column_models.iter().cloned().enumerate() {
-                        {render_bucket_drop_zone(
-                            render_context.board_id,
-                            index,
-                            render_context.drag,
-                            render_context.registry,
-                            render_context.warning_message,
-                            render_context.is_dragging,
-                        )}
-                        {render_column(column, render_context.clone())}
-                    }
-                    {render_bucket_drop_zone(
-                        render_context.board_id,
-                        column_models.len(),
-                        render_context.drag,
-                        render_context.registry,
-                        render_context.warning_message,
-                        render_context.is_dragging,
-                    )}
-                }
+                {render_board_grid(child_models, render_context)}
             }
         }
     }
@@ -91,7 +60,7 @@ pub(crate) fn render_board_screen(
 
 fn render_board_header(
     board_title: String,
-    back_route: Route,
+    back_route: Option<Route>,
     back_label: String,
     board_due_date: String,
     context: BoardRenderContext,
@@ -106,30 +75,30 @@ fn render_board_header(
             back_label: back_label.clone(),
             button {
                 class: "{toolbar_button_classes()} text-sunfire",
-                onclick: move |_| active_modal.set(Some(ModalType::CreateBucket { card_id: board_id })),
-                title: "Create Bucket",
-                "aria-label": "Create Bucket",
+                onclick: move |_| active_modal.set(Some(ModalType::CreateCard { parent_id: Some(board_id) })),
+                title: "Create Card",
+                "aria-label": "Create Card",
                 span { class: "{toolbar_action_icon_classes()}", {render_plus_icon()} }
-                span { class: "{toolbar_button_label_classes()}", "Create Bucket" }
+                span { class: "{toolbar_button_label_classes()}", "Create Card" }
             }
-                button {
-                    class: "{toolbar_button_classes()}",
-                    onclick: move |_| {
-                        active_modal.set(Some(ModalType::CardNotes { card_id: board_id }));
-                    },
-                    title: "Open notes",
-                    "aria-label": "Notes",
-                    span { class: "{toolbar_action_icon_classes()}", {render_note_icon()} }
-                    span { class: "{toolbar_button_label_classes()}", "Notes" }
-                }
-                button {
-                    class: "{toolbar_button_classes()}",
-                    onclick: move |_| active_modal.set(Some(ModalType::EditCard { id: board_id })),
-                    title: "Open settings",
-                    "aria-label": "Settings",
-                    span { class: "{toolbar_action_icon_classes()}", {render_settings_icon()} }
-                    span { class: "{toolbar_button_label_classes()}", "Settings" }
-                }
+            button {
+                class: "{toolbar_button_classes()}",
+                onclick: move |_| {
+                    active_modal.set(Some(ModalType::CardNotes { card_id: board_id }));
+                },
+                title: "Open notes",
+                "aria-label": "Notes",
+                span { class: "{toolbar_action_icon_classes()}", {render_note_icon()} }
+                span { class: "{toolbar_button_label_classes()}", "Notes" }
+            }
+            button {
+                class: "{toolbar_button_classes()}",
+                onclick: move |_| active_modal.set(Some(ModalType::EditCard { id: board_id })),
+                title: "Open settings",
+                "aria-label": "Settings",
+                span { class: "{toolbar_action_icon_classes()}", {render_settings_icon()} }
+                span { class: "{toolbar_button_label_classes()}", "Settings" }
+            }
         }
 
         div { class: "app-panel flex flex-wrap items-center justify-between gap-4 border-b px-6 py-5 lg:px-12",
@@ -140,123 +109,93 @@ fn render_board_header(
     }
 }
 
-fn render_column(column: ColumnRenderModel, context: BoardRenderContext) -> Element {
-    let bucket_id = column.bucket_id;
-    let bucket_name = column.bucket_name;
-    let mut active_modal = context.active_modal;
+fn render_board_grid(child_models: Vec<CardDisplayData>, context: BoardRenderContext) -> Element {
+    rsx! {
+        div { class: "flex flex-col gap-4 lg:gap-6",
+            if child_models.is_empty() {
+                {render_empty_drop_zone(context.clone())}
+            } else {
+                {render_card_drop_zone(0, true, context.clone())}
+                div {
+                    class: "grid gap-4 lg:gap-6",
+                    style: "grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));",
+                    for (index, card) in child_models.iter().cloned().enumerate() {
+                        {render_card_item(card, index, context.clone())}
+                    }
+                }
+                {render_card_drop_zone(child_models.len(), true, context)}
+            }
+        }
+    }
+}
+
+fn render_empty_drop_zone(context: BoardRenderContext) -> Element {
+    let mut card_drop_index = context.drag.card_drop_index;
+    let dragged_item_kind = context.dragged_item_kind;
+    let is_dragging = context.is_dragging;
+    let registry = context.registry;
     let warning_message = context.warning_message;
-    let mut bucket_drop_index = context.drag.bucket_drop_index;
-    let mut is_dragging = context.is_dragging;
-    let can_delete_bucket = bucket_name != UNASSIGNED_BUCKET_NAME;
-    let can_rename_bucket = can_delete_bucket;
-    let bucket_name_for_delete = bucket_name.clone();
-    let column_class = "app-column-surface group flex max-h-full min-w-[18rem] basis-[20rem] flex-1 flex-col rounded-[2rem] p-5 transition-all hover:border-sunfire/30";
+    let board_id = context.board_id;
+    let is_active = card_drop_index() == Some(0);
+    let class_name = drop_zone_classes(DropZoneKind::Board, is_active, dragged_item_kind());
 
     rsx! {
         div {
-            key: "{bucket_id}",
-            class: "{column_class}",
-            draggable: true,
-            ondragstart: move |event| {
-                prime_drag_session(
-                    &event,
-                    "board-route",
-                    format!("bucket:{bucket_id}:board:{}", context.board_id),
-                    is_dragging,
-                );
-                info!(bucket_id = %bucket_id, board_id = %context.board_id, "Started dragging bucket");
-                record_diagnostic(
-                    Level::INFO,
-                    "board-route",
-                    format!("Started dragging bucket {bucket_id} on board {}", context.board_id),
-                );
+            class: "{class_name} min-h-[10rem] rounded-[1.75rem] border-2 border-dashed",
+            ondragover: move |event| {
+                prime_drop_target(&event);
+                card_drop_index.set(Some(0));
             },
-            ondragend: move |_| {
-                bucket_drop_index.set(None);
-                is_dragging.set(IsDragging(false));
-            },
-            div {
-                class: "mb-6 flex flex-col gap-4 rounded-2xl px-3 py-2",
-                div {
-                    class: "flex flex-col items-center gap-3 text-center",
-                    h2 {
-                        class: "app-kicker text-sm leading-tight transition-colors group-hover:text-sunfire md:text-base",
-                        "{bucket_name}"
-                    }
-                    div { class: "flex flex-wrap items-center justify-center gap-2",
-                        if can_rename_bucket {
-                            button {
-                                class: "{surface_action_button_classes()}",
-                                title: "Rename this bucket",
-                                onclick: move |_| active_modal.set(Some(ModalType::EditBucket {
-                                    card_id: context.board_id,
-                                    bucket_id,
-                                })),
-                                "Rename"
-                            }
-                        }
-                        if can_delete_bucket {
-                            button {
-                                class: "{surface_destructive_icon_button_classes()}",
-                                title: "Delete this bucket",
-                                onclick: move |_| {
-                                    if confirm_destructive_action(&format!(
-                                        "Delete the bucket '{bucket_name_for_delete}' and all cards inside it?"
-                                    )) {
-                                        let _ = execute_command_with_feedback(
-                                            Command::RemoveBucket {
-                                                card_id: context.board_id,
-                                                bucket_id,
-                                            },
-                                            context.registry,
-                                            warning_message,
-                                            "board-route",
-                                            format!(
-                                                "delete bucket {bucket_id} from board {}",
-                                                context.board_id
-                                            ),
-                                        );
-                                    }
-                                },
-                                span { class: "shrink-0", {render_trash_icon()} }
-                            }
-                        }
-                        button {
-                            class: "{surface_icon_button_classes()} hover:rotate-90",
-                            onclick: move |_| active_modal.set(Some(ModalType::CreateCard {
-                                parent_id: Some(context.board_id),
-                                bucket_id: Some(bucket_id),
-                            })),
-                            "+"
-                        }
-                    }
+            ondragleave: move |_| {
+                if card_drop_index() == Some(0) {
+                    card_drop_index.set(None);
                 }
-            }
-            div { class: "flex-grow overflow-y-auto space-y-4 pr-2",
-                {render_card_drop_zone(bucket_id, 0, context.clone())}
-                for (index, card) in column.cards.iter().cloned().enumerate() {
-                    {render_card_item(card, bucket_id, index, context.clone())}
+            },
+            ondrop: move |event| {
+                event.prevent_default();
+
+                let Some(card_id) = crate::interface::actions::dragged_card_id(&event, "board-route") else {
+                    return;
+                };
+
+                card_drop_index.set(None);
+                let _ = execute_command_with_feedback(
+                    Command::DropChildAtPosition {
+                        parent_id: board_id,
+                        card_id,
+                        target_index: 0,
+                    },
+                    registry,
+                    warning_message,
+                    "board-route",
+                    format!("drop card {card_id} into empty board {board_id}"),
+                );
+            },
+            if is_dragging().0 {
+                div { class: "flex h-full items-center justify-center p-6 text-center",
+                    span { class: "app-kicker", "Drop a card here" }
+                }
+            } else {
+                div { class: "flex h-full items-center justify-center p-6 text-center",
+                    p { class: "app-text-muted", "No child cards yet. Create one to start this board." }
                 }
             }
         }
     }
 }
 
-fn render_card_item(
-    card: CardDisplayData,
-    bucket_id: BucketId,
-    index: usize,
-    context: BoardRenderContext,
-) -> Element {
+fn render_card_item(card: CardDisplayData, index: usize, context: BoardRenderContext) -> Element {
     let card_id = card.id;
     let mut active_modal = context.active_modal;
-    let mut card_drop_target = context.drag.card_drop_target;
+    let mut card_drop_index = context.drag.card_drop_index;
+    let mut dragged_item_kind = context.dragged_item_kind;
     let mut is_dragging = context.is_dragging;
 
     rsx! {
         div {
             key: "{card_id}",
-            class: "flex flex-col gap-3",
+            class: "flex min-w-0 flex-col gap-3",
+            {render_card_drop_zone(index, false, context.clone())}
             CardItem {
                 title: card.title,
                 subtitle: format!("{} nested items", card.nested_item_count),
@@ -268,7 +207,9 @@ fn render_card_item(
                     prime_drag_session(
                         &event,
                         "board-route",
-                        format!("card:{card_id}:board:{}", context.board_id),
+                        format!("card:{card_id}:parent:{}", context.board_id),
+                        DraggedItemKind::Card,
+                        dragged_item_kind,
                         is_dragging,
                     );
                     info!(card_id = %card_id, board_id = %context.board_id, "Started dragging card");
@@ -279,13 +220,14 @@ fn render_card_item(
                     );
                 },
                 on_drag_end: move |_| {
-                    card_drop_target.set(None);
+                    card_drop_index.set(None);
                     is_dragging.set(IsDragging(false));
+                    dragged_item_kind.set(DraggedItemKind::None);
                 },
                 on_rename: move |_| active_modal.set(Some(ModalType::EditCard { id: card_id })),
                 due_date: card.due_date,
                 is_overdue: card.is_overdue,
-                preview_sections: card.preview_sections,
+                preview_items: card.preview_items,
                 on_delete: move |_| {
                     delete_card_with_feedback(
                         card_id,
@@ -296,127 +238,68 @@ fn render_card_item(
                     );
                 },
             }
-            {render_card_drop_zone(bucket_id, index + 1, context.clone())}
         }
     }
 }
 
-fn render_bucket_drop_zone(
-    board_id: CardId,
-    index: usize,
-    drag: BoardDragSignals,
-    registry: Signal<CardRegistry>,
-    warning_message: Signal<Option<String>>,
-    is_dragging: Signal<IsDragging>,
-) -> Element {
-    let mut bucket_drop_index = drag.bucket_drop_index;
-    let is_active = bucket_drop_index() == Some(index);
-    let class_name = drop_zone_classes(DropZoneKind::Bucket, is_active, is_dragging().0);
-
-    rsx! {
-        div {
-            class: "{class_name}",
-            ondragover: move |event| {
-                prime_drop_target(&event);
-                bucket_drop_index.set(Some(index));
-            },
-            ondragleave: move |_| {
-                if bucket_drop_index() == Some(index) {
-                    bucket_drop_index.set(None);
-                }
-            },
-            ondrop: move |event| {
-                event.prevent_default();
-
-                let Some(bucket_id) =
-                    crate::interface::actions::dragged_bucket_id(&event, "board-route")
-                else {
-                    return;
-                };
-
-                bucket_drop_index.set(None);
-
-                let current_order: Vec<BucketId> = {
-                    let reg = registry.read();
-                    match reg.get_card(board_id) {
-                        Ok(card) => card.buckets().iter().map(|bucket| bucket.id()).collect(),
-                        Err(_) => return,
-                    }
-                };
-
-                let _ = execute_reorder_with_feedback(
-                    &current_order,
-                    bucket_id,
-                    index,
-                    ReorderFeedbackContext::new(
-                        registry,
-                        warning_message,
-                        "board-route",
-                        format!("reorder buckets on board {board_id} with dragged bucket {bucket_id}"),
-                    ),
-                    |ordered_ids| Command::ReorderBuckets {
-                        card_id: board_id,
-                        ordered_ids,
-                    },
-                );
-            },
-            if is_dragging().0 {
-                span { class: "rotate-90", "Drop" }
-            }
-        }
-    }
-}
-
-fn render_card_drop_zone(
-    bucket_id: BucketId,
-    index: usize,
-    context: BoardRenderContext,
-) -> Element {
+fn render_card_drop_zone(index: usize, emphasized: bool, context: BoardRenderContext) -> Element {
     let board_id = context.board_id;
     let registry = context.registry;
     let warning_message = context.warning_message;
-    let mut card_drop_target = context.drag.card_drop_target;
+    let mut card_drop_index = context.drag.card_drop_index;
+    let dragged_item_kind = context.dragged_item_kind;
     let is_dragging = context.is_dragging;
-    let is_active = card_drop_target() == Some((bucket_id, index));
-    let class_name = drop_zone_classes(DropZoneKind::Card, is_active, is_dragging().0);
+    let is_active = card_drop_index() == Some(index);
+    let class_name = drop_zone_classes(
+        if emphasized {
+            DropZoneKind::Board
+        } else {
+            DropZoneKind::Card
+        },
+        is_active,
+        dragged_item_kind(),
+    );
 
     rsx! {
         div {
-            class: "{class_name}",
+            class: if emphasized {
+                "{class_name} min-h-[3.25rem] rounded-2xl"
+            } else {
+                "{class_name} h-4 rounded-full"
+            },
             ondragover: move |event| {
                 prime_drop_target(&event);
-                card_drop_target.set(Some((bucket_id, index)));
+                card_drop_index.set(Some(index));
             },
             ondragleave: move |_| {
-                if card_drop_target() == Some((bucket_id, index)) {
-                    card_drop_target.set(None);
+                if card_drop_index() == Some(index) {
+                    card_drop_index.set(None);
                 }
             },
             ondrop: move |event| {
                 event.prevent_default();
 
-                let Some(card_id) =
-                    crate::interface::actions::dragged_card_id(&event, "board-route")
-                else {
+                let Some(card_id) = crate::interface::actions::dragged_card_id(&event, "board-route") else {
                     return;
                 };
 
-                card_drop_target.set(None);
+                card_drop_index.set(None);
                 let _ = execute_command_with_feedback(
-                    Command::DropCardAtPosition {
-                        board_id,
+                    Command::DropChildAtPosition {
+                        parent_id: board_id,
                         card_id,
-                        target_bucket_id: bucket_id,
                         target_index: index,
                     },
                     registry,
                     warning_message,
                     "board-route",
-                    format!("drop card {card_id} into bucket {bucket_id} on board {board_id}"),
+                    format!("drop card {card_id} at index {index} on board {board_id}"),
                 );
             },
-            if is_dragging().0 {
-                "Drop Here"
+            if emphasized && is_dragging().0 {
+                div { class: "flex h-full items-center justify-center px-4 py-3",
+                    span { class: "app-kicker", "Drop Here" }
+                }
             }
         }
     }

@@ -45,7 +45,7 @@
     --app-surface-strong: rgba(9, 21, 40, 0.88);
     --app-surface-soft: rgba(18, 33, 58, 0.52);
     --app-card: rgba(10, 24, 42, 0.82);
-    --app-column: rgba(8, 22, 40, 0.56);
+    --app-board-surface: rgba(8, 22, 40, 0.56);
     --app-modal: rgba(7, 18, 33, 0.94);
     --app-input: rgba(9, 23, 41, 0.84);
     --app-warning-bg: rgba(91, 47, 13, 0.7);
@@ -74,7 +74,7 @@
     --app-surface-strong: rgba(255, 251, 247, 0.9);
     --app-surface-soft: rgba(255, 238, 223, 0.72);
     --app-card: rgba(255, 250, 244, 0.9);
-    --app-column: rgba(255, 239, 225, 0.74);
+    --app-board-surface: rgba(255, 239, 225, 0.74);
     --app-modal: rgba(255, 252, 248, 0.95);
     --app-input: rgba(255, 247, 240, 0.92);
     --app-warning-bg: rgba(255, 234, 204, 0.92);
@@ -227,9 +227,9 @@
     backdrop-filter: blur(22px);
   }
 
-  .app-column-surface {
+  .app-board-surface {
     border: 1px solid var(--app-border);
-    background-color: var(--app-column);
+    background-color: var(--app-board-surface);
     box-shadow: var(--app-shadow-soft);
     backdrop-filter: blur(20px);
   }
@@ -413,7 +413,7 @@
     @apply flex items-center justify-center rounded-2xl border-2 border-dashed text-[10px] font-black uppercase tracking-[0.24em] transition-all duration-200;
   }
 
-  .app-drop-zone--root {
+  .app-drop-zone--board {
     @apply h-10;
     min-height: 2.5rem;
   }
