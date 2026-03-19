@@ -1,7 +1,6 @@
-use crate::domain::label::LabelColor;
 use crate::interface::components::shared_forms::confirm_destructive_action;
 use crate::interface::components::visuals::{
-    CardPreviewDisplaySection, render_label_chip, render_trash_icon, surface_action_button_classes,
+    CardPreviewDisplaySection, render_trash_icon, surface_action_button_classes,
     surface_destructive_icon_button_classes,
 };
 use dioxus::prelude::*;
@@ -32,7 +31,6 @@ pub fn CardItem(
     subtitle: String,
     #[props(default)] due_date: Option<String>,
     #[props(default)] is_overdue: bool,
-    #[props(default)] labels: Vec<(String, LabelColor)>,
     #[props(default)] preview_sections: Vec<CardPreviewDisplaySection>,
     #[props(default = false)] draggable: bool,
     /// Triggered when the main body of the card is clicked.
@@ -78,13 +76,6 @@ pub fn CardItem(
                     p {
                         class: if is_overdue { "mt-3 text-sm font-semibold text-red-500" } else { "app-text-muted mt-3 text-sm font-semibold" },
                         "Due {due_date}"
-                    }
-                }
-                if !labels.is_empty() {
-                    div { class: "mt-4 flex flex-wrap gap-2",
-                        for (name, color) in labels {
-                            {render_label_chip(name, color)}
-                        }
                     }
                 }
                 if !preview_sections.is_empty() {

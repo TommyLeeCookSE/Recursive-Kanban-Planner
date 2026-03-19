@@ -1,7 +1,6 @@
 use crate::application::CardPreviewView;
 use crate::domain::card::Card;
 use crate::domain::id::CardId;
-use crate::domain::label::{LabelColor, LabelDefinition};
 use dioxus::prelude::*;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -24,15 +23,10 @@ pub struct CardDisplayData {
     pub nested_item_count: usize,
     pub due_date: Option<String>,
     pub is_overdue: bool,
-    pub labels: Vec<(String, LabelColor)>,
     pub preview_sections: Vec<CardPreviewDisplaySection>,
 }
 
-pub fn build_card_display(
-    card: &Card,
-    label_definitions: &[LabelDefinition],
-    preview_view: Option<&CardPreviewView>,
-) -> CardDisplayData {
+pub fn build_card_display(card: &Card, preview_view: Option<&CardPreviewView>) -> CardDisplayData {
     let preview_sections = preview_view
         .map(|view| {
             view.sections
@@ -55,16 +49,6 @@ pub fn build_card_display(
         nested_item_count: card.children_ids().len(),
         due_date: card.due_date().map(|due| due.to_string()),
         is_overdue: card.due_date().map(|due| due.is_overdue()).unwrap_or(false),
-        labels: card
-            .label_ids()
-            .iter()
-            .filter_map(|label_id| {
-                label_definitions
-                    .iter()
-                    .find(|label| label.id() == *label_id)
-                    .map(|label| (label.name().to_string(), label.color()))
-            })
-            .collect(),
         preview_sections,
     }
 }
@@ -93,17 +77,6 @@ pub fn drop_zone_classes(kind: DropZoneKind, is_active: bool, is_dragging: bool)
         }
         (DropZoneKind::Root, false, false) => {
             "app-drop-zone app-drop-zone--root app-drop-zone--hidden"
-        }
-    }
-}
-
-pub fn render_label_chip(name: String, color: LabelColor) -> Element {
-    let (background, text_color) = color.palette();
-    rsx! {
-        span {
-            class: "rounded-full px-3 py-1 text-xs font-black uppercase tracking-widest",
-            style: "background-color: {background}; color: {text_color};",
-            "{name}"
         }
     }
 }

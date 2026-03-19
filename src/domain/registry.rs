@@ -1,9 +1,7 @@
 use crate::domain::card::{Card, UNASSIGNED_BUCKET_NAME};
 use crate::domain::due_date::DueDate;
 use crate::domain::error::DomainError;
-use crate::domain::id::{BucketId, CardId, LabelId, NotePageId, RuleId};
-use crate::domain::label::{LabelColor, LabelDefinition};
-use crate::domain::rule::{RuleAction, RuleDefinition, RuleTrigger};
+use crate::domain::id::{BucketId, CardId, NotePageId};
 use std::collections::{HashMap, HashSet};
 
 use serde::{Deserialize, Serialize};
@@ -14,10 +12,6 @@ pub struct CardRegistry {
     store: HashMap<CardId, Card>,
     #[serde(default)]
     root_order: Vec<CardId>,
-    #[serde(default)]
-    label_definitions: Vec<LabelDefinition>,
-    #[serde(default)]
-    rule_definitions: Vec<RuleDefinition>,
 }
 
 /// The strategy to use when deleting a card that has children.
@@ -43,8 +37,6 @@ impl CardRegistry {
         Self {
             store: HashMap::new(),
             root_order: Vec::new(),
-            label_definitions: Vec::new(),
-            rule_definitions: Vec::new(),
         }
     }
 
@@ -95,14 +87,6 @@ impl CardRegistry {
             children.push(child);
         }
         Ok(children)
-    }
-
-    pub fn label_definitions(&self) -> &[LabelDefinition] {
-        &self.label_definitions
-    }
-
-    pub fn rule_definitions(&self) -> &[RuleDefinition] {
-        &self.rule_definitions
     }
 
     /// Returns the children of a card grouped by their assigned buckets.
@@ -166,7 +150,6 @@ impl CardRegistry {
 
             validate_bucket_layout(card)?;
             validate_note_pages(card)?;
-            validate_card_assignments(card, &self.label_definitions, &self.rule_definitions)?;
 
             match (card.parent_id(), card.bucket_id()) {
                 (None, None) => {}
@@ -356,130 +339,6 @@ impl CardRegistry {
 
     pub fn clear_due_date(&mut self, card_id: CardId) -> Result<(), DomainError> {
         self.get_card_mut(card_id)?.set_due_date(None);
-        Ok(())
-    }
-
-    pub fn create_label_definition(
-        &mut self,
-        name: String,
-        color: LabelColor,
-    ) -> Result<LabelId, DomainError> {
-        if self
-            .label_definitions
-            .iter()
-            .any(|label| label.name().eq_ignore_ascii_case(name.trim()))
-        {
-            return Err(DomainError::InvalidOperation(format!(
-                "A label named '{}' already exists",
-                name.trim()
-            )));
-        }
-
-        let definition = LabelDefinition::new(name, color)?;
-        let id = definition.id();
-        self.label_definitions.push(definition);
-        Ok(id)
-    }
-
-    pub fn delete_label_definition(&mut self, label_id: LabelId) -> Result<(), DomainError> {
-        let original_len = self.label_definitions.len();
-        self.label_definitions
-            .retain(|label| label.id() != label_id);
-        if self.label_definitions.len() == original_len {
-            return Err(DomainError::InvalidOperation(format!(
-                "Label definition not found: {label_id}"
-            )));
-        }
-
-        for card in self.store.values_mut() {
-            card.remove_label_assignment(label_id);
-        }
-        Ok(())
-    }
-
-    pub fn set_card_labels(
-        &mut self,
-        card_id: CardId,
-        label_ids: Vec<LabelId>,
-    ) -> Result<(), DomainError> {
-        let valid_ids: HashSet<LabelId> = self
-            .label_definitions
-            .iter()
-            .map(|label| label.id())
-            .collect();
-        let mut unique = Vec::new();
-        let mut seen = HashSet::new();
-        for label_id in label_ids {
-            if !valid_ids.contains(&label_id) {
-                return Err(DomainError::InvalidOperation(format!(
-                    "Label definition not found: {label_id}"
-                )));
-            }
-            if seen.insert(label_id) {
-                unique.push(label_id);
-            }
-        }
-        self.get_card_mut(card_id)?.clear_label_assignments(unique);
-        Ok(())
-    }
-
-    pub fn create_rule_definition(
-        &mut self,
-        name: String,
-        trigger: RuleTrigger,
-        action: RuleAction,
-    ) -> Result<RuleId, DomainError> {
-        if self
-            .rule_definitions
-            .iter()
-            .any(|rule| rule.name().eq_ignore_ascii_case(name.trim()))
-        {
-            return Err(DomainError::InvalidOperation(format!(
-                "A rule named '{}' already exists",
-                name.trim()
-            )));
-        }
-        let definition = RuleDefinition::new(name, trigger, action)?;
-        let id = definition.id();
-        self.rule_definitions.push(definition);
-        Ok(id)
-    }
-
-    pub fn delete_rule_definition(&mut self, rule_id: RuleId) -> Result<(), DomainError> {
-        let original_len = self.rule_definitions.len();
-        self.rule_definitions.retain(|rule| rule.id() != rule_id);
-        if self.rule_definitions.len() == original_len {
-            return Err(DomainError::InvalidOperation(format!(
-                "Rule definition not found: {rule_id}"
-            )));
-        }
-
-        for card in self.store.values_mut() {
-            card.remove_rule_assignment(rule_id);
-        }
-        Ok(())
-    }
-
-    pub fn set_card_rules(
-        &mut self,
-        card_id: CardId,
-        rule_ids: Vec<RuleId>,
-    ) -> Result<(), DomainError> {
-        let valid_ids: HashSet<RuleId> =
-            self.rule_definitions.iter().map(|rule| rule.id()).collect();
-        let mut unique = Vec::new();
-        let mut seen = HashSet::new();
-        for rule_id in rule_ids {
-            if !valid_ids.contains(&rule_id) {
-                return Err(DomainError::InvalidOperation(format!(
-                    "Rule definition not found: {rule_id}"
-                )));
-            }
-            if seen.insert(rule_id) {
-                unique.push(rule_id);
-            }
-        }
-        self.get_card_mut(card_id)?.clear_rule_assignments(unique);
         Ok(())
     }
 
@@ -743,47 +602,6 @@ fn validate_note_pages(card: &Card) -> Result<(), DomainError> {
                 "Card {} contains duplicate note page id {}",
                 card.id(),
                 note.id()
-            )));
-        }
-    }
-    Ok(())
-}
-
-fn validate_card_assignments(
-    card: &Card,
-    labels: &[LabelDefinition],
-    rules: &[RuleDefinition],
-) -> Result<(), DomainError> {
-    let valid_label_ids: HashSet<LabelId> = labels.iter().map(|label| label.id()).collect();
-    let valid_rule_ids: HashSet<RuleId> = rules.iter().map(|rule| rule.id()).collect();
-    let mut seen_labels = HashSet::new();
-    for label_id in card.label_ids() {
-        if !valid_label_ids.contains(label_id) {
-            return Err(corrupt_state(format!(
-                "Card {} references missing label definition {label_id}",
-                card.id()
-            )));
-        }
-        if !seen_labels.insert(*label_id) {
-            return Err(corrupt_state(format!(
-                "Card {} references duplicate label definition {label_id}",
-                card.id()
-            )));
-        }
-    }
-
-    let mut seen_rules = HashSet::new();
-    for rule_id in card.rule_ids() {
-        if !valid_rule_ids.contains(rule_id) {
-            return Err(corrupt_state(format!(
-                "Card {} references missing rule definition {rule_id}",
-                card.id()
-            )));
-        }
-        if !seen_rules.insert(*rule_id) {
-            return Err(corrupt_state(format!(
-                "Card {} references duplicate rule definition {rule_id}",
-                card.id()
             )));
         }
     }

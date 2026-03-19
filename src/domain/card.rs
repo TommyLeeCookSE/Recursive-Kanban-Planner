@@ -18,7 +18,7 @@
 use crate::domain::bucket::Bucket;
 use crate::domain::due_date::DueDate;
 use crate::domain::error::DomainError;
-use crate::domain::id::{BucketId, CardId, LabelId, NotePageId, RuleId};
+use crate::domain::id::{BucketId, CardId, NotePageId};
 use crate::domain::note::NotePage;
 
 use serde::{Deserialize, Serialize};
@@ -53,10 +53,6 @@ pub struct Card {
     notes: Vec<NotePage>,
     #[serde(default)]
     due_date: Option<DueDate>,
-    #[serde(default)]
-    label_ids: Vec<LabelId>,
-    #[serde(default)]
-    rule_ids: Vec<RuleId>,
 }
 
 impl Card {
@@ -87,8 +83,6 @@ impl Card {
             buckets: vec![Bucket::new(UNASSIGNED_BUCKET_NAME.to_string())],
             notes: Vec::new(),
             due_date: None,
-            label_ids: Vec::new(),
-            rule_ids: Vec::new(),
         })
     }
 
@@ -129,8 +123,6 @@ impl Card {
             buckets: vec![Bucket::new(UNASSIGNED_BUCKET_NAME.to_string())],
             notes: Vec::new(),
             due_date: None,
-            label_ids: Vec::new(),
-            rule_ids: Vec::new(),
         })
     }
 
@@ -175,14 +167,6 @@ impl Card {
 
     pub fn due_date(&self) -> Option<&DueDate> {
         self.due_date.as_ref()
-    }
-
-    pub fn label_ids(&self) -> &[LabelId] {
-        &self.label_ids
-    }
-
-    pub fn rule_ids(&self) -> &[RuleId] {
-        &self.rule_ids
     }
 
     // -------------------------------------------------------------------------
@@ -399,34 +383,6 @@ impl Card {
 
     pub fn set_due_date(&mut self, due_date: Option<DueDate>) {
         self.due_date = due_date;
-    }
-
-    pub fn assign_label(&mut self, label_id: LabelId) {
-        if !self.label_ids.contains(&label_id) {
-            self.label_ids.push(label_id);
-        }
-    }
-
-    pub fn clear_label_assignments(&mut self, ordered_ids: Vec<LabelId>) {
-        self.label_ids = ordered_ids;
-    }
-
-    pub fn remove_label_assignment(&mut self, label_id: LabelId) {
-        self.label_ids.retain(|id| *id != label_id);
-    }
-
-    pub fn assign_rule(&mut self, rule_id: RuleId) {
-        if !self.rule_ids.contains(&rule_id) {
-            self.rule_ids.push(rule_id);
-        }
-    }
-
-    pub fn clear_rule_assignments(&mut self, ordered_ids: Vec<RuleId>) {
-        self.rule_ids = ordered_ids;
-    }
-
-    pub fn remove_rule_assignment(&mut self, rule_id: RuleId) {
-        self.rule_ids.retain(|id| *id != rule_id);
     }
 
     // -------------------------------------------------------------------------

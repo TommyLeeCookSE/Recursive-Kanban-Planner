@@ -3,15 +3,11 @@ use dioxus::prelude::*;
 
 mod bucket;
 mod card;
-mod labels;
 mod notes;
-mod rules;
 
 pub use bucket::{BucketModal, EditBucketModal};
 pub use card::{CardModal, EditCardModal};
-pub use labels::{CardLabelsModal, ManageLabelsModal};
 pub use notes::NotesModal;
-pub use rules::ManageRulesModal;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum ModalType {
@@ -32,11 +28,6 @@ pub enum ModalType {
     CardNotes {
         card_id: CardId,
     },
-    CardLabels {
-        card_id: CardId,
-    },
-    ManageLabels {},
-    ManageRules {},
 }
 
 #[component]

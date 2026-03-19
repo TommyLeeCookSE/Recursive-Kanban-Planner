@@ -2,9 +2,7 @@ use crate::application::Command;
 use crate::domain::due_date::DueDate;
 use crate::domain::error::DomainError;
 use crate::domain::id::{BucketId, CardId};
-use crate::domain::label::LabelColor;
 use crate::domain::registry::CardRegistry;
-use crate::domain::rule::{RuleAction, RuleTrigger};
 use dioxus::prelude::*;
 
 pub fn inline_error(message: String) -> Element {
@@ -114,50 +112,6 @@ pub fn build_create_card_command(
             })
         }
         None => Ok(Command::CreateRootCard { title }),
-    }
-}
-
-pub fn parse_label_color(raw: &str) -> LabelColor {
-    match raw {
-        "Gold" => LabelColor::Gold,
-        "Moss" => LabelColor::Moss,
-        "Sky" => LabelColor::Sky,
-        "Indigo" => LabelColor::Indigo,
-        "Rose" => LabelColor::Rose,
-        _ => LabelColor::Ember,
-    }
-}
-
-pub fn build_rule_trigger(kind: &str, bucket_id: &str) -> Result<RuleTrigger, DomainError> {
-    match kind {
-        "NoteOpened" => Ok(RuleTrigger::NoteOpened),
-        "NoteClosed" => Ok(RuleTrigger::NoteClosed),
-        "MovedToBucket" => Ok(RuleTrigger::MovedToBucket(bucket_id.parse().map_err(
-            |_| {
-                DomainError::InvalidOperation(
-                    "A bucket-trigger rule requires a selected bucket".to_string(),
-                )
-            },
-        )?)),
-        _ => Err(DomainError::InvalidOperation(
-            "Unknown rule trigger".to_string(),
-        )),
-    }
-}
-
-pub fn describe_rule_trigger(trigger: &RuleTrigger) -> String {
-    match trigger {
-        RuleTrigger::NoteOpened => "When a card notebook is opened".to_string(),
-        RuleTrigger::NoteClosed => "When a card notebook is closed".to_string(),
-        RuleTrigger::MovedToBucket(bucket_id) => {
-            format!("When a card is moved to bucket {bucket_id}")
-        }
-    }
-}
-
-pub fn describe_rule_action(action: &RuleAction) -> String {
-    match action {
-        RuleAction::ShowPopup { title, message } => format!("Show popup '{title}': {message}"),
     }
 }
 

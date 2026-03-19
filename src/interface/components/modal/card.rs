@@ -1,16 +1,12 @@
-use crate::application::{CardRuleEvent, Command, PopupNotification, execute};
+use crate::application::{Command, execute};
 use crate::domain::due_date::DueDate;
 use crate::domain::id::{BucketId, CardId};
 use crate::domain::registry::CardRegistry;
 use crate::infrastructure::logging::record_diagnostic;
-use crate::interface::actions::{dispatch_card_rule_event, report_result};
 use crate::interface::components::modal::Modal;
-use crate::interface::components::modal::ModalType;
 use crate::interface::components::shared_forms::{
-    CheckboxOptionRow, SelectorSection, build_create_card_command, inline_error, toggle_id,
-    user_message_for_command_error,
+    build_create_card_command, inline_error, user_message_for_command_error,
 };
-use crate::interface::components::visuals::{render_book_icon, render_label_icon};
 use dioxus::prelude::*;
 use tracing::{Level, warn};
 
@@ -87,13 +83,9 @@ pub fn EditCardModal(
     id: CardId,
     registry: Signal<CardRegistry>,
 ) -> Element {
-    let popup_queue = use_context::<Signal<Vec<PopupNotification>>>();
-    let mut active_modal = use_context::<Signal<Option<ModalType>>>();
-    let warning_message = use_context::<Signal<Option<String>>>();
-
     let card_snapshot = {
         let reg = registry.read();
-        let card = match reg.get_card(id) {
+        match reg.get_card(id) {
             Ok(card) => card.clone(),
             Err(_) => {
                 return rsx! {
@@ -102,26 +94,17 @@ pub fn EditCardModal(
                     }
                 };
             }
-        };
-        (
-            card,
-            reg.label_definitions().to_vec(),
-            reg.rule_definitions().to_vec(),
-        )
+        }
     };
 
-    let (card, label_definitions, rule_definitions) = card_snapshot;
+    let card = card_snapshot;
     let initial_title = card.title().to_string();
     let initial_due_date = card
         .due_date()
         .map(|due| due.to_string())
         .unwrap_or_default();
-    let initial_labels = card.label_ids().to_vec();
-    let initial_rules = card.rule_ids().to_vec();
     let mut input_title = use_signal(move || initial_title.clone());
     let mut due_date_input = use_signal(move || initial_due_date.clone());
-    let mut selected_labels = use_signal(move || initial_labels.clone());
-    let mut selected_rules = use_signal(move || initial_rules.clone());
     let mut error_message = use_signal(|| None::<String>);
 
     rsx! {
@@ -145,119 +128,49 @@ pub fn EditCardModal(
                     oninput: move |e| due_date_input.set(e.value()),
                 }
 
-                SelectorSection {
-                    title: "Labels".to_string(),
-                    action_label: "Manage Labels".to_string(),
-                    on_action: move |_| active_modal.set(Some(ModalType::ManageLabels {})),
-                    title_icon: Some(render_label_icon()),
-                    if label_definitions.is_empty() {
-                        p { class: "app-text-muted text-sm", "No labels created yet." }
-                    } else {
-                        div { class: "space-y-3",
-                            for label in label_definitions.iter().cloned() {
-                                CheckboxOptionRow {
-                                    label_text: label.name().to_string(),
-                                    checked: selected_labels().contains(&label.id()),
-                                    on_toggle: move |_| toggle_id(&mut selected_labels, label.id()),
-                                }
-                            }
-                        }
-                    }
-                }
-
-                SelectorSection {
-                    title: "Rules".to_string(),
-                    action_label: "Manage Rules".to_string(),
-                    on_action: move |_| active_modal.set(Some(ModalType::ManageRules {})),
-                    title_icon: Some(render_book_icon()),
-                    if rule_definitions.is_empty() {
-                        p { class: "app-text-muted text-sm", "No rules created yet." }
-                    } else {
-                        div { class: "space-y-3",
-                            for rule in rule_definitions.iter().cloned() {
-                                CheckboxOptionRow {
-                                    label_text: rule.name().to_string(),
-                                    checked: selected_rules().contains(&rule.id()),
-                                    on_toggle: move |_| toggle_id(&mut selected_rules, rule.id()),
-                                }
-                            }
-                        }
-                    }
-                }
-
                 if let Some(message) = error_message() { {inline_error(message)} }
 
-                div { class: "flex flex-wrap justify-between gap-3",
+                div { class: "flex justify-end gap-2",
+                    button { class: "app-button-ghost px-4 py-2", onclick: move |_| on_close.call(()), "Cancel" }
                     button {
-                        class: "app-button-secondary px-4 py-2",
+                        class: "app-button-primary px-6 py-3 disabled:opacity-50",
+                        disabled: input_title().trim().is_empty(),
                         onclick: move |_| {
-                            let result = dispatch_card_rule_event(
-                                id,
-                                CardRuleEvent::NoteOpened,
-                                registry,
-                                popup_queue,
-                                "ui-modal",
-                            );
-                            let _ = report_result(
-                                result,
-                                warning_message,
-                                "ui-modal",
-                                "dispatch note-opened rule",
-                            );
-                            active_modal.set(Some(ModalType::CardNotes { card_id: id }));
-                        },
-                        "Open Notes"
-                    }
-                    div { class: "flex gap-2",
-                        button { class: "app-button-ghost px-4 py-2", onclick: move |_| on_close.call(()), "Cancel" }
-                        button {
-                            class: "app-button-primary px-6 py-3 disabled:opacity-50",
-                            disabled: input_title().trim().is_empty(),
-                            onclick: move |_| {
-                                let due_date_value = if due_date_input().trim().is_empty() {
-                                    None
-                                } else {
-                                    match DueDate::parse(due_date_input()) {
-                                        Ok(due_date) => Some(due_date),
-                                        Err(error_value) => {
-                                            error_message.set(Some(user_message_for_command_error(&error_value)));
-                                            return;
-                                        }
+                            let due_date_value = if due_date_input().trim().is_empty() {
+                                None
+                            } else {
+                                match DueDate::parse(due_date_input()) {
+                                    Ok(due_date) => Some(due_date),
+                                    Err(error_value) => {
+                                        error_message.set(Some(user_message_for_command_error(&error_value)));
+                                        return;
                                     }
-                                };
-
-                                let mut reg = registry.write();
-                                let rename_result = execute(
-                                    Command::RenameCard { id, title: input_title().trim().to_string() },
-                                    &mut reg,
-                                );
-                                let due_result = match due_date_value {
-                                    Some(due_date) => execute(Command::SetDueDate { card_id: id, due_date }, &mut reg),
-                                    None => execute(Command::ClearDueDate { card_id: id }, &mut reg),
-                                };
-                                let labels_result = execute(
-                                    Command::SetCardLabels { card_id: id, label_ids: selected_labels() },
-                                    &mut reg,
-                                );
-                                let rules_result = execute(
-                                    Command::SetCardRules { card_id: id, rule_ids: selected_rules() },
-                                    &mut reg,
-                                );
-
-                                if let Some(error_value) = rename_result
-                                    .err()
-                                    .or_else(|| due_result.err())
-                                    .or_else(|| labels_result.err())
-                                    .or_else(|| rules_result.err())
-                                {
-                                    error_message.set(Some(user_message_for_command_error(&error_value)));
-                                } else {
-                                    error_message.set(None);
-                                    on_close.call(());
                                 }
-                            },
-                            "Save Changes"
-                        }
+                            };
+
+                            let mut reg = registry.write();
+                            let rename_result = execute(
+                                Command::RenameCard {
+                                    id,
+                                    title: input_title().trim().to_string(),
+                                },
+                                &mut reg,
+                            );
+                            let due_result = match due_date_value {
+                                Some(due_date) => {
+                                    execute(Command::SetDueDate { card_id: id, due_date }, &mut reg)
+                                }
+                                None => execute(Command::ClearDueDate { card_id: id }, &mut reg),
+                            };
+
+                            if let Some(error_value) = rename_result.err().or_else(|| due_result.err()) {
+                                error_message.set(Some(user_message_for_command_error(&error_value)));
+                            } else {
+                                error_message.set(None);
+                                on_close.call(());
+                            }
+                        },
+                        "Save Changes"
                     }
                 }
             }

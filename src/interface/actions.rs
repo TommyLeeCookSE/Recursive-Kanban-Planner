@@ -1,4 +1,4 @@
-use crate::application::{CardRuleEvent, Command, PopupNotification, evaluate_card_rules, execute};
+use crate::application::{Command, execute};
 use crate::domain::error::DomainError;
 use crate::domain::id::{BucketId, CardId};
 use crate::domain::registry::CardRegistry;
@@ -200,43 +200,6 @@ pub fn prime_drag_session(
 pub fn prime_drop_target(event: &DragEvent) {
     event.prevent_default();
     event.data().data_transfer().set_drop_effect("move");
-}
-
-pub fn dispatch_card_rule_event(
-    card_id: CardId,
-    event: CardRuleEvent,
-    registry: Signal<CardRegistry>,
-    mut popup_queue: Signal<Vec<PopupNotification>>,
-    log_target: &'static str,
-) -> Result<(), DomainError> {
-    info!(card_id = %card_id, event = ?event, "Dispatching card rule event");
-    record_diagnostic(
-        Level::INFO,
-        log_target,
-        format!("Dispatching card rule event {event:?} for card {card_id}"),
-    );
-
-    let outcomes = evaluate_card_rules(card_id, event, &registry.read())?;
-    if outcomes.is_empty() {
-        return Ok(());
-    }
-
-    let mut queued = popup_queue.read().clone();
-    for outcome in outcomes {
-        info!(
-            rule_name = %outcome.rule.name(),
-            popup_title = %outcome.popup.title,
-            "Queuing popup from rule"
-        );
-        record_diagnostic(
-            Level::INFO,
-            log_target,
-            format!("Queued popup from rule '{}'", outcome.rule.name()),
-        );
-        queued.push(outcome.popup);
-    }
-    popup_queue.set(queued);
-    Ok(())
 }
 
 pub fn dragged_root_card_id(event: &DragEvent, log_target: &'static str) -> Option<CardId> {

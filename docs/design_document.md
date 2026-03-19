@@ -46,12 +46,12 @@ Implemented in the current worktree:
 
 | Item | File | Notes |
 | :--- | :--- | :--- |
-| `CardId`, `BucketId`, and feature id newtypes | `src/domain/id.rs` | ULID-backed ids for cards, buckets, notes, labels, and rules |
+| `CardId`, `BucketId`, and feature id newtypes | `src/domain/id.rs` | ULID-backed ids for cards, buckets, and notes |
 | `Bucket` entity | `src/domain/bucket.rs` | Private fields and controlled mutators |
-| `Card` entity | `src/domain/card.rs` | Local invariants enforced inside the entity, including notes, due dates, labels, and rules |
-| `NotePage`, `DueDate`, `LabelDefinition`, `RuleDefinition` | `src/domain/` | Feature-specific value objects and definitions |
+| `Card` entity | `src/domain/card.rs` | Local invariants enforced inside the entity, including notes and due dates |
+| `NotePage`, `DueDate` | `src/domain/` | Feature-specific value objects and definitions |
 | `DomainError` | `src/domain/error.rs` | Typed domain errors throughout the domain/application layers |
-| `CardRegistry` and `DeleteStrategy` | `src/domain/registry.rs` | Cross-card invariant boundary plus workspace-level labels/rules |
+| `CardRegistry` and `DeleteStrategy` | `src/domain/registry.rs` | Cross-card invariant boundary plus bucket and tree management |
 | `Command` dispatcher | `src/application/mod.rs` | `execute` owns command lifecycle logging |
 | `BoardView`, `ColumnView`, and rule evaluation | `src/application/mod.rs` | Read-only UI projections plus popup trigger evaluation |
 | JSON persistence | `src/infrastructure/repository.rs` | Serialize/deserialize full registry state |
@@ -59,7 +59,7 @@ Implemented in the current worktree:
 | `AppPersistence` facade | `src/infrastructure/repository.rs` | Explicit browser-first persistence boundary |
 | Runtime logging | `src/infrastructure/logging.rs` | `tracing`, diagnostics buffer, native/web setup |
 | Dioxus shell and routing | `src/interface/` | App shell, routes, modal system, board/home views |
-| `TopBar`, `CardItem`, modal flows | `src/interface/components/` | Create/edit card, notes, labels, rules, and bucket UI |
+| `TopBar`, `CardItem`, modal flows | `src/interface/components/` | Create/edit card, notes, and bucket UI |
 | Deterministic child-card creation | `src/interface/components/modal.rs` | Child creation requires a real bucket id |
 | Fail-loud board fallback | `src/interface/routes/board.rs` | Board load preserves the real `DomainError` for logs |
 | Public API docs with examples | `src/application/`, `src/infrastructure/`, `src/interface/` | Public entry points now have `# Examples` blocks |
@@ -68,7 +68,7 @@ Not yet implemented or not yet fully verified:
 
 - Desktop-target `dx serve --platform desktop` runtime verification
 - Native desktop/mobile persistence backend beyond browser storage
-- Manual browser sanity pass across the newer notes, due-date, labels, rules, and drag/drop flows
+- Manual browser sanity pass across the newer notes, due-date, and drag/drop flows
 - Release tagging workflow
 
 Recent binding decisions already implemented:

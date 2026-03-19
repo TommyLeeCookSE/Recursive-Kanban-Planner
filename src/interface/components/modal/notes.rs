@@ -1,7 +1,6 @@
-use crate::application::{CardRuleEvent, Command, PopupNotification, execute};
+use crate::application::{Command, execute};
 use crate::domain::id::CardId;
 use crate::domain::registry::CardRegistry;
-use crate::interface::actions::{dispatch_card_rule_event, report_result};
 use crate::interface::components::modal::Modal;
 use crate::interface::components::shared_forms::{inline_error, user_message_for_command_error};
 use dioxus::prelude::*;
@@ -12,8 +11,6 @@ pub fn NotesModal(
     card_id: CardId,
     registry: Signal<CardRegistry>,
 ) -> Element {
-    let popup_queue = use_context::<Signal<Vec<PopupNotification>>>();
-    let warning_message = use_context::<Signal<Option<String>>>();
     let notes = {
         let reg = registry.read();
         match reg.get_card(card_id) {
@@ -52,22 +49,7 @@ pub fn NotesModal(
 
     rsx! {
         Modal {
-            on_close: move |_| {
-                let result = dispatch_card_rule_event(
-                    card_id,
-                    CardRuleEvent::NoteClosed,
-                    registry,
-                    popup_queue,
-                    "ui-modal",
-                );
-                let _ = report_result(
-                    result,
-                    warning_message,
-                    "ui-modal",
-                    "dispatch note-closed rule",
-                );
-                on_close.call(());
-            },
+            on_close: move |_| on_close.call(()),
             title: "Notebook",
             div { class: "flex max-h-[75vh] flex-col gap-4 lg:flex-row",
                 div { class: "w-full space-y-3 lg:w-56",

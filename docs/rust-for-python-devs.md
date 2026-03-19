@@ -84,7 +84,6 @@ They can hold data, which makes them perfect for commands, states, and UI modes.
 pub enum ModalType {
     CreateCard { parent_id: Option<CardId>, bucket_id: Option<BucketId> },
     EditCard { id: CardId },
-    ManageLabels {},
 }
 ```
 
@@ -94,7 +93,6 @@ To use an enum, you usually `match` on it:
 match modal {
     ModalType::CreateCard { parent_id, bucket_id } => { /* ... */ }
     ModalType::EditCard { id } => { /* ... */ }
-    ModalType::ManageLabels {} => { /* ... */ }
 }
 ```
 

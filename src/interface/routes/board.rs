@@ -33,7 +33,6 @@ pub fn Board(card_id: CardId) -> Element {
     let registry = use_context::<Signal<CardRegistry>>();
     let active_modal = use_context::<Signal<Option<ModalType>>>();
     let warning_message = use_context::<Signal<Option<String>>>();
-    let popup_queue = use_context::<Signal<Vec<crate::application::PopupNotification>>>();
     let is_dragging = use_context::<Signal<IsDragging>>();
     let bucket_drop_index = use_signal(|| None::<usize>);
     let card_drop_target = use_signal(|| None::<(crate::domain::id::BucketId, usize)>);
@@ -54,14 +53,12 @@ pub fn Board(card_id: CardId) -> Element {
 
     let board_id = card_id;
     let board_title = board_state.view.card.title().to_string();
-    let label_definitions = reg_guard.label_definitions().to_vec();
-    let board_display = build_card_display(board_state.view.card, &label_definitions, None);
+    let board_display = build_card_display(board_state.view.card, None);
     let board_due_date = board_display
         .due_date
         .as_deref()
         .unwrap_or("None")
         .to_string();
-    let board_labels = board_display.labels.clone();
     let column_models = board_state
         .view
         .columns
@@ -72,11 +69,7 @@ pub fn Board(card_id: CardId) -> Element {
                 .iter()
                 .map(|card| {
                     let preview_view = build_card_preview_view(card.id(), &reg_guard)?;
-                    Ok(build_card_display(
-                        card,
-                        &label_definitions,
-                        Some(&preview_view),
-                    ))
+                    Ok(build_card_display(card, Some(&preview_view)))
                 })
                 .collect::<Result<Vec<_>, DomainError>>()?;
 
@@ -104,7 +97,6 @@ pub fn Board(card_id: CardId) -> Element {
         registry,
         active_modal,
         warning_message,
-        popup_queue,
         drag: BoardDragSignals {
             bucket_drop_index,
             card_drop_target,
@@ -117,7 +109,6 @@ pub fn Board(card_id: CardId) -> Element {
         board_state.back_route,
         board_state.back_label,
         board_due_date,
-        board_labels,
         column_models,
         render_context,
     )

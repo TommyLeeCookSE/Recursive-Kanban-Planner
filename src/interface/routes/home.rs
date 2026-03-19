@@ -35,17 +35,12 @@ pub fn Home() -> Element {
 
     let root_cards = {
         let reg = registry.read();
-        let label_definitions = reg.label_definitions().to_vec();
         match reg
             .get_root_cards()
             .iter()
             .map(|card| {
                 let preview_view = build_card_preview_view(card.id(), &reg)?;
-                Ok(build_card_display(
-                    card,
-                    &label_definitions,
-                    Some(&preview_view),
-                ))
+                Ok(build_card_display(card, Some(&preview_view)))
             })
             .collect::<Result<Vec<_>, DomainError>>()
         {
@@ -107,15 +102,14 @@ pub fn Home() -> Element {
                     for (index, card) in root_cards.iter().cloned().enumerate() {
                         div { key: "{card.id}", class: "flex flex-col gap-3",
                             {render_root_drop_zone(index, root_drop_index, registry, warning_message, is_dragging)}
-                            CardItem {
-                                title: card.title,
-                                subtitle: format!("{} nested items", card.nested_item_count),
-                                due_date: card.due_date,
-                                is_overdue: card.is_overdue,
-                                labels: card.labels,
-                                preview_sections: card.preview_sections,
-                                draggable: true,
-                                on_open: move |_| {
+                                CardItem {
+                                    title: card.title,
+                                    subtitle: format!("{} nested items", card.nested_item_count),
+                                    due_date: card.due_date,
+                                    is_overdue: card.is_overdue,
+                                    preview_sections: card.preview_sections,
+                                    draggable: true,
+                                    on_open: move |_| {
                                     navigator().push(Route::Board { card_id: card.id });
                                 },
                                 on_drag_start: move |event| {

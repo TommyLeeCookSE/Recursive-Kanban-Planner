@@ -1,11 +1,9 @@
-use crate::application::PopupNotification;
 use crate::domain::registry::CardRegistry;
 use crate::infrastructure::logging::record_diagnostic;
 use crate::infrastructure::repository::AppPersistence;
 use crate::interface::Route;
 use crate::interface::components::modal::{
-    BucketModal, CardLabelsModal, CardModal, EditBucketModal, EditCardModal, ManageLabelsModal,
-    ManageRulesModal, ModalType, NotesModal,
+    BucketModal, CardModal, EditBucketModal, EditCardModal, ModalType, NotesModal,
 };
 use dioxus::prelude::*;
 use tracing::{Level, info, warn};
@@ -64,7 +62,6 @@ pub fn App() -> Element {
 
     // Global modal state.
     let mut active_modal = use_context_provider(|| Signal::new(None::<ModalType>));
-    let mut popup_queue = use_context_provider(|| Signal::new(Vec::<PopupNotification>::new()));
     let _is_dragging = use_context_provider(|| Signal::new(IsDragging(false)));
 
     let shell_class = if is_dark().0 {
@@ -101,30 +98,6 @@ pub fn App() -> Element {
                 }
 
                 Router::<Route> {}
-            }
-
-            if let Some(popup) = popup_queue().first().cloned() {
-                div { class: "fixed bottom-6 right-6 z-[60] max-w-sm",
-                    div { class: "app-modal-surface rounded-[1.5rem] px-5 py-4",
-                        div { class: "mb-3 flex items-start justify-between gap-4",
-                            div {
-                                h3 { class: "app-text-primary text-lg font-bold", "{popup.title}" }
-                                p { class: "app-text-muted mt-2 text-sm", "{popup.message}" }
-                            }
-                            button {
-                                class: "app-button-ghost p-2",
-                                onclick: move |_| {
-                                    let mut queued = popup_queue();
-                                    if !queued.is_empty() {
-                                        queued.remove(0);
-                                        popup_queue.set(queued);
-                                    }
-                                },
-                                "X"
-                            }
-                        }
-                    }
-                }
             }
 
             // Modal Overlay Dispatcher
@@ -173,31 +146,6 @@ pub fn App() -> Element {
                             NotesModal {
                                 on_close: move |_| active_modal.set(None),
                                 card_id,
-                                registry,
-                            }
-                        }
-                    }
-                    ModalType::CardLabels { card_id } => {
-                        rsx! {
-                            CardLabelsModal {
-                                on_close: move |_| active_modal.set(None),
-                                card_id,
-                                registry,
-                            }
-                        }
-                    }
-                    ModalType::ManageLabels {} => {
-                        rsx! {
-                            ManageLabelsModal {
-                                on_close: move |_| active_modal.set(None),
-                                registry,
-                            }
-                        }
-                    }
-                    ModalType::ManageRules {} => {
-                        rsx! {
-                            ManageRulesModal {
-                                on_close: move |_| active_modal.set(None),
                                 registry,
                             }
                         }

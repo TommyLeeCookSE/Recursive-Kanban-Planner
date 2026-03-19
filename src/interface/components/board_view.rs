@@ -1,14 +1,12 @@
-use crate::application::{CardRuleEvent, Command, PopupNotification, execute};
+use crate::application::Command;
 use crate::domain::card::UNASSIGNED_BUCKET_NAME;
 use crate::domain::id::{BucketId, CardId};
-use crate::domain::label::LabelColor;
 use crate::domain::registry::CardRegistry;
 use crate::infrastructure::logging::record_diagnostic;
 use crate::interface::Route;
 use crate::interface::actions::{
-    ReorderFeedbackContext, delete_card_with_feedback, dispatch_card_rule_event,
-    execute_command_with_feedback, execute_reorder_with_feedback, prime_drag_session,
-    prime_drop_target, report_result,
+    ReorderFeedbackContext, delete_card_with_feedback, execute_command_with_feedback,
+    execute_reorder_with_feedback, prime_drag_session, prime_drop_target,
 };
 use crate::interface::app::IsDragging;
 use crate::interface::components::card_item::CardItem;
@@ -16,11 +14,10 @@ use crate::interface::components::layout::TopBar;
 use crate::interface::components::modal::ModalType;
 use crate::interface::components::shared_forms::confirm_destructive_action;
 use crate::interface::components::visuals::{
-    CardDisplayData, DropZoneKind, drop_zone_classes, render_label_chip, render_label_icon,
-    render_note_icon, render_plus_icon, render_settings_icon, render_trash_icon,
-    surface_action_button_classes, surface_destructive_icon_button_classes,
-    surface_icon_button_classes, toolbar_action_icon_classes, toolbar_button_classes,
-    toolbar_button_label_classes,
+    CardDisplayData, DropZoneKind, drop_zone_classes, render_note_icon, render_plus_icon,
+    render_settings_icon, render_trash_icon, surface_action_button_classes,
+    surface_destructive_icon_button_classes, surface_icon_button_classes,
+    toolbar_action_icon_classes, toolbar_button_classes, toolbar_button_label_classes,
 };
 use dioxus::prelude::*;
 use tracing::{Level, info};
@@ -37,7 +34,6 @@ pub(crate) struct BoardRenderContext {
     pub registry: Signal<CardRegistry>,
     pub active_modal: Signal<Option<ModalType>>,
     pub warning_message: Signal<Option<String>>,
-    pub popup_queue: Signal<Vec<PopupNotification>>,
     pub drag: BoardDragSignals,
     pub is_dragging: Signal<IsDragging>,
 }
@@ -54,7 +50,6 @@ pub(crate) fn render_board_screen(
     back_route: Route,
     back_label: String,
     board_due_date: String,
-    board_labels: Vec<(String, LabelColor)>,
     column_models: Vec<ColumnRenderModel>,
     render_context: BoardRenderContext,
 ) -> Element {
@@ -65,7 +60,6 @@ pub(crate) fn render_board_screen(
                 back_route,
                 back_label,
                 board_due_date,
-                board_labels,
                 render_context.clone(),
             )}
             div { class: "flex-grow overflow-x-auto px-6 py-10 lg:px-12",
@@ -100,14 +94,10 @@ fn render_board_header(
     back_route: Route,
     back_label: String,
     board_due_date: String,
-    board_labels: Vec<(String, LabelColor)>,
     context: BoardRenderContext,
 ) -> Element {
     let board_id = context.board_id;
     let mut active_modal = context.active_modal;
-    let registry = context.registry;
-    let popup_queue = context.popup_queue;
-    let warning_message = context.warning_message;
 
     rsx! {
         TopBar {
@@ -125,34 +115,13 @@ fn render_board_header(
                 button {
                     class: "{toolbar_button_classes()}",
                     onclick: move |_| {
-                        let result = dispatch_card_rule_event(
-                            board_id,
-                        CardRuleEvent::NoteOpened,
-                        registry,
-                        popup_queue,
-                        "board-route",
-                    );
-                    let _ = report_result(
-                        result,
-                        warning_message,
-                        "board-route",
-                        "dispatch note-opened rule",
-                    );
-                    active_modal.set(Some(ModalType::CardNotes { card_id: board_id }));
+                        active_modal.set(Some(ModalType::CardNotes { card_id: board_id }));
                     },
                     title: "Open notes",
                     "aria-label": "Notes",
                     span { class: "{toolbar_action_icon_classes()}", {render_note_icon()} }
                     span { class: "{toolbar_button_label_classes()}", "Notes" }
                 }
-            button {
-                class: "{toolbar_button_classes()}",
-                onclick: move |_| active_modal.set(Some(ModalType::CardLabels { card_id: board_id })),
-                title: "Edit labels",
-                "aria-label": "Labels",
-                span { class: "{toolbar_action_icon_classes()}", {render_label_icon()} }
-                span { class: "{toolbar_button_label_classes()}", "Labels" }
-            }
                 button {
                     class: "{toolbar_button_classes()}",
                     onclick: move |_| active_modal.set(Some(ModalType::EditCard { id: board_id })),
@@ -165,16 +134,7 @@ fn render_board_header(
 
         div { class: "app-panel flex flex-wrap items-center justify-between gap-4 border-b px-6 py-5 lg:px-12",
             div { class: "flex flex-wrap items-center gap-4",
-                p { class: "app-kicker", "Status: Active | Due: {board_due_date} | Labels:" }
-                if board_labels.is_empty() {
-                    span { class: "app-text-muted text-xs font-black uppercase tracking-widest", "None" }
-                } else {
-                    div { class: "flex flex-wrap gap-2",
-                        for (name, color) in board_labels {
-                            {render_label_chip(name, color)}
-                        }
-                    }
-                }
+                p { class: "app-kicker", "Status: Active | Due: {board_due_date}" }
             }
         }
     }
@@ -325,7 +285,6 @@ fn render_card_item(
                 on_rename: move |_| active_modal.set(Some(ModalType::EditCard { id: card_id })),
                 due_date: card.due_date,
                 is_overdue: card.is_overdue,
-                labels: card.labels,
                 preview_sections: card.preview_sections,
                 on_delete: move |_| {
                     delete_card_with_feedback(
@@ -414,9 +373,8 @@ fn render_card_drop_zone(
     context: BoardRenderContext,
 ) -> Element {
     let board_id = context.board_id;
-    let mut registry = context.registry;
+    let registry = context.registry;
     let warning_message = context.warning_message;
-    let popup_queue = context.popup_queue;
     let mut card_drop_target = context.drag.card_drop_target;
     let is_dragging = context.is_dragging;
     let is_active = card_drop_target() == Some((bucket_id, index));
@@ -444,42 +402,18 @@ fn render_card_drop_zone(
                 };
 
                 card_drop_target.set(None);
-                let previous_bucket_id = registry
-                    .read()
-                    .get_card(card_id)
-                    .ok()
-                    .and_then(|card| card.bucket_id());
-
-                let result = execute(
+                let _ = execute_command_with_feedback(
                     Command::DropCardAtPosition {
                         board_id,
                         card_id,
                         target_bucket_id: bucket_id,
                         target_index: index,
                     },
-                    &mut registry.write(),
-                );
-                let outcome = report_result(
-                    result,
+                    registry,
                     warning_message,
                     "board-route",
                     format!("drop card {card_id} into bucket {bucket_id} on board {board_id}"),
                 );
-                if outcome.is_ok() && previous_bucket_id != Some(bucket_id) {
-                    let result = dispatch_card_rule_event(
-                        card_id,
-                        CardRuleEvent::MovedToBucket(bucket_id),
-                        registry,
-                        popup_queue,
-                        "board-route",
-                    );
-                    let _ = report_result(
-                        result,
-                        warning_message,
-                        "board-route",
-                        "dispatch moved-to-bucket rule",
-                    );
-                }
             },
             if is_dragging().0 {
                 "Drop Here"

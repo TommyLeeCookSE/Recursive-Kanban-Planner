@@ -1,9 +1,7 @@
 use crate::interface::Route;
 use crate::interface::app::IsDark;
 use crate::interface::components::modal::ModalType;
-use crate::interface::components::visuals::{
-    render_back_icon, render_book_icon, render_day_night_icon, render_label_icon,
-};
+use crate::interface::components::visuals::{render_back_icon, render_day_night_icon};
 use crate::interface::components::web_utilities::{
     render_clear_cache_button, render_export_button, render_import_button,
 };
@@ -21,7 +19,7 @@ use dioxus::prelude::*;
 #[component]
 pub fn NavbarLayout() -> Element {
     let mut is_dark = use_context::<Signal<IsDark>>();
-    let mut active_modal = use_context::<Signal<Option<ModalType>>>();
+    let active_modal = use_context::<Signal<Option<ModalType>>>();
     let registry = use_context::<Signal<crate::domain::registry::CardRegistry>>();
     let persistence_warning = use_context::<Signal<Option<String>>>();
     let nav = navigator();
@@ -46,22 +44,6 @@ pub fn NavbarLayout() -> Element {
                         {render_export_button(registry, persistence_warning)}
                         {render_import_button(registry, active_modal, persistence_warning, nav)}
                         {render_clear_cache_button(registry, active_modal, persistence_warning, nav)}
-                        button {
-                            class: "app-utility-button inline-flex items-center gap-2",
-                            title: "Manage reusable card labels",
-                            "aria-label": "Labels",
-                            onclick: move |_| active_modal.set(Some(ModalType::ManageLabels {})),
-                            span { class: "shrink-0", {render_label_icon()} }
-                            span { class: "hidden sm:inline", "Labels" }
-                        }
-                        button {
-                            class: "app-utility-button inline-flex items-center gap-2",
-                            title: "Manage card automation rules",
-                            "aria-label": "Rules",
-                            onclick: move |_| active_modal.set(Some(ModalType::ManageRules {})),
-                            span { class: "shrink-0", {render_book_icon()} }
-                            span { class: "hidden sm:inline", "Rules" }
-                        }
                     }
 
                     div { class: "flex min-w-0 flex-wrap items-center gap-2 sm:gap-3",

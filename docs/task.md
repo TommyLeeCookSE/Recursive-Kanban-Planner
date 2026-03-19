@@ -22,8 +22,6 @@
 - [x] Inline child previews on cards grouped by bucket name
 - [x] Notebook-style notes with titled plain-text pages
 - [x] Date-only due dates with overdue state
-- [x] Reusable visual labels
-- [x] Popup-only rule presets for note and bucket events
 - [x] Bucket rename is exposed directly in the board UI
 - [x] Modal system split into feature-focused modules
 - [x] `src/interface/tailwind.css` is the editable stylesheet source
@@ -123,13 +121,12 @@
 
 - [ ] Tighten drag-and-drop affordances now that boards carry more metadata
 - [ ] Rebalance card density, spacing, and readability
-- [ ] Improve modal ergonomics for note, label, and rule editing
+- [ ] Improve modal ergonomics for note editing and bucket management
 
 ### P7 - Rule Expansion
 
-- [ ] Add more rule actions beyond popup notifications
-- [ ] Explore enable/disable or filter controls for larger rule sets
-- [ ] Decide whether recent rule activity needs a visible history panel
+- [ ] Improve note tooling and editing ergonomics
+- [ ] Review whether any future automation belongs in the core model
 
 ### P8 - Native Persistence
 

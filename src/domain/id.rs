@@ -144,66 +144,6 @@ impl FromStr for NotePageId {
     }
 }
 
-/// Unique identifier for a label definition in the workspace.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
-pub struct LabelId(Ulid);
-
-impl LabelId {
-    pub fn new() -> Self {
-        Self(Ulid::new())
-    }
-}
-
-impl Default for LabelId {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl fmt::Display for LabelId {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-impl FromStr for LabelId {
-    type Err = ulid::DecodeError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(Self(Ulid::from_str(s)?))
-    }
-}
-
-/// Unique identifier for a rule definition in the workspace.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
-pub struct RuleId(Ulid);
-
-impl RuleId {
-    pub fn new() -> Self {
-        Self(Ulid::new())
-    }
-}
-
-impl Default for RuleId {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl fmt::Display for RuleId {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-impl FromStr for RuleId {
-    type Err = ulid::DecodeError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(Self(Ulid::from_str(s)?))
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -229,18 +169,6 @@ mod tests {
     #[test]
     fn test_note_page_id_generation_and_display() {
         let id = NotePageId::new();
-        assert_eq!(id.to_string(), id.0.to_string());
-    }
-
-    #[test]
-    fn test_label_id_generation_and_display() {
-        let id = LabelId::new();
-        assert_eq!(id.to_string(), id.0.to_string());
-    }
-
-    #[test]
-    fn test_rule_id_generation_and_display() {
-        let id = RuleId::new();
         assert_eq!(id.to_string(), id.0.to_string());
     }
 }

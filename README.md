@@ -18,7 +18,6 @@ Recursive Kanban Planner is a local-first Kanban application built with Rust and
 - Inline child previews on cards grouped by bucket name
 - Notebook-style notes with titled plain-text pages on each card
 - Date-only due dates with overdue card styling
-- Reusable visual labels and popup-only rule presets
 - Browser persistence through `localStorage`
 - Export, import, and clear-cache utilities in the top navigation
 - Native and web runtime logging
@@ -39,7 +38,7 @@ cargo check --no-default-features --features desktop
 What is not fully verified yet:
 
 - Manual `dx serve --platform desktop` runtime launch in this environment
-- Manual browser sanity pass for the newer notebook, due-date, label, rule, and drag/drop flows
+- Manual browser sanity pass for the newer notebook, due-date, and drag/drop flows
 
 ## Getting Started
 
