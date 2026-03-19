@@ -24,41 +24,44 @@ pub fn NavbarLayout() -> Element {
     let persistence_warning = use_context::<Signal<Option<String>>>();
     let nav = navigator();
 
+    let theme_title = if is_dark().0 {
+        "Switch to Sunrise mode"
+    } else {
+        "Switch to Evening mode"
+    };
+    let theme_label = if is_dark().0 { "Evening" } else { "Sunrise" };
+
     rsx! {
         div { class: "flex min-h-0 flex-1 flex-col selection:bg-sunfire/30 selection:text-white",
-                nav { class: "app-navbar",
-                    div { class: "flex min-w-0 flex-wrap items-center gap-3 sm:gap-8",
-                        Link {
-                            to: Route::Home {},
-                            class: "group flex min-w-0 items-center gap-3",
-                            div { class: "flex h-10 w-10 items-center justify-center rounded-xl bg-sunfire shadow-lg shadow-sunfire/30 transition-transform group-hover:rotate-12",
-                                span { class: "text-white text-xl font-black", "K" }
-                            }
-                            span { class: "app-text-primary hidden text-2xl font-black tracking-tighter transition-colors group-hover:text-sunfire sm:inline",
-                                "Kanban"
-                            }
+            nav { class: "app-navbar",
+                div { class: "flex min-w-0 flex-wrap items-center gap-3 sm:gap-8",
+                    Link {
+                        to: Route::Home {},
+                        class: "group flex min-w-0 items-center gap-3",
+                        div { class: "flex h-10 w-10 items-center justify-center rounded-xl bg-sunfire shadow-lg shadow-sunfire/30 transition-transform group-hover:rotate-12",
+                            span { class: "text-white text-xl font-black", "K" }
+                        }
+                        span { class: "app-text-primary hidden text-2xl font-black tracking-tighter transition-colors group-hover:text-sunfire sm:inline",
+                            "Kanban"
                         }
                     }
+                }
 
-                    div { class: "flex min-w-0 flex-wrap items-center justify-end gap-2 sm:gap-3",
-                        {render_export_button(registry, persistence_warning)}
-                        {render_import_button(registry, active_modal, persistence_warning, nav)}
-                        {render_clear_cache_button(registry, active_modal, persistence_warning, nav)}
-                    }
+                div { class: "flex min-w-0 flex-wrap items-center justify-end gap-2 sm:gap-3",
+                    {render_export_button(registry, persistence_warning)}
+                    {render_import_button(registry, active_modal, persistence_warning, nav)}
+                    {render_clear_cache_button(registry, active_modal, persistence_warning, nav)}
+                }
 
-                    div { class: "flex min-w-0 flex-wrap items-center gap-2 sm:gap-3",
-                        button {
-                            class: "app-button-secondary inline-flex items-center gap-2 px-3 py-2.5 text-sm sm:min-w-[7.5rem] sm:px-4 sm:py-3",
-                            onclick: move |_| is_dark.set(IsDark(!is_dark().0)),
-                            title: "Toggle Light/Dark Mode",
-                            "aria-label": "Toggle Light/Dark Mode",
-                            span { class: "shrink-0", {render_day_night_icon()} }
-                            if is_dark().0 {
-                                span { class: "hidden sm:inline", "Evening" }
-                            } else {
-                                span { class: "hidden sm:inline", "Sunrise" }
-                            }
-                        }
+                div { class: "flex min-w-0 flex-wrap items-center gap-2 sm:gap-3",
+                    button {
+                        class: "app-button-secondary inline-flex items-center gap-2 px-3 py-2.5 text-sm sm:min-w-[7.5rem] sm:px-4 sm:py-3",
+                        onclick: move |_| is_dark.set(IsDark(!is_dark().0)),
+                        title: "{theme_title}",
+                        "aria-label": "{theme_title}",
+                        "aria-pressed": is_dark().0,
+                        span { class: "shrink-0", {render_day_night_icon()} }
+                        span { class: "hidden sm:inline", "{theme_label}" }
                     }
                 }
             }
@@ -66,6 +69,7 @@ pub fn NavbarLayout() -> Element {
             main { class: "flex-1 min-h-0 overflow-auto",
                 Outlet::<Route> {}
             }
+        }
     }
 }
 

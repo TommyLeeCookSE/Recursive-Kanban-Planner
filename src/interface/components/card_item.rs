@@ -121,7 +121,7 @@ pub fn CardItem(
                         if let Some(rename_handler) = on_rename {
                             button {
                                 class: "{surface_action_button_classes()}",
-                                title: "Rename this card",
+                                title: "Edit this card",
                                 draggable: false,
                                 onclick: move |_| rename_handler.call(()),
                                 "Edit"
