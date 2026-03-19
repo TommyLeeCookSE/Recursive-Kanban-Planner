@@ -100,6 +100,8 @@ To publish it:
 2. Push to `main`.
 3. Let the workflow in `.github/workflows/github-pages.yml` build and deploy the site.
 
+If GitHub Pages ever starts showing the repository `README.md` instead of the app, the site has usually been switched back to legacy branch publishing (`main` / `/`). Change it back to `GitHub Actions`.
+
 If you rename the repository, update the `base_path` in [Dioxus.toml](Dioxus.toml) to match the new repo slug.
 
 ## Persistence
