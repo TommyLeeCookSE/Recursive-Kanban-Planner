@@ -132,7 +132,7 @@ pub fn toolbar_button_label_classes() -> &'static str {
     "hidden sm:inline"
 }
 
-pub fn toolbar_button_mobile_icon_classes() -> &'static str {
+pub fn toolbar_action_icon_classes() -> &'static str {
     "text-lg leading-none"
 }
 

@@ -19,8 +19,8 @@ use crate::interface::components::visuals::{
     CardDisplayData, DropZoneKind, drop_zone_classes, render_label_chip, render_label_icon,
     render_note_icon, render_plus_icon, render_settings_icon, render_trash_icon,
     surface_action_button_classes, surface_destructive_icon_button_classes,
-    surface_icon_button_classes, toolbar_button_classes, toolbar_button_label_classes,
-    toolbar_button_mobile_icon_classes,
+    surface_icon_button_classes, toolbar_action_icon_classes, toolbar_button_classes,
+    toolbar_button_label_classes,
 };
 use dioxus::prelude::*;
 use tracing::{Level, info};
@@ -119,7 +119,7 @@ fn render_board_header(
                 onclick: move |_| active_modal.set(Some(ModalType::CreateBucket { card_id: board_id })),
                 title: "Create Bucket",
                 "aria-label": "Create Bucket",
-                span { class: "{toolbar_button_mobile_icon_classes()}", {render_plus_icon()} }
+                span { class: "{toolbar_action_icon_classes()}", {render_plus_icon()} }
                 span { class: "{toolbar_button_label_classes()}", "Create Bucket" }
             }
                 button {
@@ -142,7 +142,7 @@ fn render_board_header(
                     },
                     title: "Open notes",
                     "aria-label": "Notes",
-                    span { class: "{toolbar_button_mobile_icon_classes()}", {render_note_icon()} }
+                    span { class: "{toolbar_action_icon_classes()}", {render_note_icon()} }
                     span { class: "{toolbar_button_label_classes()}", "Notes" }
                 }
             button {
@@ -150,7 +150,7 @@ fn render_board_header(
                 onclick: move |_| active_modal.set(Some(ModalType::CardLabels { card_id: board_id })),
                 title: "Edit labels",
                 "aria-label": "Labels",
-                span { class: "{toolbar_button_mobile_icon_classes()}", {render_label_icon()} }
+                span { class: "{toolbar_action_icon_classes()}", {render_label_icon()} }
                 span { class: "{toolbar_button_label_classes()}", "Labels" }
             }
                 button {
@@ -158,7 +158,7 @@ fn render_board_header(
                     onclick: move |_| active_modal.set(Some(ModalType::EditCard { id: board_id })),
                     title: "Open settings",
                     "aria-label": "Settings",
-                    span { class: "{toolbar_button_mobile_icon_classes()}", {render_settings_icon()} }
+                    span { class: "{toolbar_action_icon_classes()}", {render_settings_icon()} }
                     span { class: "{toolbar_button_label_classes()}", "Settings" }
                 }
         }
