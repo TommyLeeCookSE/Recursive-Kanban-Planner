@@ -18,11 +18,12 @@ use crate::interface::components::modal::ModalType;
 use crate::interface::components::shared_forms::confirm_destructive_action;
 use crate::interface::components::visuals::{
     CardDisplayData, DropZoneKind, build_card_display, drop_zone_classes, render_label_chip,
+    render_label_icon, render_note_icon, render_plus_icon, render_settings_icon,
     surface_action_button_classes, surface_destructive_icon_button_classes,
-    surface_icon_button_classes,
+    surface_icon_button_classes, toolbar_button_classes, toolbar_button_label_classes,
+    toolbar_button_mobile_icon_classes, toolbar_icon_button_classes,
 };
 use dioxus::prelude::*;
-use std::collections::HashMap;
 use tracing::{Level, error, info};
 
 struct BoardScreenState<'a> {
@@ -155,13 +156,15 @@ pub fn Board(card_id: CardId) -> Element {
                 back_route: board_state.back_route.clone(),
                 back_label: board_state.back_label.clone(),
                 button {
-                    class: "app-button-secondary h-14 px-8 text-sunfire",
+                    class: "{toolbar_button_classes()} text-sunfire",
                     onclick: move |_| active_modal.set(Some(ModalType::CreateBucket { card_id: board_id })),
-                    span { class: "text-xl", "+" }
-                    "Create Bucket"
+                    title: "Create Bucket",
+                    "aria-label": "Create Bucket",
+                    span { class: "{toolbar_button_mobile_icon_classes()}", {render_plus_icon()} }
+                    span { class: "{toolbar_button_label_classes()}", "Create Bucket" }
                 }
                 button {
-                    class: "app-button-secondary h-14 min-w-[4.5rem] px-0 text-2xl leading-none",
+                    class: "{toolbar_icon_button_classes()}",
                     onclick: move |_| {
                         let result = dispatch_card_rule_event(
                             board_id,
@@ -179,18 +182,23 @@ pub fn Board(card_id: CardId) -> Element {
                         active_modal.set(Some(ModalType::CardNotes { card_id: board_id }));
                     },
                     title: "Open notes",
-                    "📄"
+                    "aria-label": "Notes",
+                    {render_note_icon()}
                 }
                 button {
-                    class: "app-button-secondary h-14 px-8",
+                    class: "{toolbar_button_classes()}",
                     onclick: move |_| active_modal.set(Some(ModalType::CardLabels { card_id: board_id })),
-                    "Labels"
+                    title: "Edit labels",
+                    "aria-label": "Labels",
+                    span { class: "{toolbar_button_mobile_icon_classes()}", {render_label_icon()} }
+                    span { class: "{toolbar_button_label_classes()}", "Labels" }
                 }
                 button {
-                    class: "app-button-secondary h-14 min-w-[4.5rem] px-0 text-2xl leading-none",
+                    class: "{toolbar_icon_button_classes()}",
                     onclick: move |_| active_modal.set(Some(ModalType::EditCard { id: board_id })),
                     title: "Open settings",
-                    "⚙"
+                    "aria-label": "Settings",
+                    {render_settings_icon()}
                 }
             }
 
@@ -376,24 +384,30 @@ fn render_card_item(
         div {
             key: "{card_id}",
             class: "flex flex-col gap-3",
-            draggable: true,
-            ondragstart: move |event| {
-                prime_drag_session(
-                    &event,
-                    "board-route",
-                    format!("card:{card_id}:board:{}", context.board_id),
-                    is_dragging,
-                );
-            },
-            ondragend: move |_| {
-                card_drop_target.set(None);
-                is_dragging.set(IsDragging(false));
-            },
             CardItem {
                 title: card.title,
                 subtitle: format!("{} nested items", card.nested_item_count),
+                draggable: true,
                 on_open: move |_| {
                     navigator().push(Route::Board { card_id });
+                },
+                on_drag_start: move |event| {
+                    prime_drag_session(
+                        &event,
+                        "board-route",
+                        format!("card:{card_id}:board:{}", context.board_id),
+                        is_dragging,
+                    );
+                    info!(card_id = %card_id, board_id = %context.board_id, "Started dragging card");
+                    record_diagnostic(
+                        Level::INFO,
+                        "board-route",
+                        format!("Started dragging card {card_id} on board {}", context.board_id),
+                    );
+                },
+                on_drag_end: move |_| {
+                    card_drop_target.set(None);
+                    is_dragging.set(IsDragging(false));
                 },
                 on_rename: move |_| active_modal.set(Some(ModalType::EditCard { id: card_id })),
                 due_date: card.due_date,
@@ -523,10 +537,15 @@ fn render_card_drop_zone(
                     .ok()
                     .and_then(|card| card.bucket_id());
 
-                let result = {
-                    let mut reg = registry.write();
-                    apply_card_drop(&mut reg, board_id, card_id, bucket_id, index)
-                };
+                let result = execute(
+                    Command::DropCardAtPosition {
+                        board_id,
+                        card_id,
+                        target_bucket_id: bucket_id,
+                        target_index: index,
+                    },
+                    &mut registry.write(),
+                );
                 let outcome = report_result(
                     result,
                     warning_message,
@@ -568,73 +587,6 @@ where
     let insertion_index = target_index.min(reordered.len());
     reordered.insert(insertion_index, dragged_id);
     reordered
-}
-
-fn apply_card_drop(
-    registry: &mut CardRegistry,
-    board_id: CardId,
-    card_id: CardId,
-    target_bucket_id: BucketId,
-    target_index: usize,
-) -> Result<(), DomainError> {
-    let board = registry.get_card(board_id)?;
-    let bucket_order: Vec<BucketId> = board.buckets().iter().map(|bucket| bucket.id()).collect();
-    let child_order = board.children_ids().to_vec();
-
-    let mut cards_by_bucket: HashMap<BucketId, Vec<CardId>> = bucket_order
-        .iter()
-        .copied()
-        .map(|bucket_id| (bucket_id, Vec::new()))
-        .collect();
-    let mut current_bucket_id = None;
-
-    for child_id in child_order {
-        let child = registry.get_card(child_id)?;
-        let bucket_id = child.bucket_id().ok_or_else(|| {
-            DomainError::InvalidOperation(format!(
-                "Child card {child_id} is missing its bucket assignment"
-            ))
-        })?;
-
-        if child_id == card_id {
-            current_bucket_id = Some(bucket_id);
-            continue;
-        }
-
-        cards_by_bucket.entry(bucket_id).or_default().push(child_id);
-    }
-
-    let current_bucket_id = current_bucket_id.ok_or(DomainError::CardNotFound(card_id))?;
-    let target_cards = cards_by_bucket
-        .get_mut(&target_bucket_id)
-        .ok_or(DomainError::BucketNotFound(target_bucket_id))?;
-    let insertion_index = target_index.min(target_cards.len());
-    target_cards.insert(insertion_index, card_id);
-
-    if current_bucket_id != target_bucket_id {
-        execute(
-            Command::MoveCardToBucket {
-                card_id,
-                bucket_id: target_bucket_id,
-            },
-            registry,
-        )?;
-    }
-
-    let mut reordered_children = Vec::new();
-    for bucket_id in bucket_order {
-        if let Some(cards) = cards_by_bucket.get(&bucket_id) {
-            reordered_children.extend(cards.iter().copied());
-        }
-    }
-
-    execute(
-        Command::ReorderChildren {
-            card_id: board_id,
-            ordered_ids: reordered_children,
-        },
-        registry,
-    )
 }
 
 fn delete_card_with_feedback(

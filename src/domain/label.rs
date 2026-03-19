@@ -80,3 +80,34 @@ impl LabelDefinition {
         self.color
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_label_creation() {
+        let label = LabelDefinition::new("Urgent".into(), LabelColor::Rose).unwrap();
+        assert_eq!(label.name(), "Urgent");
+        assert_eq!(label.color(), LabelColor::Rose);
+    }
+
+    #[test]
+    fn test_label_rejects_blank_name() {
+        let result = LabelDefinition::new("   ".into(), LabelColor::Ember);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_label_color_as_str() {
+        assert_eq!(LabelColor::Ember.as_str(), "Ember");
+        assert_eq!(LabelColor::Rose.as_str(), "Rose");
+    }
+
+    #[test]
+    fn test_label_color_palette() {
+        let (bg, text) = LabelColor::Sky.palette();
+        assert!(bg.contains("rgba"));
+        assert!(text.starts_with("#"));
+    }
+}

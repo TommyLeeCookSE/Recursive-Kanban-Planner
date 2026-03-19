@@ -34,8 +34,11 @@ pub fn CardItem(
     #[props(default)] is_overdue: bool,
     #[props(default)] labels: Vec<(String, LabelColor)>,
     #[props(default)] preview_sections: Vec<CardPreviewDisplaySection>,
+    #[props(default = false)] draggable: bool,
     /// Triggered when the main body of the card is clicked.
     on_open: EventHandler<()>,
+    #[props(default)] on_drag_start: Option<EventHandler<DragEvent>>,
+    #[props(default)] on_drag_end: Option<EventHandler<DragEvent>>,
     /// Optional rename event. If None, the rename button is hidden.
     #[props(default)]
     on_rename: Option<EventHandler<()>>,
@@ -45,7 +48,22 @@ pub fn CardItem(
 ) -> Element {
     rsx! {
         article {
-            class: "app-card-surface group flex flex-col rounded-[1.75rem] transition-all hover:border-sunfire/50 hover:-translate-y-0.5",
+            class: if draggable {
+                "app-card-surface group flex cursor-grab flex-col rounded-[1.75rem] transition-all hover:border-sunfire/50 hover:-translate-y-0.5 active:cursor-grabbing"
+            } else {
+                "app-card-surface group flex flex-col rounded-[1.75rem] transition-all hover:border-sunfire/50 hover:-translate-y-0.5"
+            },
+            draggable: draggable,
+            ondragstart: move |event| {
+                if let Some(handler) = &on_drag_start {
+                    handler.call(event);
+                }
+            },
+            ondragend: move |event| {
+                if let Some(handler) = &on_drag_end {
+                    handler.call(event);
+                }
+            },
 
             button {
                 class: "flex-grow w-full rounded-t-[1.75rem] p-6 text-left outline-none transition-colors focus:ring-2 focus:ring-sunfire/30",
@@ -94,6 +112,7 @@ pub fn CardItem(
                             button {
                                 class: "{surface_destructive_icon_button_classes()}",
                                 title: "Delete this card",
+                                draggable: false,
                                 onclick: move |_| {
                                     if confirm_destructive_action(&format!(
                                         "Delete the card '{title}' and all of its descendants?"
@@ -107,6 +126,7 @@ pub fn CardItem(
                         if let Some(rename_handler) = on_rename {
                             button {
                                 class: "{surface_action_button_classes()}",
+                                draggable: false,
                                 onclick: move |_| rename_handler.call(()),
                                 "Edit"
                             }

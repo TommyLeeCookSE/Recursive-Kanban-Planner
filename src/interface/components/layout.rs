@@ -4,6 +4,7 @@ use crate::infrastructure::repository::{AppPersistence, JsonRepository};
 use crate::interface::Route;
 use crate::interface::app::IsDark;
 use crate::interface::components::modal::ModalType;
+use crate::interface::components::visuals::render_back_icon;
 use dioxus::prelude::*;
 use dioxus_router::Navigator;
 #[cfg(target_arch = "wasm32")]
@@ -421,29 +422,30 @@ fn clear_workspace_with_confirmation() -> Result<bool, crate::domain::error::Dom
 #[component]
 pub fn TopBar(title: String, back_route: Route, back_label: String, children: Element) -> Element {
     rsx! {
-        div { class: "app-panel border-b px-6 py-8 lg:px-12",
-            div { class: "mx-auto grid max-w-7xl grid-cols-1 gap-8 lg:grid-cols-[auto_minmax(0,1fr)_auto] lg:items-center",
-                div { class: "flex items-center justify-start lg:justify-self-start",
+        div { class: "app-panel border-b px-4 py-6 sm:px-6 lg:px-12",
+            div { class: "grid w-full grid-cols-[minmax(0,auto)_minmax(0,1fr)_minmax(0,auto)] items-center gap-3 sm:gap-4 lg:gap-8",
+                div { class: "min-w-0 justify-self-start",
                     button {
-                        class: "app-button-secondary min-w-[12rem] justify-center px-6 py-4 text-base font-black group",
+                        class: "app-button-secondary inline-flex min-h-[3.25rem] max-w-full items-center justify-center gap-2 rounded-2xl px-3 py-3 text-sm font-black sm:min-w-[12rem] sm:px-6 sm:text-base group",
                         onclick: move |_| {
                             navigator().push(back_route.clone());
                         },
-                        span { class: "block transform transition-transform group-hover:-translate-x-1", "Back to:" }
-                        span { "{back_label}" }
+                        title: "Back to {back_label}",
+                        span { class: "shrink-0 transform transition-transform group-hover:-translate-x-1", {render_back_icon()} }
+                        span { class: "truncate", "Back to: {back_label}" }
                     }
                 }
 
-                div { class: "min-w-0 text-center lg:justify-self-center",
-                    h1 { class: "app-text-primary max-w-2xl break-words text-5xl font-black tracking-tighter",
+                div { class: "min-w-0 px-2 text-center justify-self-center",
+                    h1 { class: "app-text-primary mx-auto max-w-xl break-words text-2xl font-black tracking-tighter sm:text-4xl lg:max-w-2xl lg:text-5xl",
                         "{title}"
                     }
-                    p { class: "app-kicker mt-3 block",
+                    p { class: "app-kicker mt-2 block",
                         "Board Context / {back_label}"
                     }
                 }
 
-                div { class: "flex flex-wrap items-center justify-start gap-4 lg:justify-self-end lg:justify-end",
+                div { class: "flex min-w-0 flex-nowrap items-center justify-end gap-2 sm:gap-3 lg:gap-4 justify-self-end overflow-x-auto",
                     {children}
                 }
             }

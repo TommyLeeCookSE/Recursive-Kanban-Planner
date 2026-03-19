@@ -107,9 +107,18 @@ pub fn Home() -> Element {
                     for (index, card) in root_cards.iter().cloned().enumerate() {
                         div { key: "{card.id}", class: "flex flex-col gap-3",
                             {render_root_drop_zone(index, root_drop_index, registry, warning_message, is_dragging)}
-                            div {
+                            CardItem {
+                                title: card.title,
+                                subtitle: format!("{} nested items", card.nested_item_count),
+                                due_date: card.due_date,
+                                is_overdue: card.is_overdue,
+                                labels: card.labels,
+                                preview_sections: card.preview_sections,
                                 draggable: true,
-                                ondragstart: move |event| {
+                                on_open: move |_| {
+                                    navigator().push(Route::Board { card_id: card.id });
+                                },
+                                on_drag_start: move |event| {
                                     prime_drag_session(&event, "workspace-route", format!("root-card:{}", card.id), is_dragging);
                                     info!(card_id = %card.id, "Started dragging root card");
                                     record_diagnostic(
@@ -118,27 +127,16 @@ pub fn Home() -> Element {
                                         format!("Started dragging root card {}", card.id),
                                     );
                                 },
-                                ondragend: move |_| {
+                                on_drag_end: move |_| {
                                     root_drop_index.set(None);
                                     is_dragging.set(IsDragging(false));
                                 },
-                                CardItem {
-                                    title: card.title,
-                                    subtitle: format!("{} nested items", card.nested_item_count),
-                                    due_date: card.due_date,
-                                    is_overdue: card.is_overdue,
-                                    labels: card.labels,
-                                    preview_sections: card.preview_sections,
-                                    on_open: move |_| {
-                                        navigator().push(Route::Board { card_id: card.id });
-                                    },
-                                    on_rename: move |_| {
-                                        active_modal.set(Some(ModalType::EditCard { id: card.id }));
-                                    },
-                                    on_delete: move |_| {
-                                        delete_card_with_feedback(card.id, registry, warning_message);
-                                    },
-                                }
+                                on_rename: move |_| {
+                                    active_modal.set(Some(ModalType::EditCard { id: card.id }));
+                                },
+                                on_delete: move |_| {
+                                    delete_card_with_feedback(card.id, registry, warning_message);
+                                },
                             }
                         }
                     }

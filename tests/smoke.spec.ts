@@ -21,8 +21,17 @@ test('smoke: app boots and core board actions are visible', async ({ page }) => 
 
   const main = page.locator('main');
   await expect(main.getByRole('button', { name: 'Create Bucket' })).toBeVisible();
-  await expect(main.getByRole('button', { name: 'Notes' })).toBeVisible();
+  await expect(main.getByRole('button', { name: 'Open notes' })).toBeVisible();
   await expect(main.getByRole('button', { name: 'Labels' })).toBeVisible();
+  await expect(main.getByRole('button', { name: 'Open settings' })).toBeVisible();
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(main.getByRole('button', { name: /Back to:/ })).toBeVisible();
+  await expect(main.getByRole('button', { name: 'Create Bucket' })).toBeVisible();
+  await expect(main.getByRole('button', { name: 'Open notes' })).toBeVisible();
+  await expect(main.getByRole('button', { name: 'Labels' })).toBeVisible();
+  await expect(main.getByRole('button', { name: 'Open settings' })).toBeVisible();
+  await page.setViewportSize({ width: 1440, height: 900 });
 
   await main.getByRole('button', { name: 'Create Bucket' }).click();
   await page.getByPlaceholder('Column Name (e.g., Todo, Doing)').fill('Smoke Lane');

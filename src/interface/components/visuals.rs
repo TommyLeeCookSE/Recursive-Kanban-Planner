@@ -119,3 +119,106 @@ pub fn surface_icon_button_classes() -> &'static str {
 pub fn surface_destructive_icon_button_classes() -> &'static str {
     "app-button-secondary inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full p-0 text-sm leading-none text-red-400 hover:text-red-500"
 }
+
+pub fn toolbar_button_classes() -> &'static str {
+    "app-toolbar-button"
+}
+
+pub fn toolbar_icon_button_classes() -> &'static str {
+    "app-toolbar-button app-toolbar-button--icon"
+}
+
+pub fn toolbar_button_label_classes() -> &'static str {
+    "hidden sm:inline"
+}
+
+pub fn toolbar_button_mobile_icon_classes() -> &'static str {
+    "text-lg leading-none sm:hidden"
+}
+
+pub fn render_plus_icon() -> Element {
+    rsx! {
+        svg {
+            class: "h-5 w-5",
+            view_box: "0 0 20 20",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "1.9",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            "aria-hidden": "true",
+            path { d: "M10 4.5v11" }
+            path { d: "M4.5 10h11" }
+        }
+    }
+}
+
+pub fn render_note_icon() -> Element {
+    rsx! {
+        svg {
+            class: "h-5 w-5",
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "1.8",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            "aria-hidden": "true",
+            path { d: "M7 3.75h7.75L19.5 8.5v11.75a1.5 1.5 0 0 1-1.5 1.5H7a1.5 1.5 0 0 1-1.5-1.5V5.25A1.5 1.5 0 0 1 7 3.75Z" }
+            path { d: "M14.5 3.75V8.5H19.5" }
+            path { d: "M8.5 12h7" }
+            path { d: "M8.5 15.5h7" }
+        }
+    }
+}
+
+pub fn render_label_icon() -> Element {
+    rsx! {
+        svg {
+            class: "h-5 w-5",
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "1.8",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            "aria-hidden": "true",
+            path { d: "M11 4.5H6.75A2.25 2.25 0 0 0 4.5 6.75V11L12.75 19.25a1.5 1.5 0 0 0 2.12 0l4.38-4.38a1.5 1.5 0 0 0 0-2.12L11 4.5Z" }
+            circle { cx: "8.25", cy: "8.25", r: "1.1" }
+        }
+    }
+}
+
+pub fn render_settings_icon() -> Element {
+    rsx! {
+        svg {
+            class: "h-5 w-5",
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "1.8",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            "aria-hidden": "true",
+            path { d: "M12 4.75 13.62 6.1l2.08-.33.9 1.9 1.97.74-.2 2.1 1.46 1.52-1.46 1.52.2 2.1-1.97.74-.9 1.9-2.08-.33L12 19.25l-1.62-1.35-2.08.33-.9-1.9-1.97-.74.2-2.1-1.46-1.52 1.46-1.52-.2-2.1 1.97-.74.9-1.9 2.08.33L12 4.75Z" }
+            circle { cx: "12", cy: "12", r: "2.6" }
+        }
+    }
+}
+
+pub fn render_back_icon() -> Element {
+    rsx! {
+        svg {
+            class: "h-4.5 w-4.5",
+            view_box: "0 0 20 20",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "1.9",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            "aria-hidden": "true",
+            path { d: "M11.5 4.5 6 10l5.5 5.5" }
+            path { d: "M6.5 10h8" }
+        }
+    }
+}

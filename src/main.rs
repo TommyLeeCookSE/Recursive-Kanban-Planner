@@ -13,11 +13,22 @@ fn main() {
         }
     };
 
+    #[cfg(not(target_arch = "wasm32"))]
     let current_dir = std::env::current_dir()
         .map(|dir| dir.display().to_string())
         .unwrap_or_else(|_| "<unavailable>".to_string());
+    #[cfg(target_arch = "wasm32")]
+    let current_dir = "<web-runtime>".to_string();
+
+    #[cfg(not(target_arch = "wasm32"))]
     let backtrace = std::env::var("RUST_BACKTRACE").unwrap_or_else(|_| "unset".to_string());
+    #[cfg(target_arch = "wasm32")]
+    let backtrace = "<n/a>".to_string();
+
+    #[cfg(not(target_arch = "wasm32"))]
     let log_level = std::env::var("KANBAN_LOG_LEVEL").unwrap_or_else(|_| "info".to_string());
+    #[cfg(target_arch = "wasm32")]
+    let log_level = "info".to_string(); // In WASM we typically rely on defaults or hardcoded levels if EnvFilter fails
 
     info!(
         version = env!("CARGO_PKG_VERSION"),

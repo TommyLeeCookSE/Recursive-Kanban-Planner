@@ -809,6 +809,12 @@ button,
           backdrop-filter: blur(16px);
 }
 
+.app-card-surface[draggable="true"] {
+  -webkit-user-select: none;
+     -moz-user-select: none;
+          user-select: none;
+}
+
 .app-card-preview {
   border-top: 1px solid color-mix(in srgb, var(--app-border) 68%, transparent);
   margin-top: 1.25rem;
@@ -935,6 +941,49 @@ button,
 .app-button-secondary:hover {
   border-color: rgba(255, 140, 0, 0.45);
   color: #ff8c00;
+}
+
+.app-toolbar-button {
+  display: inline-flex;
+  min-height: 3.25rem;
+  min-width: 3.25rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 1rem;
+  border-width: 1px;
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 700;
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+.app-toolbar-button:active {
+  --tw-scale-x: .95;
+  --tw-scale-y: .95;
+  transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
+}
+
+.app-toolbar-button {
+  border-color: var(--app-border-strong);
+  background-color: var(--app-surface-soft);
+  color: var(--app-text);
+}
+
+.app-toolbar-button:hover {
+  border-color: rgba(255, 140, 0, 0.45);
+  color: #ff8c00;
+}
+
+.app-toolbar-button--icon {
+  padding-left: 0px;
+  padding-right: 0px;
 }
 
 .app-button-ghost {
@@ -1130,6 +1179,17 @@ button,
   color: var(--app-drop-dragging-text);
 }
 
+@media (min-width: 640px) {
+  .app-toolbar-button {
+    min-height: 3.5rem;
+    min-width: 4.5rem;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+    font-size: 1rem;
+    line-height: 1.5rem;
+  }
+}
+
 .pointer-events-none {
   pointer-events: none;
 }
@@ -1286,6 +1346,10 @@ button,
   height: 5rem;
 }
 
+.h-5 {
+  height: 1.25rem;
+}
+
 .h-8 {
   height: 2rem;
 }
@@ -1306,6 +1370,10 @@ button,
   max-height: 100%;
 }
 
+.min-h-14 {
+  min-height: 3.5rem;
+}
+
 .min-h-\[10rem\] {
   min-height: 10rem;
 }
@@ -1318,6 +1386,10 @@ button,
   min-height: 24rem;
 }
 
+.min-h-\[3\.25rem\] {
+  min-height: 3.25rem;
+}
+
 .min-h-full {
   min-height: 100%;
 }
@@ -1328,6 +1400,10 @@ button,
 
 .w-10 {
   width: 2.5rem;
+}
+
+.w-5 {
+  width: 1.25rem;
 }
 
 .w-8 {
@@ -1346,8 +1422,8 @@ button,
   min-width: 0px;
 }
 
-.min-w-\[12rem\] {
-  min-width: 12rem;
+.min-w-\[3\.25rem\] {
+  min-width: 3.25rem;
 }
 
 .min-w-\[4\.5rem\] {
@@ -1375,12 +1451,20 @@ button,
   max-width: 80rem;
 }
 
+.max-w-full {
+  max-width: 100%;
+}
+
 .max-w-md {
   max-width: 28rem;
 }
 
 .max-w-sm {
   max-width: 24rem;
+}
+
+.max-w-xl {
+  max-width: 36rem;
 }
 
 .flex-1 {
@@ -1408,12 +1492,20 @@ button,
   transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
 }
 
+.cursor-grab {
+  cursor: grab;
+}
+
 .cursor-not-allowed {
   cursor: not-allowed;
 }
 
 .grid-cols-1 {
   grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+
+.grid-cols-\[minmax\(0\2c auto\)_minmax\(0\2c 1fr\)_minmax\(0\2c auto\)\] {
+  grid-template-columns: minmax(0,auto) minmax(0,1fr) minmax(0,auto);
 }
 
 .flex-col {
@@ -1424,16 +1516,16 @@ button,
   flex-wrap: wrap;
 }
 
+.flex-nowrap {
+  flex-wrap: nowrap;
+}
+
 .items-start {
   align-items: flex-start;
 }
 
 .items-center {
   align-items: center;
-}
-
-.justify-start {
-  justify-content: flex-start;
 }
 
 .justify-end {
@@ -1486,6 +1578,18 @@ button,
   margin-bottom: calc(1rem * var(--tw-space-y-reverse));
 }
 
+.justify-self-start {
+  justify-self: start;
+}
+
+.justify-self-end {
+  justify-self: end;
+}
+
+.justify-self-center {
+  justify-self: center;
+}
+
 .overflow-auto {
   overflow: auto;
 }
@@ -1500,6 +1604,12 @@ button,
 
 .overflow-y-auto {
   overflow-y: auto;
+}
+
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .break-words {
@@ -1611,9 +1721,9 @@ button,
   padding: 1.5rem;
 }
 
-.px-0 {
-  padding-left: 0px;
-  padding-right: 0px;
+.px-2 {
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
 }
 
 .px-3 {
@@ -1696,9 +1806,9 @@ button,
   padding-bottom: 1.25rem;
 }
 
-.py-8 {
-  padding-top: 2rem;
-  padding-bottom: 2rem;
+.py-6 {
+  padding-top: 1.5rem;
+  padding-bottom: 1.5rem;
 }
 
 .pr-1 {
@@ -1987,6 +2097,10 @@ button,
   --tw-ring-color: rgb(255 140 0 / 0.3);
 }
 
+.active\:cursor-grabbing:active {
+  cursor: grabbing;
+}
+
 .disabled\:opacity-50:disabled {
   opacity: 0.5;
 }
@@ -2019,6 +2133,43 @@ button,
   color: rgb(254 202 202 / var(--tw-text-opacity, 1));
 }
 
+@media (min-width: 640px) {
+  .sm\:inline {
+    display: inline;
+  }
+
+  .sm\:hidden {
+    display: none;
+  }
+
+  .sm\:min-w-\[12rem\] {
+    min-width: 12rem;
+  }
+
+  .sm\:gap-3 {
+    gap: 0.75rem;
+  }
+
+  .sm\:gap-4 {
+    gap: 1rem;
+  }
+
+  .sm\:px-6 {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+
+  .sm\:text-4xl {
+    font-size: 2.25rem;
+    line-height: 2.5rem;
+  }
+
+  .sm\:text-base {
+    font-size: 1rem;
+    line-height: 1.5rem;
+  }
+}
+
 @media (min-width: 768px) {
   .md\:flex {
     display: flex;
@@ -2039,12 +2190,12 @@ button,
     width: 14rem;
   }
 
-  .lg\:grid-cols-3 {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+  .lg\:max-w-2xl {
+    max-width: 42rem;
   }
 
-  .lg\:grid-cols-\[auto_minmax\(0\2c 1fr\)_auto\] {
-    grid-template-columns: auto minmax(0,1fr) auto;
+  .lg\:grid-cols-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .lg\:flex-row {
@@ -2059,33 +2210,26 @@ button,
     align-items: center;
   }
 
-  .lg\:justify-end {
-    justify-content: flex-end;
-  }
-
   .lg\:justify-between {
     justify-content: space-between;
+  }
+
+  .lg\:gap-4 {
+    gap: 1rem;
   }
 
   .lg\:gap-8 {
     gap: 2rem;
   }
 
-  .lg\:justify-self-start {
-    justify-self: start;
-  }
-
-  .lg\:justify-self-end {
-    justify-self: end;
-  }
-
-  .lg\:justify-self-center {
-    justify-self: center;
-  }
-
   .lg\:px-12 {
     padding-left: 3rem;
     padding-right: 3rem;
+  }
+
+  .lg\:text-5xl {
+    font-size: 3rem;
+    line-height: 1;
   }
 
   .lg\:text-lg {

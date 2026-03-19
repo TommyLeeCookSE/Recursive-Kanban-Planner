@@ -69,3 +69,59 @@ impl RuleDefinition {
         &self.action
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_rule_creation() {
+        let rule = RuleDefinition::new(
+            "My Rule".into(),
+            RuleTrigger::NoteOpened,
+            RuleAction::ShowPopup {
+                title: "T".into(),
+                message: "M".into(),
+            },
+        )
+        .unwrap();
+        assert_eq!(rule.name(), "My Rule");
+        assert_eq!(rule.trigger(), &RuleTrigger::NoteOpened);
+    }
+
+    #[test]
+    fn test_rule_rejects_blank_name() {
+        let result = RuleDefinition::new(
+            "  ".into(),
+            RuleTrigger::NoteOpened,
+            RuleAction::ShowPopup {
+                title: "T".into(),
+                message: "M".into(),
+            },
+        );
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_rule_rejects_empty_popup_fields() {
+        let result = RuleDefinition::new(
+            "Rule".into(),
+            RuleTrigger::NoteOpened,
+            RuleAction::ShowPopup {
+                title: "".into(),
+                message: "Valid".into(),
+            },
+        );
+        assert!(result.is_err());
+
+        let result = RuleDefinition::new(
+            "Rule".into(),
+            RuleTrigger::NoteOpened,
+            RuleAction::ShowPopup {
+                title: "Valid".into(),
+                message: "   ".into(),
+            },
+        );
+        assert!(result.is_err());
+    }
+}

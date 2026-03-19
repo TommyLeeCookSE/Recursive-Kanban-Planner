@@ -7,6 +7,7 @@ use crate::domain::label::LabelColor;
 use crate::domain::registry::{CardRegistry, DeleteStrategy};
 use crate::domain::rule::{RuleAction, RuleDefinition, RuleTrigger};
 use crate::infrastructure::logging::record_diagnostic;
+use std::collections::HashMap;
 use tracing::{Level, error, info};
 
 /// Application layer commands that can be executed against the domain.
@@ -119,6 +120,13 @@ pub enum Command {
     ReorderRootCards {
         ordered_ids: Vec<CardId>,
     },
+    /// Drops a card into a specific bucket at a given index on its parent board.
+    DropCardAtPosition {
+        board_id: CardId,
+        card_id: CardId,
+        target_bucket_id: BucketId,
+        target_index: usize,
+    },
 }
 
 /// Executes a command against the card registry.
@@ -226,6 +234,12 @@ pub fn execute(command: Command, registry: &mut CardRegistry) -> Result<(), Doma
             ordered_ids,
         } => registry.reorder_children(card_id, ordered_ids),
         Command::ReorderRootCards { ordered_ids } => registry.reorder_root_cards(ordered_ids),
+        Command::DropCardAtPosition {
+            board_id,
+            card_id,
+            target_bucket_id,
+            target_index,
+        } => apply_card_drop_internal(registry, board_id, card_id, target_bucket_id, target_index),
     };
 
     match &result {
@@ -569,7 +583,69 @@ fn log_command_start(command: &Command) {
                 "Executing application command"
             );
         }
+        Command::DropCardAtPosition { .. } => {
+            info!(
+                command = "DropCardAtPosition",
+                "Executing application command"
+            );
+        }
     }
+}
+
+fn apply_card_drop_internal(
+    registry: &mut CardRegistry,
+    board_id: CardId,
+    card_id: CardId,
+    target_bucket_id: BucketId,
+    target_index: usize,
+) -> Result<(), DomainError> {
+    let board = registry.get_card(board_id)?;
+    let bucket_order: Vec<BucketId> = board.buckets().iter().map(|bucket| bucket.id()).collect();
+    let child_order = board.children_ids().to_vec();
+
+    let mut cards_by_bucket: HashMap<BucketId, Vec<CardId>> = bucket_order
+        .iter()
+        .copied()
+        .map(|bucket_id| (bucket_id, Vec::new()))
+        .collect();
+    let mut current_bucket_id = None;
+
+    for child_id in child_order {
+        let child = registry.get_card(child_id)?;
+        let bucket_id = child.bucket_id().ok_or_else(|| {
+            DomainError::InvalidOperation(format!(
+                "Child card {child_id} is missing its bucket assignment"
+            ))
+        })?;
+
+        if child_id == card_id {
+            current_bucket_id = Some(bucket_id);
+            continue;
+        }
+
+        cards_by_bucket.entry(bucket_id).or_default().push(child_id);
+    }
+
+    let _current_bucket_id = current_bucket_id.ok_or(DomainError::CardNotFound(card_id))?;
+    let target_cards = cards_by_bucket
+        .get_mut(&target_bucket_id)
+        .ok_or(DomainError::BucketNotFound(target_bucket_id))?;
+    let insertion_index = target_index.min(target_cards.len());
+    target_cards.insert(insertion_index, card_id);
+
+    // If bucket changed, update it first
+    if current_bucket_id != Some(target_bucket_id) {
+        registry.move_card_to_bucket(card_id, target_bucket_id)?;
+    }
+
+    let mut reordered_children = Vec::new();
+    for bucket_id in bucket_order {
+        if let Some(cards) = cards_by_bucket.get(&bucket_id) {
+            reordered_children.extend(cards.iter().copied());
+        }
+    }
+
+    registry.reorder_children(board_id, reordered_children)
 }
 
 fn command_name(command: &Command) -> &'static str {
@@ -598,6 +674,7 @@ fn command_name(command: &Command) -> &'static str {
         Command::ReorderBuckets { .. } => "ReorderBuckets",
         Command::ReorderChildren { .. } => "ReorderChildren",
         Command::ReorderRootCards { .. } => "ReorderRootCards",
+        Command::DropCardAtPosition { .. } => "DropCardAtPosition",
     }
 }
 
@@ -697,5 +774,47 @@ mod tests {
 
         assert_eq!(matches.len(), 1);
         assert_eq!(matches[0].popup.title, "Moved");
+    }
+
+    #[test]
+    fn test_execute_drop_card_at_position() {
+        let mut reg = CardRegistry::new();
+        let board_id = reg.create_root_card("Board".into()).unwrap();
+        let b1_id = reg.get_card(board_id).unwrap().buckets()[0].id(); // Unassigned
+        let b2_id = reg.add_bucket(board_id, "Bucket 2".into()).unwrap();
+
+        let c1 = reg.create_child_card("C1".into(), board_id, b1_id).unwrap();
+        let c2 = reg.create_child_card("C2".into(), board_id, b1_id).unwrap();
+        let c3 = reg.create_child_card("C3".into(), board_id, b2_id).unwrap();
+
+        // Initial order: C1, C2 (b1), C3 (b2)
+        assert_eq!(
+            reg.get_card(board_id).unwrap().children_ids(),
+            &[c1, c2, c3]
+        );
+
+        // Drop C1 into b2 at index 0 (before C3)
+        execute(
+            Command::DropCardAtPosition {
+                board_id,
+                card_id: c1,
+                target_bucket_id: b2_id,
+                target_index: 0,
+            },
+            &mut reg,
+        )
+        .unwrap();
+
+        // New order should be: C2 (b1), C1 (b2), C3 (b2)
+        // Wait, the logic preserves bucket order from the board.
+        // Board has [b1, b2].
+        // b1 has [C2].
+        // b2 has [C1, C3].
+        // So global order should be [C2, C1, C3].
+        assert_eq!(
+            reg.get_card(board_id).unwrap().children_ids(),
+            &[c2, c1, c3]
+        );
+        assert_eq!(reg.get_card(c1).unwrap().bucket_id(), Some(b2_id));
     }
 }
