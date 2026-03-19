@@ -3,11 +3,11 @@ use crate::application::build_card_preview_view;
 use crate::domain::error::DomainError;
 use crate::domain::id::CardId;
 use crate::domain::registry::CardRegistry;
-use crate::domain::registry::DeleteStrategy;
 use crate::infrastructure::logging::record_diagnostic;
 use crate::interface::Route;
 use crate::interface::actions::{
-    dragged_root_card_id, execute_command_with_feedback, prime_drag_session, prime_drop_target,
+    ReorderFeedbackContext, delete_card_with_feedback, dragged_root_card_id,
+    execute_reorder_with_feedback, prime_drag_session, prime_drop_target,
 };
 use crate::interface::app::IsDragging;
 use crate::interface::components::card_item::CardItem;
@@ -135,7 +135,13 @@ pub fn Home() -> Element {
                                     active_modal.set(Some(ModalType::EditCard { id: card.id }));
                                 },
                                 on_delete: move |_| {
-                                    delete_card_with_feedback(card.id, registry, warning_message);
+                                    delete_card_with_feedback(
+                                        card.id,
+                                        registry,
+                                        warning_message,
+                                        "workspace-route",
+                                        format!("delete workspace card {}", card.id),
+                                    );
                                 },
                             }
                         }
@@ -158,25 +164,6 @@ fn HomeLoadError(message: String) -> Element {
             }
         }
     }
-}
-
-fn delete_card_with_feedback(
-    id: CardId,
-    registry: Signal<CardRegistry>,
-    warning_message: Signal<Option<String>>,
-) {
-    if execute_command_with_feedback(
-        Command::DeleteCard {
-            id,
-            strategy: DeleteStrategy::CascadeDelete,
-        },
-        registry,
-        warning_message,
-        "workspace-route",
-        format!("delete workspace card {id}"),
-    )
-    .is_err()
-    {}
 }
 
 fn render_root_drop_zone(
@@ -215,43 +202,22 @@ fn render_root_drop_zone(
                     reg.get_root_cards().iter().map(|card| card.id()).collect()
                 };
 
-                let reordered = reorder_ids(&current_order, dragged_id, index);
-                if reordered != current_order {
-                    info!(card_id = %dragged_id, drop_index = index, "Attempting root card reorder");
-                    record_diagnostic(
-                        Level::INFO,
-                        "workspace-route",
-                        format!("Attempting root reorder for {dragged_id} at index {index}"),
-                    );
-                    if execute_command_with_feedback(
-                        Command::ReorderRootCards { ordered_ids: reordered },
+                let _ = execute_reorder_with_feedback(
+                    &current_order,
+                    dragged_id,
+                    index,
+                    ReorderFeedbackContext::new(
                         registry,
                         warning_message,
                         "workspace-route",
                         format!("reorder root cards with dragged card {dragged_id}"),
-                    )
-                    .is_err()
-                    {
-                    }
-                }
+                    ),
+                    |ordered_ids| Command::ReorderRootCards { ordered_ids },
+                );
             },
             if is_dragging().0 {
                 "Drop Here"
             }
         }
     }
-}
-
-fn reorder_ids<T>(ordered_ids: &[T], dragged_id: T, target_index: usize) -> Vec<T>
-where
-    T: Copy + Eq,
-{
-    let mut reordered: Vec<T> = ordered_ids
-        .iter()
-        .copied()
-        .filter(|id| *id != dragged_id)
-        .collect();
-    let insertion_index = target_index.min(reordered.len());
-    reordered.insert(insertion_index, dragged_id);
-    reordered
 }

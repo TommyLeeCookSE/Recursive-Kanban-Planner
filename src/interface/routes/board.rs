@@ -4,12 +4,13 @@ use crate::application::{
 };
 use crate::domain::error::DomainError;
 use crate::domain::id::{BucketId, CardId};
-use crate::domain::registry::{CardRegistry, DeleteStrategy};
+use crate::domain::registry::CardRegistry;
 use crate::infrastructure::logging::record_diagnostic;
 use crate::interface::Route;
 use crate::interface::actions::{
-    dispatch_card_rule_event, execute_command_with_feedback, prime_drag_session, prime_drop_target,
-    report_result,
+    ReorderFeedbackContext, delete_card_with_feedback, dispatch_card_rule_event,
+    execute_command_with_feedback, execute_reorder_with_feedback, prime_drag_session,
+    prime_drop_target, report_result,
 };
 use crate::interface::app::IsDragging;
 use crate::interface::components::card_item::CardItem;
@@ -415,7 +416,13 @@ fn render_card_item(
                 labels: card.labels,
                 preview_sections: card.preview_sections,
                 on_delete: move |_| {
-                    delete_card_with_feedback(card_id, context.registry, context.warning_message);
+                    delete_card_with_feedback(
+                        card_id,
+                        context.registry,
+                        context.warning_message,
+                        "board-route",
+                        format!("delete board card {card_id}"),
+                    );
                 },
             }
             {render_card_drop_zone(bucket_id, index + 1, context.clone())}
@@ -466,27 +473,21 @@ fn render_bucket_drop_zone(
                     }
                 };
 
-                let reordered = reorder_ids(&current_order, bucket_id, index);
-                if reordered != current_order {
-                    info!(bucket_id = %bucket_id, board_id = %board_id, drop_index = index, "Attempting bucket reorder");
-                    record_diagnostic(
-                        Level::INFO,
-                        "board-route",
-                        format!("Attempting bucket reorder for {bucket_id} on board {board_id} at index {index}"),
-                    );
-                    let _ = execute_command_with_feedback(
-                        Command::ReorderBuckets {
-                            card_id: board_id,
-                            ordered_ids: reordered,
-                        },
+                let _ = execute_reorder_with_feedback(
+                    &current_order,
+                    bucket_id,
+                    index,
+                    ReorderFeedbackContext::new(
                         registry,
                         warning_message,
                         "board-route",
-                        format!(
-                            "reorder buckets on board {board_id} with dragged bucket {bucket_id}"
-                        ),
-                    );
-                }
+                        format!("reorder buckets on board {board_id} with dragged bucket {bucket_id}"),
+                    ),
+                    |ordered_ids| Command::ReorderBuckets {
+                        card_id: board_id,
+                        ordered_ids,
+                    },
+                );
             },
             if is_dragging().0 {
                 span { class: "rotate-90", "Drop" }
@@ -573,39 +574,6 @@ fn render_card_drop_zone(
             }
         }
     }
-}
-
-fn reorder_ids<T>(ordered_ids: &[T], dragged_id: T, target_index: usize) -> Vec<T>
-where
-    T: Copy + Eq,
-{
-    let mut reordered: Vec<T> = ordered_ids
-        .iter()
-        .copied()
-        .filter(|id| *id != dragged_id)
-        .collect();
-    let insertion_index = target_index.min(reordered.len());
-    reordered.insert(insertion_index, dragged_id);
-    reordered
-}
-
-fn delete_card_with_feedback(
-    id: CardId,
-    registry: Signal<CardRegistry>,
-    warning_message: Signal<Option<String>>,
-) {
-    if execute_command_with_feedback(
-        Command::DeleteCard {
-            id,
-            strategy: DeleteStrategy::CascadeDelete,
-        },
-        registry,
-        warning_message,
-        "board-route",
-        format!("delete board card {id}"),
-    )
-    .is_err()
-    {}
 }
 
 fn render_board_load_error() -> Element {
