@@ -100,7 +100,7 @@ pub fn TopBar(title: String, back_route: Route, back_label: String, children: El
                         },
                         title: "Back to {back_label}",
                         "aria-label": "Back to {back_label}",
-                        span { class: "shrink-0 transform transition-transform group-hover:-translate-x-1", {render_back_icon()} }
+                        span { class: "inline-flex shrink-0 items-center justify-center text-lg leading-none transform transition-transform group-hover:-translate-x-1", {render_back_icon()} }
                         span { class: "hidden truncate sm:inline", "Back to: {back_label}" }
                     }
                 }

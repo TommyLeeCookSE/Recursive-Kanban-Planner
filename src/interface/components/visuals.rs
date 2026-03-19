@@ -275,7 +275,7 @@ pub fn render_settings_icon() -> Element {
 pub fn render_back_icon() -> Element {
     rsx! {
         svg {
-            class: "h-4.5 w-4.5",
+            class: "h-5 w-5 shrink-0 overflow-visible",
             view_box: "0 0 20 20",
             fill: "none",
             stroke: "currentColor",
