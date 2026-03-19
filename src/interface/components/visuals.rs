@@ -1,3 +1,4 @@
+use crate::application::CardPreviewView;
 use crate::domain::card::Card;
 use crate::domain::id::CardId;
 use crate::domain::label::{LabelColor, LabelDefinition};
@@ -11,6 +12,12 @@ pub enum DropZoneKind {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+pub struct CardPreviewDisplaySection {
+    pub bucket_name: String,
+    pub items: Vec<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct CardDisplayData {
     pub id: CardId,
     pub title: String,
@@ -18,9 +25,30 @@ pub struct CardDisplayData {
     pub due_date: Option<String>,
     pub is_overdue: bool,
     pub labels: Vec<(String, LabelColor)>,
+    pub preview_sections: Vec<CardPreviewDisplaySection>,
 }
 
-pub fn build_card_display(card: &Card, label_definitions: &[LabelDefinition]) -> CardDisplayData {
+pub fn build_card_display(
+    card: &Card,
+    label_definitions: &[LabelDefinition],
+    preview_view: Option<&CardPreviewView>,
+) -> CardDisplayData {
+    let preview_sections = preview_view
+        .map(|view| {
+            view.sections
+                .iter()
+                .map(|section| CardPreviewDisplaySection {
+                    bucket_name: section.bucket.name().to_string(),
+                    items: section
+                        .cards
+                        .iter()
+                        .map(|child| child.title().to_string())
+                        .collect(),
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+
     CardDisplayData {
         id: card.id(),
         title: card.title().to_string(),
@@ -37,6 +65,7 @@ pub fn build_card_display(card: &Card, label_definitions: &[LabelDefinition]) ->
                     .map(|label| (label.name().to_string(), label.color()))
             })
             .collect(),
+        preview_sections,
     }
 }
 

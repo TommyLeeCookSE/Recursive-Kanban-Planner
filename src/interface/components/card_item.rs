@@ -1,7 +1,8 @@
 use crate::domain::label::LabelColor;
 use crate::interface::components::shared_forms::confirm_destructive_action;
 use crate::interface::components::visuals::{
-    render_label_chip, surface_action_button_classes, surface_destructive_icon_button_classes,
+    CardPreviewDisplaySection, render_label_chip, surface_action_button_classes,
+    surface_destructive_icon_button_classes,
 };
 use dioxus::prelude::*;
 
@@ -32,6 +33,7 @@ pub fn CardItem(
     #[props(default)] due_date: Option<String>,
     #[props(default)] is_overdue: bool,
     #[props(default)] labels: Vec<(String, LabelColor)>,
+    #[props(default)] preview_sections: Vec<CardPreviewDisplaySection>,
     /// Triggered when the main body of the card is clicked.
     on_open: EventHandler<()>,
     /// Optional rename event. If None, the rename button is hidden.
@@ -64,6 +66,22 @@ pub fn CardItem(
                     div { class: "mt-4 flex flex-wrap gap-2",
                         for (name, color) in labels {
                             {render_label_chip(name, color)}
+                        }
+                    }
+                }
+                if !preview_sections.is_empty() {
+                    div { class: "app-card-preview mt-5",
+                        for section in preview_sections {
+                            div { class: "app-card-preview-section",
+                                p { class: "app-card-preview-header",
+                                    "{section.bucket_name}"
+                                }
+                                ul { class: "app-card-preview-list",
+                                    for item in section.items {
+                                        li { class: "app-card-preview-item", "{item}" }
+                                    }
+                                }
+                            }
                         }
                     }
                 }

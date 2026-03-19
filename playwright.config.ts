@@ -18,7 +18,7 @@ export default defineConfig({
   webServer: {
     command: `dx serve --platform web --port ${port} --open false`,
     url: baseURL,
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: true,
     timeout: 120_000,
   },
 });

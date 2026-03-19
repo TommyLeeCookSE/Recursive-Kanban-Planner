@@ -15,6 +15,7 @@ Recursive Kanban Planner is a local-first Kanban application built with Rust and
 - Card create, edit, move, reparent, and delete flows
 - Bucket create, rename, remove, reorder, and drag-and-drop flows
 - Drag-and-drop for cards, buckets, and root boards
+- Inline child previews on cards grouped by bucket name
 - Notebook-style notes with titled plain-text pages on each card
 - Date-only due dates with overdue card styling
 - Reusable visual labels and popup-only rule presets

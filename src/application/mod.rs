@@ -270,6 +270,20 @@ pub struct ColumnView<'a> {
     pub cards: Vec<&'a Card>,
 }
 
+/// A single bucket group in an inline card preview.
+#[derive(Debug)]
+pub struct CardPreviewSection<'a> {
+    pub bucket: &'a Bucket,
+    pub cards: Vec<&'a Card>,
+}
+
+/// A read-only preview of a card's immediate children grouped by bucket.
+#[derive(Debug)]
+pub struct CardPreviewView<'a> {
+    pub card: &'a Card,
+    pub sections: Vec<CardPreviewSection<'a>>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PopupNotification {
     pub title: String,
@@ -333,6 +347,30 @@ pub fn build_board_view(
     }
 
     Ok(BoardView { card, columns })
+}
+
+/// Builds an inline preview of a card's immediate children grouped by bucket.
+///
+/// Empty buckets are omitted from the preview to keep the UI compact.
+pub fn build_card_preview_view(
+    card_id: CardId,
+    registry: &CardRegistry,
+) -> Result<CardPreviewView, DomainError> {
+    info!(%card_id, "Building card preview view");
+    let card = registry.get_card(card_id)?;
+    let projection = registry.board_projection(card_id)?;
+
+    let mut sections = Vec::new();
+    for bucket in card.buckets() {
+        let cards = projection.get(&bucket.id()).cloned().unwrap_or_default();
+        if cards.is_empty() {
+            continue;
+        }
+
+        sections.push(CardPreviewSection { bucket, cards });
+    }
+
+    Ok(CardPreviewView { card, sections })
 }
 
 pub fn evaluate_card_rules(
@@ -605,6 +643,36 @@ mod tests {
 
         let view = build_board_view(root_id, &reg).unwrap();
         assert_eq!(view.columns.len(), 2);
+    }
+
+    #[test]
+    fn test_card_preview_groups_children_by_bucket() {
+        let mut reg = CardRegistry::new();
+        let root_id = reg.create_root_card("Root".into()).unwrap();
+        let extra_bucket_id = reg.add_bucket(root_id, "Doing".into()).unwrap();
+        let third_bucket_id = reg.add_bucket(root_id, "Done".into()).unwrap();
+        let unassigned_id = reg.get_card(root_id).unwrap().buckets()[0].id();
+
+        reg.create_child_card("Alpha".into(), root_id, extra_bucket_id)
+            .unwrap();
+        reg.create_child_card("Beta".into(), root_id, unassigned_id)
+            .unwrap();
+
+        let preview = build_card_preview_view(root_id, &reg).unwrap();
+
+        assert_eq!(preview.card.id(), root_id);
+        assert_eq!(preview.sections.len(), 2);
+        assert_eq!(preview.sections[0].bucket.id(), unassigned_id);
+        assert_eq!(preview.sections[0].cards[0].title(), "Beta");
+        assert_eq!(preview.sections[1].bucket.id(), extra_bucket_id);
+        assert_eq!(preview.sections[1].cards[0].title(), "Alpha");
+        assert!(
+            preview
+                .sections
+                .iter()
+                .all(|section| section.bucket.id() != third_bucket_id),
+            "Empty buckets should be omitted from card previews"
+        );
     }
 
     #[test]

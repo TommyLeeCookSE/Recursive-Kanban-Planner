@@ -1,4 +1,6 @@
 use crate::application::Command;
+use crate::application::build_card_preview_view;
+use crate::domain::error::DomainError;
 use crate::domain::id::CardId;
 use crate::domain::registry::CardRegistry;
 use crate::domain::registry::DeleteStrategy;
@@ -34,10 +36,28 @@ pub fn Home() -> Element {
     let root_cards = {
         let reg = registry.read();
         let label_definitions = reg.label_definitions().to_vec();
-        reg.get_root_cards()
+        match reg
+            .get_root_cards()
             .iter()
-            .map(|card| build_card_display(card, &label_definitions))
-            .collect::<Vec<_>>()
+            .map(|card| {
+                let preview_view = build_card_preview_view(card.id(), &reg)?;
+                Ok(build_card_display(
+                    card,
+                    &label_definitions,
+                    Some(&preview_view),
+                ))
+            })
+            .collect::<Result<Vec<_>, DomainError>>()
+        {
+            Ok(cards) => cards,
+            Err(error_value) => {
+                return rsx! {
+                    HomeLoadError {
+                        message: error_value.to_string(),
+                    }
+                };
+            }
+        }
     };
 
     rsx! {
@@ -108,6 +128,7 @@ pub fn Home() -> Element {
                                     due_date: card.due_date,
                                     is_overdue: card.is_overdue,
                                     labels: card.labels,
+                                    preview_sections: card.preview_sections,
                                     on_open: move |_| {
                                         navigator().push(Route::Board { card_id: card.id });
                                     },
@@ -123,6 +144,19 @@ pub fn Home() -> Element {
                     }
                     {render_root_drop_zone(root_cards.len(), root_drop_index, registry, warning_message, is_dragging)}
                 }
+            }
+        }
+    }
+}
+
+#[component]
+fn HomeLoadError(message: String) -> Element {
+    rsx! {
+        div { class: "mx-auto max-w-3xl px-6 py-20 text-center lg:px-12",
+            div { class: "app-empty-state rounded-[2rem] px-8 py-16",
+                h2 { class: "mb-4 text-2xl font-bold text-red-500", "Workspace could not be loaded" }
+                p { class: "app-text-muted", "The workspace data is unavailable or inconsistent. Check the logs for the full error." }
+                p { class: "app-text-muted mt-3 text-sm", "{message}" }
             }
         }
     }

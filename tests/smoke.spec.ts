@@ -30,10 +30,19 @@ test('smoke: app boots and core board actions are visible', async ({ page }) => 
 
   await expect(page.getByRole('button', { name: 'Rename' })).toBeVisible();
 
+  await page.getByRole('button', { name: '+' }).click();
+  await page.getByPlaceholder('Enter title...').fill('Smoke Child');
+  await page.getByRole('button', { name: 'Create Item' }).click();
+  await expect(page.getByText('Smoke Child', { exact: true })).toBeVisible();
+
   await page.getByRole('button', { name: 'Rename' }).click();
   await page.getByRole('textbox').fill('Renamed Lane');
   await page.getByRole('button', { name: 'Save Changes' }).click();
   await expect(page.getByText('Renamed Lane')).toBeVisible();
+
+  await page.getByRole('button', { name: /Back to:/ }).click();
+  await expect(page.getByText('Smoke Lane')).toBeVisible();
+  await expect(page.getByText('Smoke Child')).toBeVisible();
 
   const shell = page.locator('.app-shell');
   await expect(shell).toHaveClass(/theme-dark/);

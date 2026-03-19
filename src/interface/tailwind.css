@@ -237,6 +237,39 @@
     backdrop-filter: blur(16px);
   }
 
+  .app-card-preview {
+    border-top: 1px solid color-mix(in srgb, var(--app-border) 68%, transparent);
+    margin-top: 1.25rem;
+    padding-top: 1rem;
+  }
+
+  .app-card-preview-section + .app-card-preview-section {
+    border-top: 1px solid color-mix(in srgb, var(--app-border) 50%, transparent);
+    margin-top: 0.9rem;
+    padding-top: 0.9rem;
+  }
+
+  .app-card-preview-header {
+    color: var(--app-text-soft);
+    font-size: 0.65rem;
+    font-weight: 900;
+    letter-spacing: 0.35em;
+    line-height: 1.2;
+    text-transform: uppercase;
+  }
+
+  .app-card-preview-list {
+    list-style: disc;
+    margin-top: 0.55rem;
+    padding-left: 1.15rem;
+  }
+
+  .app-card-preview-item {
+    color: var(--app-text-muted);
+    font-size: 0.92rem;
+    line-height: 1.35;
+  }
+
   .app-modal-surface {
     border: 1px solid color-mix(in srgb, var(--app-border-strong) 82%, transparent);
     background-color: var(--app-modal);

@@ -1,5 +1,6 @@
 use crate::application::{
-    BoardView, CardRuleEvent, Command, PopupNotification, build_board_view, execute,
+    BoardView, CardRuleEvent, Command, PopupNotification, build_board_view,
+    build_card_preview_view, execute,
 };
 use crate::domain::error::DomainError;
 use crate::domain::id::{BucketId, CardId};
@@ -16,7 +17,7 @@ use crate::interface::components::layout::TopBar;
 use crate::interface::components::modal::ModalType;
 use crate::interface::components::shared_forms::confirm_destructive_action;
 use crate::interface::components::visuals::{
-    DropZoneKind, build_card_display, drop_zone_classes, render_label_chip,
+    CardDisplayData, DropZoneKind, build_card_display, drop_zone_classes, render_label_chip,
     surface_action_button_classes, surface_destructive_icon_button_classes,
     surface_icon_button_classes,
 };
@@ -51,17 +52,7 @@ struct BoardRenderContext {
 struct ColumnRenderModel {
     bucket_id: BucketId,
     bucket_name: String,
-    cards: Vec<CardRenderModel>,
-}
-
-#[derive(Clone)]
-struct CardRenderModel {
-    id: CardId,
-    title: String,
-    nested_item_count: usize,
-    due_date: Option<String>,
-    is_overdue: bool,
-    labels: Vec<(String, crate::domain::label::LabelColor)>,
+    cards: Vec<CardDisplayData>,
 }
 
 /// Renders a single board and its buckets for the selected card.
@@ -100,7 +91,7 @@ pub fn Board(card_id: CardId) -> Element {
     let board_id = card_id;
     let board_title = board_state.view.card.title().to_string();
     let label_definitions = reg_guard.label_definitions().to_vec();
-    let board_display = build_card_display(board_state.view.card, &label_definitions);
+    let board_display = build_card_display(board_state.view.card, &label_definitions, None);
     let board_due_date = board_display
         .due_date
         .as_deref()
@@ -111,26 +102,39 @@ pub fn Board(card_id: CardId) -> Element {
         .view
         .columns
         .iter()
-        .map(|column| ColumnRenderModel {
-            bucket_id: column.bucket.id(),
-            bucket_name: column.bucket.name().to_string(),
-            cards: column
+        .map(|column| {
+            let cards = column
                 .cards
                 .iter()
                 .map(|card| {
-                    let display = build_card_display(card, &label_definitions);
-                    CardRenderModel {
-                        id: display.id,
-                        title: display.title,
-                        nested_item_count: display.nested_item_count,
-                        due_date: display.due_date,
-                        is_overdue: display.is_overdue,
-                        labels: display.labels,
-                    }
+                    let preview_view = build_card_preview_view(card.id(), &reg_guard)?;
+                    Ok(build_card_display(
+                        card,
+                        &label_definitions,
+                        Some(&preview_view),
+                    ))
                 })
-                .collect(),
+                .collect::<Result<Vec<_>, DomainError>>()?;
+
+            Ok(ColumnRenderModel {
+                bucket_id: column.bucket.id(),
+                bucket_name: column.bucket.name().to_string(),
+                cards,
+            })
         })
-        .collect::<Vec<_>>();
+        .collect::<Result<Vec<_>, DomainError>>();
+    let column_models = match column_models {
+        Ok(models) => models,
+        Err(error_value) => {
+            error!(%board_id, error = %error_value, "Board route failed while building card previews");
+            record_diagnostic(
+                Level::ERROR,
+                "board-route",
+                format!("Board preview load failed for {board_id}: {error_value}"),
+            );
+            return render_board_load_error();
+        }
+    };
     let render_context = BoardRenderContext {
         board_id,
         registry,
@@ -358,14 +362,12 @@ fn render_column(column: ColumnRenderModel, context: BoardRenderContext) -> Elem
 }
 
 fn render_card_item(
-    card: CardRenderModel,
+    card: CardDisplayData,
     bucket_id: BucketId,
     index: usize,
     context: BoardRenderContext,
 ) -> Element {
     let card_id = card.id;
-    let card_title = card.title;
-    let nested_item_count = card.nested_item_count;
     let mut active_modal = context.active_modal;
     let mut card_drop_target = context.drag.card_drop_target;
     let mut is_dragging = context.is_dragging;
@@ -388,15 +390,16 @@ fn render_card_item(
                 is_dragging.set(IsDragging(false));
             },
             CardItem {
-                title: card_title.clone(),
-                subtitle: format!("{nested_item_count} nested items"),
+                title: card.title,
+                subtitle: format!("{} nested items", card.nested_item_count),
                 on_open: move |_| {
                     navigator().push(Route::Board { card_id });
                 },
                 on_rename: move |_| active_modal.set(Some(ModalType::EditCard { id: card_id })),
-                due_date: card.due_date.clone(),
+                due_date: card.due_date,
                 is_overdue: card.is_overdue,
                 labels: card.labels,
+                preview_sections: card.preview_sections,
                 on_delete: move |_| {
                     delete_card_with_feedback(card_id, context.registry, context.warning_message);
                 },

@@ -19,6 +19,7 @@
 - [x] Dioxus shell, routes, board view, home view, and modal flows
 - [x] Export, import, and clear-cache web utilities
 - [x] Drag-and-drop for cards, buckets, and root boards
+- [x] Inline child previews on cards grouped by bucket name
 - [x] Notebook-style notes with titled plain-text pages
 - [x] Date-only due dates with overdue state
 - [x] Reusable visual labels
