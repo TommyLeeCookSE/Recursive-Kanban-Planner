@@ -43,11 +43,10 @@ jobs:
       - name: Build web bundle
         run: dx bundle --release --out-dir dist/pages
 
-      - name: Flatten static assets
+      - name: Prepare GitHub Pages site root
         run: |
-          cp -R dist/pages/public/. dist/pages/
-          rm -rf dist/pages/public
-          cp dist/pages/index.html dist/pages/404.html
+          cp dist/pages/public/index.html dist/pages/public/404.html
+          if [ -f CNAME ]; then cp CNAME dist/pages/public/CNAME; fi
 
       - name: Setup GitHub Pages
         uses: actions/configure-pages@v5
@@ -55,7 +54,7 @@ jobs:
       - name: Upload GitHub Pages artifact
         uses: actions/upload-pages-artifact@v4
         with:
-          path: dist/pages
+          path: dist/pages/public
 
   deploy:
     environment:
