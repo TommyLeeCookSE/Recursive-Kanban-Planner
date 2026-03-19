@@ -3,3 +3,4 @@ pub mod layout;
 pub mod modal;
 pub mod shared_forms;
 pub mod visuals;
+pub mod web_utilities;

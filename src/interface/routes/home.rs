@@ -74,15 +74,6 @@ pub fn Home() -> Element {
                         "Organize your world with nested recursive boards."
                     }
                 }
-                button {
-                    class: "app-button-primary px-8 py-4",
-                    onclick: move |_| active_modal.set(Some(ModalType::CreateCard {
-                        parent_id: None,
-                        bucket_id: None,
-                    })),
-                    span { class: "text-2xl", "+" }
-                    "New Board"
-                }
             }
 
             if root_cards.is_empty() {
