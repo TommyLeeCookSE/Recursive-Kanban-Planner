@@ -7,7 +7,8 @@ use crate::interface::actions::{dispatch_card_rule_event, report_result};
 use crate::interface::components::modal::Modal;
 use crate::interface::components::modal::ModalType;
 use crate::interface::components::shared_forms::{
-    build_create_card_command, inline_error, toggle_id, user_message_for_command_error,
+    CheckboxOptionRow, SelectorSection, build_create_card_command, inline_error, toggle_id,
+    user_message_for_command_error,
 };
 use dioxus::prelude::*;
 use tracing::{Level, warn};
@@ -143,51 +144,39 @@ pub fn EditCardModal(
                     oninput: move |e| due_date_input.set(e.value()),
                 }
 
-                div { class: "flex items-center justify-between gap-4",
-                    label { class: "app-kicker", "Labels" }
-                    button {
-                        class: "app-button-secondary px-4 py-2 text-xs",
-                        onclick: move |_| active_modal.set(Some(ModalType::ManageLabels {})),
-                        "Manage Labels"
-                    }
-                }
-                if label_definitions.is_empty() {
-                    p { class: "app-text-muted text-sm", "No labels created yet." }
-                } else {
-                    div { class: "space-y-3",
-                        for label in label_definitions.iter().cloned() {
-                            label { class: "flex items-center gap-3 rounded-xl border px-4 py-3", style: "border-color: var(--app-border);",
-                                input {
-                                    r#type: "checkbox",
+                SelectorSection {
+                    title: "Labels".to_string(),
+                    action_label: "Manage Labels".to_string(),
+                    on_action: move |_| active_modal.set(Some(ModalType::ManageLabels {})),
+                    if label_definitions.is_empty() {
+                        p { class: "app-text-muted text-sm", "No labels created yet." }
+                    } else {
+                        div { class: "space-y-3",
+                            for label in label_definitions.iter().cloned() {
+                                CheckboxOptionRow {
+                                    label_text: label.name().to_string(),
                                     checked: selected_labels().contains(&label.id()),
-                                    onclick: move |_| toggle_id(&mut selected_labels, label.id()),
+                                    on_toggle: move |_| toggle_id(&mut selected_labels, label.id()),
                                 }
-                                span { class: "app-text-primary text-sm font-medium", "{label.name()}" }
                             }
                         }
                     }
                 }
 
-                div { class: "flex items-center justify-between gap-4",
-                    label { class: "app-kicker", "Rules" }
-                    button {
-                        class: "app-button-secondary px-4 py-2 text-xs",
-                        onclick: move |_| active_modal.set(Some(ModalType::ManageRules {})),
-                        "Manage Rules"
-                    }
-                }
-                if rule_definitions.is_empty() {
-                    p { class: "app-text-muted text-sm", "No rules created yet." }
-                } else {
-                    div { class: "space-y-3",
-                        for rule in rule_definitions.iter().cloned() {
-                            label { class: "flex items-center gap-3 rounded-xl border px-4 py-3", style: "border-color: var(--app-border);",
-                                input {
-                                    r#type: "checkbox",
+                SelectorSection {
+                    title: "Rules".to_string(),
+                    action_label: "Manage Rules".to_string(),
+                    on_action: move |_| active_modal.set(Some(ModalType::ManageRules {})),
+                    if rule_definitions.is_empty() {
+                        p { class: "app-text-muted text-sm", "No rules created yet." }
+                    } else {
+                        div { class: "space-y-3",
+                            for rule in rule_definitions.iter().cloned() {
+                                CheckboxOptionRow {
+                                    label_text: rule.name().to_string(),
                                     checked: selected_rules().contains(&rule.id()),
-                                    onclick: move |_| toggle_id(&mut selected_rules, rule.id()),
+                                    on_toggle: move |_| toggle_id(&mut selected_rules, rule.id()),
                                 }
-                                span { class: "app-text-primary text-sm font-medium", "{rule.name()}" }
                             }
                         }
                     }

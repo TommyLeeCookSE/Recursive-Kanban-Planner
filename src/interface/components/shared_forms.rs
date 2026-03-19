@@ -15,6 +15,46 @@ pub fn inline_error(message: String) -> Element {
     }
 }
 
+#[component]
+pub fn SelectorSection(
+    title: String,
+    action_label: String,
+    on_action: EventHandler<()>,
+    children: Element,
+) -> Element {
+    rsx! {
+        div { class: "flex flex-col gap-4",
+            div { class: "flex items-center justify-between gap-4",
+                label { class: "app-kicker", "{title}" }
+                button {
+                    class: "app-button-secondary px-4 py-2 text-xs",
+                    onclick: move |_| on_action.call(()),
+                    "{action_label}"
+                }
+            }
+            {children}
+        }
+    }
+}
+
+#[component]
+pub fn CheckboxOptionRow(
+    label_text: String,
+    checked: bool,
+    on_toggle: EventHandler<()>,
+) -> Element {
+    rsx! {
+        label { class: "flex items-center gap-3 rounded-xl border px-4 py-3", style: "border-color: var(--app-border);",
+            input {
+                r#type: "checkbox",
+                checked: checked,
+                onclick: move |_| on_toggle.call(()),
+            }
+            span { class: "app-text-primary text-sm font-medium", "{label_text}" }
+        }
+    }
+}
+
 pub fn user_message_for_command_error(error: &DomainError) -> String {
     error.to_string()
 }

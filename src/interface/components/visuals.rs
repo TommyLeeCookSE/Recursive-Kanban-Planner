@@ -172,6 +172,25 @@ pub fn render_note_icon() -> Element {
     }
 }
 
+pub fn render_book_icon() -> Element {
+    rsx! {
+        svg {
+            class: "h-5 w-5",
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "1.8",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            "aria-hidden": "true",
+            path { d: "M6.5 4.75h9.75a2 2 0 0 1 2 2v12.5a1.5 1.5 0 0 0-1.5-1.5H6.5a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2Z" }
+            path { d: "M6.5 4.75a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h10.25" }
+            path { d: "M8.25 8h6.75" }
+            path { d: "M8.25 11h6.75" }
+        }
+    }
+}
+
 pub fn render_label_icon() -> Element {
     rsx! {
         svg {
@@ -185,6 +204,80 @@ pub fn render_label_icon() -> Element {
             "aria-hidden": "true",
             path { d: "M11 4.5H6.75A2.25 2.25 0 0 0 4.5 6.75V11L12.75 19.25a1.5 1.5 0 0 0 2.12 0l4.38-4.38a1.5 1.5 0 0 0 0-2.12L11 4.5Z" }
             circle { cx: "8.25", cy: "8.25", r: "1.1" }
+        }
+    }
+}
+
+pub fn render_import_icon() -> Element {
+    rsx! {
+        svg {
+            class: "h-5 w-5",
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "1.8",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            "aria-hidden": "true",
+            path { d: "M12 4.75v10" }
+            path { d: "m8.25 11.25 3.75 3.75 3.75-3.75" }
+            path { d: "M6.5 16.5v1.75a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2V16.5" }
+        }
+    }
+}
+
+pub fn render_export_icon() -> Element {
+    rsx! {
+        svg {
+            class: "h-5 w-5",
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "1.8",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            "aria-hidden": "true",
+            path { d: "M12 19.25v-10" }
+            path { d: "m15.75 12.75-3.75-3.75-3.75 3.75" }
+            path { d: "M6.5 7.5V5.75a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2V7.5" }
+        }
+    }
+}
+
+pub fn render_trash_icon() -> Element {
+    rsx! {
+        svg {
+            class: "h-5 w-5",
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "1.8",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            "aria-hidden": "true",
+            path { d: "M4.75 7.5h14.5" }
+            path { d: "M9 4.75h6" }
+            path { d: "M8.25 7.5V5.75a1 1 0 0 1 1-1h5.5a1 1 0 0 1 1 1V7.5" }
+            path { d: "M9.5 10.5v6.25" }
+            path { d: "M14.5 10.5v6.25" }
+            path { d: "M6.75 7.5l.75 10.25a2 2 0 0 0 2 1.85h4.95a2 2 0 0 0 2-1.85L17.2 7.5" }
+        }
+    }
+}
+
+pub fn render_day_night_icon() -> Element {
+    rsx! {
+        svg {
+            class: "h-5 w-5",
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "1.8",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            "aria-hidden": "true",
+            path { d: "M12 3.75a8.25 8.25 0 1 0 8.25 8.25 6.75 6.75 0 0 1-8.25-8.25Z" }
+            circle { cx: "12", cy: "12", r: "2" }
         }
     }
 }
