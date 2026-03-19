@@ -1,7 +1,7 @@
 use crate::domain::label::LabelColor;
 use crate::interface::components::shared_forms::confirm_destructive_action;
 use crate::interface::components::visuals::{
-    CardPreviewDisplaySection, render_label_chip, surface_action_button_classes,
+    CardPreviewDisplaySection, render_label_chip, render_trash_icon, surface_action_button_classes,
     surface_destructive_icon_button_classes,
 };
 use dioxus::prelude::*;
@@ -120,7 +120,7 @@ pub fn CardItem(
                                         delete_handler.call(());
                                     }
                                 },
-                                span { "🗑" }
+                                span { class: "shrink-0", {render_trash_icon()} }
                             }
                         }
                         if let Some(rename_handler) = on_rename {

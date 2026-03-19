@@ -4,7 +4,13 @@ use crate::infrastructure::repository::{AppPersistence, JsonRepository};
 use crate::interface::Route;
 use crate::interface::app::IsDark;
 use crate::interface::components::modal::ModalType;
-use crate::interface::components::visuals::render_back_icon;
+use crate::interface::components::visuals::{
+    render_back_icon, render_book_icon, render_day_night_icon, render_label_icon,
+};
+#[cfg(target_arch = "wasm32")]
+use crate::interface::components::visuals::{
+    render_export_icon, render_import_icon, render_trash_icon,
+};
 use dioxus::prelude::*;
 use dioxus_router::Navigator;
 #[cfg(target_arch = "wasm32")]
@@ -34,71 +40,80 @@ pub fn NavbarLayout() -> Element {
     let nav = navigator();
 
     rsx! {
-            div { class: "min-h-screen flex flex-col selection:bg-sunfire/30 selection:text-white",
+        div { class: "flex min-h-0 flex-1 flex-col selection:bg-sunfire/30 selection:text-white",
                 nav { class: "app-navbar",
-                    div { class: "flex flex-wrap items-center gap-8",
-                    Link {
-                        to: Route::Home {},
-                        class: "group flex items-center gap-3",
-                        div { class: "flex h-10 w-10 items-center justify-center rounded-xl bg-sunfire shadow-lg shadow-sunfire/30 transition-transform group-hover:rotate-12",
-                            span { class: "text-white text-xl font-black", "K" }
+                    div { class: "flex min-w-0 flex-wrap items-center gap-3 sm:gap-8",
+                        Link {
+                            to: Route::Home {},
+                            class: "group flex min-w-0 items-center gap-3",
+                            div { class: "flex h-10 w-10 items-center justify-center rounded-xl bg-sunfire shadow-lg shadow-sunfire/30 transition-transform group-hover:rotate-12",
+                                span { class: "text-white text-xl font-black", "K" }
+                            }
+                            span { class: "app-text-primary hidden text-2xl font-black tracking-tighter transition-colors group-hover:text-sunfire sm:inline",
+                                "Kanban"
+                            }
                         }
-                        span { class: "app-text-primary text-2xl font-black tracking-tighter transition-colors group-hover:text-sunfire",
-                            "Kanban"
+                        button {
+                            class: "app-button-primary inline-flex items-center gap-2 px-4 py-2.5 sm:px-6",
+                            onclick: move |_| active_modal.set(Some(ModalType::CreateCard {
+                                parent_id: None,
+                                bucket_id: None,
+                            })),
+                            title: "Create a new board",
+                            "aria-label": "New Board",
+                            span { class: "text-lg", "+" }
+                            span { class: "hidden sm:inline", "New Board" }
                         }
                     }
-                    button {
-                        class: "app-button-primary ml-4 px-6 py-2.5",
-                        onclick: move |_| active_modal.set(Some(ModalType::CreateCard {
-                            parent_id: None,
-                            bucket_id: None,
-                        })),
-                        span { class: "text-lg", "+" }
-                        "New Board"
-                    }
-                }
 
-                div { class: "flex flex-wrap items-center gap-4",
-                    div { class: "hidden flex-wrap items-center gap-2 border-r pr-4 md:flex", style: "border-color: var(--app-border);",
+                    div { class: "flex min-w-0 flex-wrap items-center justify-end gap-2 sm:gap-3",
                         {render_export_button(registry, persistence_warning)}
                         {render_import_button(registry, active_modal, persistence_warning, nav)}
                         {render_clear_cache_button(registry, active_modal, persistence_warning, nav)}
                         button {
-                            class: "app-utility-button",
+                            class: "app-utility-button inline-flex items-center gap-2",
                             title: "Manage reusable card labels",
+                            "aria-label": "Labels",
                             onclick: move |_| active_modal.set(Some(ModalType::ManageLabels {})),
-                            "Labels"
+                            span { class: "shrink-0", {render_label_icon()} }
+                            span { class: "hidden sm:inline", "Labels" }
                         }
                         button {
-                            class: "app-utility-button",
+                            class: "app-utility-button inline-flex items-center gap-2",
                             title: "Manage card automation rules",
+                            "aria-label": "Rules",
                             onclick: move |_| active_modal.set(Some(ModalType::ManageRules {})),
-                            "Rules"
-                        }
-                    }
-                    if cfg!(target_arch = "wasm32") {
-                        span { class: "app-kicker",
-                            "Web Utilities"
+                            span { class: "shrink-0", {render_book_icon()} }
+                            span { class: "hidden sm:inline", "Rules" }
                         }
                     }
 
-                    button {
-                        class: "app-button-secondary min-w-[7.5rem] px-4 py-3 text-sm",
-                        onclick: move |_| is_dark.set(IsDark(!is_dark().0)),
-                        title: "Toggle Light/Dark Mode",
-                        if is_dark().0 {
-                            span { "Evening" }
-                        } else {
-                            span { "Sunrise" }
+                    div { class: "flex min-w-0 flex-wrap items-center gap-2 sm:gap-3",
+                        if cfg!(target_arch = "wasm32") {
+                            span { class: "app-kicker hidden lg:inline",
+                                "Web Utilities"
+                            }
+                        }
+
+                        button {
+                            class: "app-button-secondary inline-flex items-center gap-2 px-3 py-2.5 text-sm sm:min-w-[7.5rem] sm:px-4 sm:py-3",
+                            onclick: move |_| is_dark.set(IsDark(!is_dark().0)),
+                            title: "Toggle Light/Dark Mode",
+                            "aria-label": "Toggle Light/Dark Mode",
+                            span { class: "shrink-0", {render_day_night_icon()} }
+                            if is_dark().0 {
+                                span { class: "hidden sm:inline", "Evening" }
+                            } else {
+                                span { class: "hidden sm:inline", "Sunrise" }
+                            }
                         }
                     }
                 }
             }
 
-            main { class: "flex-grow overflow-auto",
+            main { class: "flex-1 min-h-0 overflow-auto",
                 Outlet::<Route> {}
             }
-        }
     }
 }
 
@@ -111,8 +126,9 @@ fn render_export_button(
         let mut persistence_warning = persistence_warning;
         return rsx! {
             button {
-                class: "app-utility-button",
+                class: "app-utility-button inline-flex items-center gap-2",
                 title: "Download a JSON backup of your workspace",
+                "aria-label": "Export",
                 onclick: move |_| {
                     let snapshot = registry.read().clone();
                     match export_registry_snapshot(&snapshot) {
@@ -120,7 +136,8 @@ fn render_export_button(
                         Err(error) => persistence_warning.set(Some(error.to_string())),
                     }
                 },
-                "Export"
+                span { class: "shrink-0", {render_export_icon()} }
+                span { class: "hidden sm:inline", "Export" }
             }
         };
     }
@@ -143,8 +160,9 @@ fn render_import_button(
     {
         return rsx! {
             button {
-                class: "app-utility-button",
+                class: "app-utility-button inline-flex items-center gap-2",
                 title: "Replace your workspace with a validated JSON import",
+                "aria-label": "Import",
                 onclick: move |_| {
                     begin_import_flow(
                         registry,
@@ -153,7 +171,8 @@ fn render_import_button(
                         nav.clone(),
                     );
                 },
-                "Import"
+                span { class: "shrink-0", {render_import_icon()} }
+                span { class: "hidden sm:inline", "Import" }
             }
         };
     }
@@ -181,8 +200,9 @@ fn render_clear_cache_button(
         let mut persistence_warning = persistence_warning;
         return rsx! {
             button {
-                class: "app-danger-button",
+                class: "app-danger-button inline-flex items-center gap-2",
                 title: "Clear saved data and reset the workspace",
+                "aria-label": "Clear Cache",
                 onclick: move |_| {
                     match clear_workspace_with_confirmation() {
                         Ok(true) => {
@@ -195,7 +215,8 @@ fn render_clear_cache_button(
                         Err(error) => persistence_warning.set(Some(error.to_string())),
                     }
                 },
-                "Clear Cache"
+                span { class: "shrink-0", {render_trash_icon()} }
+                span { class: "hidden sm:inline", "Clear Cache" }
             }
         };
     }
@@ -217,6 +238,7 @@ fn disabled_utility_button(label: &str, title: &str) -> Element {
             class: "app-utility-button-disabled",
             disabled: true,
             title: "{title}",
+            "aria-label": "{label}",
             "{label}"
         }
         span { class: "app-kicker",
@@ -431,8 +453,9 @@ pub fn TopBar(title: String, back_route: Route, back_label: String, children: El
                             navigator().push(back_route.clone());
                         },
                         title: "Back to {back_label}",
+                        "aria-label": "Back to {back_label}",
                         span { class: "shrink-0 transform transition-transform group-hover:-translate-x-1", {render_back_icon()} }
-                        span { class: "truncate", "Back to: {back_label}" }
+                        span { class: "hidden truncate sm:inline", "Back to: {back_label}" }
                     }
                 }
 
@@ -445,7 +468,7 @@ pub fn TopBar(title: String, back_route: Route, back_label: String, children: El
                     }
                 }
 
-                div { class: "flex min-w-0 flex-nowrap items-center justify-end gap-2 sm:gap-3 lg:gap-4 justify-self-end overflow-x-auto",
+                div { class: "flex min-w-0 flex-wrap items-center justify-end gap-2 sm:gap-3 lg:gap-4 justify-self-end",
                     {children}
                 }
             }

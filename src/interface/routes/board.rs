@@ -19,7 +19,7 @@ use crate::interface::components::modal::ModalType;
 use crate::interface::components::shared_forms::confirm_destructive_action;
 use crate::interface::components::visuals::{
     CardDisplayData, DropZoneKind, build_card_display, drop_zone_classes, render_label_chip,
-    render_label_icon, render_note_icon, render_plus_icon, render_settings_icon,
+    render_label_icon, render_note_icon, render_plus_icon, render_settings_icon, render_trash_icon,
     surface_action_button_classes, surface_destructive_icon_button_classes,
     surface_icon_button_classes, toolbar_button_classes, toolbar_button_label_classes,
     toolbar_button_mobile_icon_classes, toolbar_icon_button_classes,
@@ -339,14 +339,14 @@ fn render_column(column: ColumnRenderModel, context: BoardRenderContext) -> Elem
                                             context.registry,
                                             warning_message,
                                             "board-route",
-                                            format!(
-                                                "delete bucket {bucket_id} from board {}",
-                                                context.board_id
-                                            ),
-                                        );
+                                                format!(
+                                                    "delete bucket {bucket_id} from board {}",
+                                                    context.board_id
+                                                ),
+                                            );
                                     }
                                 },
-                                span { "🗑" }
+                                span { class: "shrink-0", {render_trash_icon()} }
                             }
                         }
                         button {
