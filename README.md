@@ -83,6 +83,24 @@ For a guided Rust primer written for Python developers, read:
 dx serve --platform desktop
 ```
 
+## GitHub Pages Deployment
+
+This app can be hosted as a static GitHub Pages site using a custom GitHub Actions workflow.
+
+What makes that work:
+
+- `Dioxus.toml` sets `base_path = "Recursive-Kanban-Planner"` so the app loads correctly from the repository subpath.
+- The workflow builds the web bundle, copies the generated static files into a publishable folder, and uploads that folder to GitHub Pages.
+- A copied `404.html` lets the Dioxus router handle direct links like `/board/:card_id`.
+
+To publish it:
+
+1. In the repository settings, set GitHub Pages source to `GitHub Actions`.
+2. Push to `main`.
+3. Let the workflow in `.github/workflows/github-pages.yml` build and deploy the site.
+
+If you rename the repository, update the `base_path` in [Dioxus.toml](Dioxus.toml) to match the new repo slug.
+
 ## Persistence
 
 Browser builds save automatically to `localStorage`.
