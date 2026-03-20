@@ -6,8 +6,12 @@ use crate::domain::registry::DeleteStrategy;
 use crate::infrastructure::logging::record_diagnostic;
 use crate::interface::app::{DraggedItemKind, IsDragging};
 use dioxus::prelude::*;
+#[cfg(target_arch = "wasm32")]
+use js_sys::{Function, Reflect};
 use std::str::FromStr;
 use tracing::{Level, info, warn};
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen::{JsCast, JsValue, closure::Closure};
 
 /// Executes a UI-originated command and routes failures to diagnostics plus the warning banner.
 pub fn execute_command_with_feedback(
@@ -44,6 +48,50 @@ pub fn delete_card_with_feedback(
         log_target,
         action_label,
     );
+}
+
+/// Runs a UI mutation inside the browser view-transition API when available.
+pub fn run_with_view_transition<F>(callback: F)
+where
+    F: FnOnce() + 'static,
+{
+    #[cfg(target_arch = "wasm32")]
+    {
+        let Some(window) = web_sys::window() else {
+            callback();
+            return;
+        };
+        let Some(document) = window.document() else {
+            callback();
+            return;
+        };
+
+        let callback_js = Closure::once_into_js(callback);
+        let callback_fn = callback_js.clone().dyn_into::<Function>().ok();
+
+        let Ok(start_view_transition_value) =
+            Reflect::get(document.as_ref(), &JsValue::from_str("startViewTransition"))
+        else {
+            if let Some(function) = callback_fn {
+                let _ = function.call0(&JsValue::NULL);
+            }
+            return;
+        };
+
+        let Some(start_view_transition) = start_view_transition_value.dyn_into::<Function>().ok()
+        else {
+            if let Some(function) = callback_fn {
+                let _ = function.call0(&JsValue::NULL);
+            }
+            return;
+        };
+
+        let _ = start_view_transition.call1(document.as_ref(), &callback_js);
+        return;
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    callback();
 }
 
 /// Reorders a list by moving one item to a target index after removing the dragged item.

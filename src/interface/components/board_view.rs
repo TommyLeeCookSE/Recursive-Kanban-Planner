@@ -4,9 +4,10 @@ use crate::domain::registry::CardRegistry;
 use crate::infrastructure::logging::record_diagnostic;
 use crate::interface::Route;
 use crate::interface::actions::{
-    delete_card_with_feedback, execute_command_with_feedback, prime_drag_session, prime_drop_target,
+    delete_card_with_feedback, execute_command_with_feedback, prime_drag_session,
+    prime_drop_target, run_with_view_transition,
 };
-use crate::interface::app::{DraggedItemKind, IsDragging};
+use crate::interface::app::{DraggedItemKind, IsDragging, RouteMotionDirection};
 use crate::interface::components::card_item::CardItem;
 use crate::interface::components::layout::TopBar;
 use crate::interface::components::modal::ModalType;
@@ -42,8 +43,11 @@ pub(crate) fn render_board_screen(
     child_models: Vec<CardDisplayData>,
     render_context: BoardRenderContext,
 ) -> Element {
+    let board_id = render_context.board_id;
     rsx! {
-        div { class: "flex h-full flex-col",
+        div {
+            class: "flex h-full flex-col",
+            style: format!("view-transition-name: card-{};", board_id),
             {render_board_header(
                 board_title,
                 back_route,
@@ -161,17 +165,19 @@ fn render_empty_drop_zone(context: BoardRenderContext) -> Element {
                 };
 
                 card_drop_index.set(None);
-                let _ = execute_command_with_feedback(
-                    Command::DropChildAtPosition {
-                        parent_id: board_id,
-                        card_id,
-                        target_index: 0,
-                    },
-                    registry,
-                    warning_message,
-                    "board-route",
-                    format!("drop card {card_id} into empty board {board_id}"),
-                );
+                run_with_view_transition(move || {
+                    let _ = execute_command_with_feedback(
+                        Command::DropChildAtPosition {
+                            parent_id: board_id,
+                            card_id,
+                            target_index: 0,
+                        },
+                        registry,
+                        warning_message,
+                        "board-route",
+                        format!("drop card {card_id} into empty board {board_id}"),
+                    );
+                });
             },
             if is_dragging().0 {
                 div { class: "flex h-full items-center justify-center p-6 text-center",
@@ -192,11 +198,14 @@ fn render_card_slot(
     is_last: bool,
     context: BoardRenderContext,
 ) -> Element {
+    let card_id = card.id;
     rsx! {
         div {
             class: "flex min-w-[18rem] flex-[1_1_18rem] items-stretch gap-2 lg:gap-3",
             {render_card_drop_zone(index, false, context.clone(), true)}
-            div { class: "min-w-0 flex-1",
+            div {
+                class: "min-w-0 flex-1",
+                style: format!("view-transition-name: card-{};", card_id),
                 {render_card_item(card, context.clone())}
             }
             if is_last {
@@ -214,6 +223,7 @@ fn render_card_item(card: CardDisplayData, context: BoardRenderContext) -> Eleme
     let mut card_drop_index = context.drag.card_drop_index;
     let mut dragged_item_kind = context.dragged_item_kind;
     let mut is_dragging = context.is_dragging;
+    let mut route_motion = use_context::<Signal<RouteMotionDirection>>();
 
     rsx! {
         div {
@@ -224,6 +234,7 @@ fn render_card_item(card: CardDisplayData, context: BoardRenderContext) -> Eleme
                 subtitle: format!("{} nested items", card.nested_item_count),
                 draggable: true,
                 on_open: move |_| {
+                    route_motion.set(RouteMotionDirection::Forward);
                     navigator().push(Route::Board { card_id });
                 },
                 on_drag_start: move |event| {
@@ -314,17 +325,19 @@ fn render_card_drop_zone(
                 };
 
                 card_drop_index.set(None);
-                let _ = execute_command_with_feedback(
-                    Command::DropChildAtPosition {
-                        parent_id: board_id,
-                        card_id,
-                        target_index: index,
-                    },
-                    registry,
-                    warning_message,
-                    "board-route",
-                    format!("drop card {card_id} at index {index} on board {board_id}"),
-                );
+                run_with_view_transition(move || {
+                    let _ = execute_command_with_feedback(
+                        Command::DropChildAtPosition {
+                            parent_id: board_id,
+                            card_id,
+                            target_index: index,
+                        },
+                        registry,
+                        warning_message,
+                        "board-route",
+                        format!("drop card {card_id} at index {index} on board {board_id}"),
+                    );
+                });
             },
             if emphasized && is_dragging().0 {
                 div { class: "flex h-full items-center justify-center px-4 py-3",

@@ -754,6 +754,20 @@ button,
   flex-direction: column;
 }
 
+.app-content--motion-forward,
+  .app-content--motion-backward {
+  transform-origin: center top;
+  will-change: transform, opacity;
+}
+
+.app-content--motion-forward {
+  animation: app-route-forward 920ms cubic-bezier(0.12, 0.9, 0.18, 1) both;
+}
+
+.app-content--motion-backward {
+  animation: app-route-backward 920ms cubic-bezier(0.12, 0.9, 0.18, 1) both;
+}
+
 .app-navbar {
   position: sticky;
   top: 0px;
@@ -1194,6 +1208,43 @@ button,
   color: var(--app-drop-dragging-text);
 }
 
+@keyframes app-route-forward {
+  from {
+    opacity: 0.68;
+    transform: translateX(5.5rem) translateY(0.85rem) scale(0.88);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes app-route-backward {
+  from {
+    opacity: 0.7;
+    transform: translateX(-5rem) translateY(-0.6rem) scale(1.08);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@supports (view-transition-name: none) {
+  ::view-transition-group(root) {
+    animation-duration: 650ms;
+    animation-timing-function: cubic-bezier(0.42, 0, 1, 1);
+  }
+
+  ::view-transition-old(root),
+    ::view-transition-new(root) {
+    animation-duration: 650ms;
+    animation-timing-function: cubic-bezier(0.42, 0, 1, 1);
+  }
+}
+
 @media (min-width: 640px) {
   .app-toolbar-button {
     min-height: 3.5rem;
@@ -1289,10 +1340,6 @@ button,
   display: inline-flex;
 }
 
-.grid {
-  display: grid;
-}
-
 .hidden {
   display: none;
 }
@@ -1349,6 +1396,10 @@ button,
   min-height: 10rem;
 }
 
+.min-h-\[12rem\] {
+  min-height: 12rem;
+}
+
 .min-h-\[18rem\] {
   min-height: 18rem;
 }
@@ -1359,6 +1410,10 @@ button,
 
 .min-h-\[3\.25rem\] {
   min-height: 3.25rem;
+}
+
+.w-0 {
+  width: 0px;
 }
 
 .w-10 {
@@ -1381,6 +1436,10 @@ button,
   min-width: 0px;
 }
 
+.min-w-\[18rem\] {
+  min-width: 18rem;
+}
+
 .min-w-\[3\.25rem\] {
   min-width: 3.25rem;
 }
@@ -1401,12 +1460,12 @@ button,
   max-width: 28rem;
 }
 
-.max-w-xl {
-  max-width: 36rem;
-}
-
 .flex-1 {
   flex: 1 1 0%;
+}
+
+.flex-\[1_1_18rem\] {
+  flex: 1 1 18rem;
 }
 
 .shrink-0 {
@@ -1415,6 +1474,10 @@ button,
 
 .flex-grow {
   flex-grow: 1;
+}
+
+.basis-\[18rem\] {
+  flex-basis: 18rem;
 }
 
 .transform {
@@ -1429,10 +1492,6 @@ button,
   cursor: not-allowed;
 }
 
-.grid-cols-\[minmax\(0\2c auto\)_minmax\(0\2c 1fr\)_minmax\(0\2c auto\)\] {
-  grid-template-columns: minmax(0,auto) minmax(0,1fr) minmax(0,auto);
-}
-
 .flex-col {
   flex-direction: column;
 }
@@ -1443,6 +1502,10 @@ button,
 
 .items-center {
   align-items: center;
+}
+
+.items-stretch {
+  align-items: stretch;
 }
 
 .justify-end {
@@ -1481,16 +1544,12 @@ button,
   margin-bottom: calc(0.75rem * var(--tw-space-y-reverse));
 }
 
+.self-stretch {
+  align-self: stretch;
+}
+
 .justify-self-start {
   justify-self: start;
-}
-
-.justify-self-end {
-  justify-self: end;
-}
-
-.justify-self-center {
-  justify-self: center;
 }
 
 .overflow-auto {
@@ -1996,6 +2055,10 @@ button,
     display: inline;
   }
 
+  .sm\:w-6 {
+    width: 1.5rem;
+  }
+
   .sm\:min-w-\[12rem\] {
     min-width: 12rem;
   }
@@ -2053,6 +2116,10 @@ button,
 
   .lg\:flex-row {
     flex-direction: row;
+  }
+
+  .lg\:gap-3 {
+    gap: 0.75rem;
   }
 
   .lg\:gap-4 {
