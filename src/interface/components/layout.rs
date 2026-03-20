@@ -1,5 +1,5 @@
 use crate::interface::Route;
-use crate::interface::app::{IsDark, RouteMotionDirection};
+use crate::interface::app::IsDark;
 use crate::interface::components::modal::ModalType;
 use crate::interface::components::visuals::{render_back_icon, render_day_night_icon};
 use crate::interface::components::web_utilities::{
@@ -98,7 +98,6 @@ pub fn TopBar(
     back_label: String,
     children: Element,
 ) -> Element {
-    let mut route_motion = use_context::<Signal<RouteMotionDirection>>();
     let back_button = if let Some(route) = back_route {
         rsx! {
                 button {
@@ -106,7 +105,6 @@ pub fn TopBar(
                     onclick: move |_| {
                         let nav = navigator();
                         let destination = route.clone();
-                        route_motion.set(RouteMotionDirection::Backward);
                         nav.push(destination);
                     },
                 title: "Back to {back_label}",

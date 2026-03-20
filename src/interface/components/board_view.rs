@@ -7,7 +7,7 @@ use crate::interface::actions::{
     delete_card_with_feedback, execute_command_with_feedback, prime_drag_session,
     prime_drop_target, run_with_view_transition,
 };
-use crate::interface::app::{DraggedItemKind, IsDragging, RouteMotionDirection};
+use crate::interface::app::{DraggedItemKind, IsDragging};
 use crate::interface::components::card_item::CardItem;
 use crate::interface::components::layout::TopBar;
 use crate::interface::components::modal::ModalType;
@@ -223,7 +223,6 @@ fn render_card_item(card: CardDisplayData, context: BoardRenderContext) -> Eleme
     let mut card_drop_index = context.drag.card_drop_index;
     let mut dragged_item_kind = context.dragged_item_kind;
     let mut is_dragging = context.is_dragging;
-    let mut route_motion = use_context::<Signal<RouteMotionDirection>>();
 
     rsx! {
         div {
@@ -234,7 +233,6 @@ fn render_card_item(card: CardDisplayData, context: BoardRenderContext) -> Eleme
                 subtitle: None,
                 draggable: true,
                 on_open: move |_| {
-                    route_motion.set(RouteMotionDirection::Forward);
                     navigator().push(Route::Board { card_id });
                 },
                 on_drag_start: move |event| {
