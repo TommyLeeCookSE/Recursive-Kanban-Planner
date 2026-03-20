@@ -34,20 +34,20 @@ pub fn NavbarLayout() -> Element {
     rsx! {
         div { class: "flex min-h-0 flex-1 flex-col selection:bg-sunfire/30 selection:text-white",
             nav { class: "app-navbar",
-                div { class: "flex min-w-0 shrink-0 items-center gap-3 sm:gap-8",
+                div { class: "min-w-0 shrink-0",
                     Link {
                         to: Route::Home {},
-                        class: "group flex min-w-0 items-center gap-3",
-                        div { class: "flex h-10 w-10 items-center justify-center rounded-xl bg-sunfire shadow-lg shadow-sunfire/30 transition-transform group-hover:rotate-12",
+                        class: "app-navbar-brand group",
+                        div { class: "app-navbar-brand-mark",
                             span { class: "text-white text-xl font-black", "K" }
                         }
-                        span { class: "app-text-primary hidden text-2xl font-black tracking-tighter transition-colors group-hover:text-sunfire sm:inline",
+                        span { class: "app-navbar-brand-text",
                             "Kanban"
                         }
                     }
                 }
 
-                div { class: "flex min-w-0 flex-wrap items-center justify-end gap-2 sm:gap-3",
+                div { class: "app-navbar-actions",
                     {render_export_button(registry, persistence_warning)}
                     {render_import_button(registry, active_modal, persistence_warning, nav)}
                     {render_clear_cache_button(registry, active_modal, persistence_warning, nav)}
@@ -55,7 +55,7 @@ pub fn NavbarLayout() -> Element {
 
                 div { class: "flex min-w-0 shrink-0 flex-wrap items-center gap-2 sm:gap-3",
                     button {
-                        class: "app-button-secondary inline-flex items-center gap-2 px-3 py-2.5 text-sm sm:min-w-[7.5rem] sm:px-4 sm:py-3",
+                        class: "app-navbar-theme-toggle",
                         onclick: move |_| is_dark.set(IsDark(!is_dark().0)),
                         title: "{theme_title}",
                         "aria-label": "{theme_title}",
@@ -102,8 +102,8 @@ pub fn TopBar(
     let back_button = if let Some(route) = back_route {
         rsx! {
                 button {
-                    class: "app-button-secondary inline-flex min-h-[3.25rem] max-w-full items-center justify-center gap-2 rounded-2xl px-3 py-3 text-sm font-black sm:min-w-[12rem] sm:px-6 sm:text-base group",
-                onclick: move |_| {
+                    class: "app-topbar-back group",
+                    onclick: move |_| {
                         let nav = navigator();
                         let destination = route.clone();
                         route_motion.set(RouteMotionDirection::Backward);
@@ -118,7 +118,7 @@ pub fn TopBar(
     } else {
         rsx! {
                 button {
-                    class: "app-button-secondary inline-flex min-h-[3.25rem] max-w-full items-center justify-center gap-2 rounded-2xl px-3 py-3 text-sm font-black opacity-50 sm:min-w-[12rem] sm:px-6 sm:text-base",
+                    class: "app-topbar-back app-topbar-back--disabled group",
                 disabled: true,
                 title: "Back to {back_label}",
                 "aria-label": "Back to {back_label}",
@@ -130,14 +130,14 @@ pub fn TopBar(
     };
 
     rsx! {
-        div { class: "app-panel border-b px-4 py-6 sm:px-6 lg:px-12",
-            div { class: "flex w-full flex-wrap items-center gap-3 sm:gap-4 lg:gap-8",
+        div { class: "app-topbar-shell",
+            div { class: "app-topbar-grid",
                 div { class: "min-w-0 shrink-0 justify-self-start",
                     {back_button}
                 }
 
                 div { class: "min-w-0 flex-1 basis-[18rem] px-2 text-center",
-                    h1 { class: "app-text-primary mx-auto max-w-full break-words text-2xl font-black tracking-tighter sm:text-4xl lg:max-w-2xl lg:text-5xl",
+                    h1 { class: "app-topbar-title",
                         "{title}"
                     }
                     p { class: "app-kicker mt-2 block",
@@ -145,7 +145,7 @@ pub fn TopBar(
                     }
                 }
 
-                div { class: "flex min-w-0 shrink-0 flex-wrap items-center justify-end gap-2 sm:gap-3 lg:gap-4",
+                div { class: "app-topbar-actions",
                     {children}
                 }
             }

@@ -26,8 +26,9 @@ use dioxus::prelude::*;
 pub fn CardItem(
     /// Main display text.
     title: String,
-    /// Second line of text for counts or metadata.
-    subtitle: String,
+    /// Optional second line of text for metadata.
+    #[props(default)]
+    subtitle: Option<String>,
     #[props(default)] due_date: Option<String>,
     #[props(default)] is_overdue: bool,
     #[props(default)] preview_items: Vec<String>,
@@ -52,9 +53,9 @@ pub fn CardItem(
 
             button {
                 class: if draggable {
-                    "flex-grow w-full cursor-grab rounded-t-[1.75rem] p-6 text-left outline-none transition-colors focus:ring-2 focus:ring-sunfire/30 active:cursor-grabbing"
+                    "app-card-body app-card-body--draggable"
                 } else {
-                    "flex-grow w-full rounded-t-[1.75rem] p-6 text-left outline-none transition-colors focus:ring-2 focus:ring-sunfire/30"
+                    "app-card-body"
                 },
                 draggable: draggable,
                 ondragstart: move |event| {
@@ -69,24 +70,30 @@ pub fn CardItem(
                 },
                 title: "Open {card_title_for_open}",
                 onclick: move |_| on_open.call(()),
-                h3 { class: "app-text-primary h-12 overflow-hidden text-lg font-semibold transition-colors group-hover:text-sunfire line-clamp-2",
-                    "{title}"
-                }
-                p { class: "app-text-soft mt-3 text-xs font-medium uppercase tracking-widest",
-                    "{subtitle}"
-                }
-                if let Some(due_date) = due_date {
-                    p {
-                        class: if is_overdue { "mt-3 text-sm font-semibold text-red-500" } else { "app-text-muted mt-3 text-sm font-semibold" },
-                        "Due {due_date}"
+                div { class: "app-card-title-stack",
+                    h3 { class: "app-card-title",
+                        "{title}"
                     }
-                }
-                if !preview_items.is_empty() {
-                    div { class: "app-card-preview mt-5",
-                        p { class: "app-card-preview-header", "Contains" }
-                        div { class: "mt-3 flex flex-wrap gap-2",
-                            for item in preview_items {
-                                span { class: "app-card-preview-item rounded-xl border px-3 py-2 text-xs font-semibold", "{item}" }
+                    if let Some(subtitle) = subtitle {
+                        p { class: "app-card-subtitle",
+                            "{subtitle}"
+                        }
+                    }
+                    if let Some(due_date) = due_date {
+                        p {
+                            class: if is_overdue { "mt-4 text-left text-sm font-semibold text-red-500" } else { "app-text-muted mt-4 text-left text-sm font-semibold" },
+                            "Due {due_date}"
+                        }
+                    }
+                    if !preview_items.is_empty() {
+                        div { class: "app-card-preview-shell",
+                            div { class: "app-card-preview-items",
+                                for item in preview_items {
+                                    span {
+                                        class: "app-card-preview-chip",
+                                        "{item}"
+                                    }
+                                }
                             }
                         }
                     }

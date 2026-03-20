@@ -14,7 +14,6 @@ pub enum DropZoneKind {
 pub struct CardDisplayData {
     pub id: CardId,
     pub title: String,
-    pub nested_item_count: usize,
     pub due_date: Option<String>,
     pub is_overdue: bool,
     pub preview_items: Vec<String>,
@@ -33,7 +32,6 @@ pub fn build_card_display(card: &Card, preview_view: Option<&CardPreviewView>) -
     CardDisplayData {
         id: card.id(),
         title: card.title().to_string(),
-        nested_item_count: card.children_ids().len(),
         due_date: card.due_date().map(|due| due.to_string()),
         is_overdue: card.due_date().map(|due| due.is_overdue()).unwrap_or(false),
         preview_items,

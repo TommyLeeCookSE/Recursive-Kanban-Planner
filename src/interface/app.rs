@@ -31,6 +31,7 @@ pub enum RouteMotionDirection {
     Backward,
 }
 
+#[cfg(target_arch = "wasm32")]
 const ROUTE_MOTION_DURATION_MS: i32 = 720;
 
 /// The root application component.

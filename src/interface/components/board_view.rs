@@ -115,12 +115,12 @@ fn render_board_header(
 
 fn render_board_grid(child_models: Vec<CardDisplayData>, context: BoardRenderContext) -> Element {
     rsx! {
-        div { class: "flex flex-wrap items-stretch gap-4 lg:gap-6",
+        div { class: "flex flex-wrap items-stretch gap-6 lg:gap-8",
             if child_models.is_empty() {
                 {render_empty_drop_zone(context.clone())}
             } else {
                 div {
-                    class: "flex flex-wrap items-stretch gap-4 lg:gap-6",
+                    class: "flex flex-wrap items-stretch gap-6 lg:gap-8",
                     for (index, card) in child_models.iter().cloned().enumerate() {
                         {render_card_slot(
                             card,
@@ -201,7 +201,7 @@ fn render_card_slot(
     let card_id = card.id;
     rsx! {
         div {
-            class: "flex min-w-[18rem] flex-[1_1_18rem] items-stretch gap-2 lg:gap-3",
+            class: "flex min-w-[21rem] flex-[1_1_21rem] items-stretch gap-2 lg:gap-3",
             {render_card_drop_zone(index, false, context.clone(), true)}
             div {
                 class: "min-w-0 flex-1",
@@ -231,7 +231,7 @@ fn render_card_item(card: CardDisplayData, context: BoardRenderContext) -> Eleme
             class: "flex min-w-0 flex-col gap-3",
             CardItem {
                 title: card.title,
-                subtitle: format!("{} nested items", card.nested_item_count),
+                subtitle: None,
                 draggable: true,
                 on_open: move |_| {
                     route_motion.set(RouteMotionDirection::Forward);

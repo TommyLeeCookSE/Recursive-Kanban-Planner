@@ -32,6 +32,35 @@
     transition:
       color 200ms ease,
       background-color 200ms ease;
+
+    /* Shared sizing tokens */
+    --app-navbar-brand-gap: 0.75rem;
+    --app-navbar-brand-mark-size: 2.5rem;
+    --app-navbar-brand-text-size: 2rem;
+    --app-navbar-action-gap: 0.5rem;
+    --app-navbar-theme-padding-x: 1rem;
+    --app-navbar-theme-padding-y: 0.75rem;
+
+    --app-topbar-shell-padding-x: 1rem;
+    --app-topbar-shell-padding-y: 1.5rem;
+    --app-topbar-grid-gap: 0.75rem;
+    --app-topbar-title-size: 2rem;
+    --app-topbar-title-height: 2.75rem;
+    --app-topbar-title-width: 100%;
+    --app-topbar-actions-gap: 0.5rem;
+
+    --app-card-body-padding-x: 2.5rem;
+    --app-card-body-padding-y: 2.5rem;
+    --app-card-title-size: 1.125rem;
+    --app-card-title-height: 2.75rem;
+    --app-card-title-gap: 0.75rem;
+    --app-card-subtitle-gap: 0.5rem;
+    --app-card-preview-gap-top: 2rem;
+    --app-card-preview-pad-x: 2.5rem;
+    --app-card-preview-pad-y: 1.5rem;
+    --app-card-preview-chip-gap: 1rem;
+    --app-card-preview-chip-pad-x: 1.5rem;
+    --app-card-preview-chip-pad-y: 0.75rem;
   }
 
   .theme-dark {
@@ -259,37 +288,109 @@
     user-select: none;
   }
 
-  .app-card-preview {
+  .app-navbar-brand {
+    @apply flex min-w-0 items-center;
+    gap: var(--app-navbar-brand-gap);
+  }
+
+  .app-navbar-brand-mark {
+    @apply flex items-center justify-center rounded-xl bg-sunfire shadow-lg shadow-sunfire/30 transition-transform group-hover:rotate-12;
+    width: var(--app-navbar-brand-mark-size);
+    height: var(--app-navbar-brand-mark-size);
+  }
+
+  .app-navbar-brand-text {
+    @apply app-text-primary hidden font-black tracking-tighter transition-colors group-hover:text-sunfire sm:inline;
+    font-size: var(--app-navbar-brand-text-size);
+  }
+
+  .app-navbar-actions {
+    @apply flex min-w-0 flex-wrap items-center justify-end;
+    gap: var(--app-navbar-action-gap);
+  }
+
+  .app-navbar-theme-toggle {
+    @apply app-button-secondary inline-flex items-center gap-2 text-sm;
+    padding: var(--app-navbar-theme-padding-y) var(--app-navbar-theme-padding-x);
+  }
+
+  .app-topbar-shell {
+    @apply app-panel border-b;
+    padding: var(--app-topbar-shell-padding-y) var(--app-topbar-shell-padding-x);
+  }
+
+  .app-topbar-grid {
+    @apply flex w-full flex-wrap items-center;
+    gap: var(--app-topbar-grid-gap);
+  }
+
+  .app-topbar-back {
+    @apply app-button-secondary inline-flex min-h-[3.25rem] max-w-full items-center justify-center gap-2 rounded-2xl px-3 py-3 text-sm font-black sm:min-w-[12rem] sm:px-6 sm:text-base;
+  }
+
+  .app-topbar-back--disabled {
+    @apply opacity-50;
+  }
+
+  .app-topbar-title {
+    @apply app-text-primary mx-auto max-w-full break-words text-center font-black tracking-tighter;
+    font-size: var(--app-topbar-title-size);
+    line-height: 1.05;
+    min-height: var(--app-topbar-title-height);
+    width: var(--app-topbar-title-width);
+  }
+
+  .app-topbar-actions {
+    @apply flex min-w-0 shrink-0 flex-wrap items-center justify-end;
+    gap: var(--app-topbar-actions-gap);
+  }
+
+  .app-card-body {
+    @apply flex w-full cursor-pointer flex-col items-start rounded-t-[1.75rem] text-center outline-none transition-colors focus:ring-2 focus:ring-sunfire/30;
+    padding: var(--app-card-body-padding-y) var(--app-card-body-padding-x);
+  }
+
+  .app-card-body--draggable {
+    @apply cursor-grab active:cursor-grabbing;
+  }
+
+  .app-card-title-stack {
+    @apply flex w-full flex-col items-start;
+    padding-top: 0.5rem;
+  }
+
+  .app-card-title {
+    @apply app-text-primary w-full overflow-hidden text-center font-bold transition-colors group-hover:text-sunfire line-clamp-2;
+    font-size: var(--app-card-title-size);
+    line-height: 1.15;
+    min-height: var(--app-card-title-height);
+    margin-bottom: var(--app-card-title-gap);
+  }
+
+  .app-card-subtitle {
+    @apply app-text-soft text-left text-[10px] font-black uppercase tracking-[0.2em];
+    margin-bottom: var(--app-card-subtitle-gap);
+  }
+
+  .app-card-preview-shell {
     border-top: 1px solid color-mix(in srgb, var(--app-border) 68%, transparent);
-    margin-top: 1.25rem;
-    padding-top: 1rem;
+    margin-top: var(--app-card-preview-gap-top);
+    margin-left: calc(var(--app-card-body-padding-x) * -1);
+    padding: var(--app-card-preview-pad-y) var(--app-card-preview-pad-x) 0;
+    width: calc(100% + (var(--app-card-body-padding-x) * 2));
   }
 
-  .app-card-preview-section + .app-card-preview-section {
-    border-top: 1px solid color-mix(in srgb, var(--app-border) 50%, transparent);
-    margin-top: 0.9rem;
-    padding-top: 0.9rem;
+  .app-card-preview-items {
+    @apply flex flex-wrap items-start justify-start;
+    gap: var(--app-card-preview-chip-gap);
   }
 
-  .app-card-preview-header {
-    color: var(--app-text-soft);
-    font-size: 0.65rem;
-    font-weight: 900;
-    letter-spacing: 0.35em;
-    line-height: 1.2;
-    text-transform: uppercase;
-  }
-
-  .app-card-preview-list {
-    list-style: disc;
-    margin-top: 0.55rem;
-    padding-left: 1.15rem;
-  }
-
-  .app-card-preview-item {
+  .app-card-preview-chip {
+    @apply max-w-full break-words rounded-2xl border text-sm font-bold shadow-sm transition-all hover:border-sunfire/30 hover:bg-sunfire/5;
+    padding: var(--app-card-preview-chip-pad-y) var(--app-card-preview-chip-pad-x);
     color: var(--app-text-muted);
-    font-size: 0.92rem;
-    line-height: 1.35;
+    border-color: var(--app-border);
+    background-color: color-mix(in srgb, var(--app-surface-soft) 40%, transparent);
   }
 
   .app-modal-surface {
