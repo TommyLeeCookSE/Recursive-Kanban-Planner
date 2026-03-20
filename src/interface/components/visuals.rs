@@ -1,24 +1,62 @@
+//! Visual components, icons, and styling utilities for the user interface.
+//!
+//! This module contains SVG icon renderers, CSS class builders for dynamic
+//! UI states (like drag-and-drop), and data structures for card display.
+//!
+//! For more on Rust's module system and documentation, see `docs/rust-for-python-devs.md`.
+
 use crate::application::CardPreviewView;
 use crate::domain::card::Card;
 use crate::domain::id::CardId;
 use crate::interface::app::DraggedItemKind;
 use dioxus::prelude::*;
 
+/// Categories of drop zones in the application.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum DropZoneKind {
+    /// A drop zone representing the entire board or a major section.
     Board,
+    /// A drop zone representing a specific card.
     Card,
 }
 
+/// A simplified view of a card's data for rendering in the UI.
+///
+/// # Examples
+///
+/// ```ignore
+/// use crate::interface::components::visuals::CardDisplayData;
+/// use crate::domain::id::CardId;
+///
+/// let data = CardDisplayData {
+///     id: CardId::new(),
+///     title: "Fix bug".to_string(),
+///     due_date: Some("2023-12-31".to_string()),
+///     is_overdue: false,
+///     preview_items: vec!["Task 1".to_string()],
+/// };
+/// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct CardDisplayData {
+    /// Unique identifier for the card.
     pub id: CardId,
+    /// The card's title.
     pub title: String,
+    /// Optional formatted due date string.
     pub due_date: Option<String>,
+    /// Whether the card's due date has passed.
     pub is_overdue: bool,
+    /// Titles of immediate child cards for a quick preview.
     pub preview_items: Vec<String>,
 }
 
+/// Transforms a domain `Card` into `CardDisplayData`.
+///
+/// # Examples
+///
+/// ```ignore
+/// let display_data = build_card_display(&card, Some(&preview_view));
+/// ```
 pub fn build_card_display(card: &Card, preview_view: Option<&CardPreviewView>) -> CardDisplayData {
     let preview_items = preview_view
         .map(|view| {
@@ -38,6 +76,13 @@ pub fn build_card_display(card: &Card, preview_view: Option<&CardPreviewView>) -
     }
 }
 
+/// Computes the CSS classes for a drop zone based on its state.
+///
+/// # Examples
+///
+/// ```ignore
+/// let classes = drop_zone_classes(DropZoneKind::Card, true, DraggedItemKind::Card);
+/// ```
 pub fn drop_zone_classes(
     kind: DropZoneKind,
     is_active: bool,
@@ -76,34 +121,97 @@ pub fn drop_zone_classes(
     }
 }
 
+/// Standard CSS classes for a primary action button on a surface.
+///
+/// # Examples
+///
+/// ```
+/// use kanban_planner::interface::components::visuals::surface_action_button_classes;
+/// assert_eq!(surface_action_button_classes(), "app-surface-action-button");
+/// ```
 pub fn surface_action_button_classes() -> &'static str {
     "app-surface-action-button"
 }
 
+/// Standard CSS classes for an icon-only button on a surface.
+///
+/// # Examples
+///
+/// ```
+/// use kanban_planner::interface::components::visuals::surface_icon_button_classes;
+/// assert_eq!(surface_icon_button_classes(), "app-surface-icon-button");
+/// ```
 pub fn surface_icon_button_classes() -> &'static str {
     "app-surface-icon-button"
 }
 
+/// Standard CSS classes for a destructive icon-only button on a surface.
+///
+/// # Examples
+///
+/// ```
+/// use kanban_planner::interface::components::visuals::surface_destructive_icon_button_classes;
+/// assert_eq!(surface_destructive_icon_button_classes(), "app-surface-icon-button app-surface-icon-button--danger");
+/// ```
 pub fn surface_destructive_icon_button_classes() -> &'static str {
     "app-surface-icon-button app-surface-icon-button--danger"
 }
 
+/// Standard CSS classes for a button in the main toolbar.
+///
+/// # Examples
+///
+/// ```
+/// use kanban_planner::interface::components::visuals::toolbar_button_classes;
+/// assert_eq!(toolbar_button_classes(), "app-toolbar-button");
+/// ```
 pub fn toolbar_button_classes() -> &'static str {
     "app-toolbar-button"
 }
 
+/// Standard CSS classes for an icon-only button in the main toolbar.
+///
+/// # Examples
+///
+/// ```
+/// use kanban_planner::interface::components::visuals::toolbar_icon_button_classes;
+/// assert_eq!(toolbar_icon_button_classes(), "app-toolbar-button app-toolbar-button--icon");
+/// ```
 pub fn toolbar_icon_button_classes() -> &'static str {
     "app-toolbar-button app-toolbar-button--icon"
 }
 
+/// Standard CSS classes for a label within a toolbar button.
+///
+/// # Examples
+///
+/// ```
+/// use kanban_planner::interface::components::visuals::toolbar_button_label_classes;
+/// assert_eq!(toolbar_button_label_classes(), "app-toolbar-label");
+/// ```
 pub fn toolbar_button_label_classes() -> &'static str {
     "app-toolbar-label"
 }
 
+/// Standard CSS classes for an icon within a toolbar button.
+///
+/// # Examples
+///
+/// ```
+/// use kanban_planner::interface::components::visuals::toolbar_action_icon_classes;
+/// assert_eq!(toolbar_action_icon_classes(), "app-toolbar-icon");
+/// ```
 pub fn toolbar_action_icon_classes() -> &'static str {
     "app-toolbar-icon"
 }
 
+/// Renders a "+" (plus) icon.
+///
+/// # Examples
+///
+/// ```ignore
+/// rsx! { render_plus_icon() }
+/// ```
 pub fn render_plus_icon() -> Element {
     rsx! {
         svg {
@@ -121,6 +229,13 @@ pub fn render_plus_icon() -> Element {
     }
 }
 
+/// Renders a document/note icon.
+///
+/// # Examples
+///
+/// ```ignore
+/// rsx! { render_note_icon() }
+/// ```
 pub fn render_note_icon() -> Element {
     rsx! {
         svg {
@@ -140,6 +255,13 @@ pub fn render_note_icon() -> Element {
     }
 }
 
+/// Renders a book icon.
+///
+/// # Examples
+///
+/// ```ignore
+/// rsx! { render_book_icon() }
+/// ```
 pub fn render_book_icon() -> Element {
     rsx! {
         svg {
@@ -159,6 +281,13 @@ pub fn render_book_icon() -> Element {
     }
 }
 
+/// Renders a label/tag icon.
+///
+/// # Examples
+///
+/// ```ignore
+/// rsx! { render_label_icon() }
+/// ```
 pub fn render_label_icon() -> Element {
     rsx! {
         svg {
@@ -176,6 +305,13 @@ pub fn render_label_icon() -> Element {
     }
 }
 
+/// Renders an import/download icon.
+///
+/// # Examples
+///
+/// ```ignore
+/// rsx! { render_import_icon() }
+/// ```
 pub fn render_import_icon() -> Element {
     rsx! {
         svg {
@@ -194,6 +330,13 @@ pub fn render_import_icon() -> Element {
     }
 }
 
+/// Renders an export/upload icon.
+///
+/// # Examples
+///
+/// ```ignore
+/// rsx! { render_export_icon() }
+/// ```
 pub fn render_export_icon() -> Element {
     rsx! {
         svg {
@@ -212,6 +355,13 @@ pub fn render_export_icon() -> Element {
     }
 }
 
+/// Renders a trash/delete icon.
+///
+/// # Examples
+///
+/// ```ignore
+/// rsx! { render_trash_icon() }
+/// ```
 pub fn render_trash_icon() -> Element {
     rsx! {
         svg {
@@ -233,6 +383,13 @@ pub fn render_trash_icon() -> Element {
     }
 }
 
+/// Renders a sunrise icon.
+///
+/// # Examples
+///
+/// ```ignore
+/// rsx! { render_sunrise_icon() }
+/// ```
 pub fn render_sunrise_icon() -> Element {
     rsx! {
         svg {
@@ -257,6 +414,13 @@ pub fn render_sunrise_icon() -> Element {
     }
 }
 
+/// Renders a moon/evening icon.
+///
+/// # Examples
+///
+/// ```ignore
+/// rsx! { render_evening_icon() }
+/// ```
 pub fn render_evening_icon() -> Element {
     rsx! {
         svg {
@@ -273,6 +437,13 @@ pub fn render_evening_icon() -> Element {
     }
 }
 
+/// Renders a settings icon.
+///
+/// # Examples
+///
+/// ```ignore
+/// rsx! { render_settings_icon() }
+/// ```
 pub fn render_settings_icon() -> Element {
     rsx! {
         svg {
@@ -290,6 +461,13 @@ pub fn render_settings_icon() -> Element {
     }
 }
 
+/// Renders a "back" arrow icon.
+///
+/// # Examples
+///
+/// ```ignore
+/// rsx! { render_back_icon() }
+/// ```
 pub fn render_back_icon() -> Element {
     rsx! {
         svg {

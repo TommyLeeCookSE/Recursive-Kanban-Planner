@@ -1,3 +1,11 @@
+//! High-level layout components for the Kanban Planner.
+//!
+//! This module provides the shell, navigation bar, and top bar components
+//! that structure the overall user interface.
+//!
+//! For an overview of the UI layout, see
+//! `docs/rust-for-python-devs.md`.
+
 use crate::interface::Route;
 use crate::interface::app::IsDark;
 use crate::interface::components::modal::ModalType;

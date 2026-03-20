@@ -1,4 +1,13 @@
+//! The board view component for the Kanban Planner.
+//!
+//! This module coordinates the rendering of a specific board, including its
+//! header, grid, and individual card items.
+//!
+//! For an overview of the board architecture, see
+//! `docs/rust-for-python-devs.md`.
+
 mod card;
+mod drop_target;
 mod empty_state;
 mod grid;
 mod header;
@@ -13,6 +22,20 @@ use dioxus::prelude::*;
 
 pub(crate) use models::{BoardDragSignals, BoardRenderContext};
 
+/// Renders the complete board screen.
+///
+/// # Examples
+///
+/// ```ignore
+/// render_board_screen(
+///     "My Board".to_string(),
+///     Some(Route::Home {}),
+///     "Home".to_string(),
+///     "Tomorrow".to_string(),
+///     vec![card_display_data],
+///     render_context,
+/// )
+/// ```
 pub(crate) fn render_board_screen(
     board_title: String,
     back_route: Option<Route>,

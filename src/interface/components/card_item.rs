@@ -1,3 +1,11 @@
+//! The card item component for the Kanban Planner.
+//!
+//! This module provides the main interactive card component used across
+//! the workspace and board views to represent individual tasks or projects.
+//!
+//! For an overview of how components are structured, see
+//! `docs/rust-for-python-devs.md`.
+
 use crate::interface::components::shared_forms::confirm_destructive_action;
 use crate::interface::components::visuals::{
     render_trash_icon, surface_action_button_classes, surface_destructive_icon_button_classes,

@@ -1,3 +1,11 @@
+//! The board route for individual cards.
+//!
+//! This module renders the board view for a specific card, including its
+//! children, title, and due date.
+//!
+//! For an overview of the routing structure, see
+//! `docs/rust-for-python-devs.md`.
+
 use crate::domain::id::CardId;
 use crate::domain::registry::CardRegistry;
 use crate::infrastructure::logging::record_diagnostic;
@@ -11,6 +19,15 @@ use crate::interface::routes::board_screen::load_board_screen_data;
 use dioxus::prelude::*;
 use tracing::{Level, error};
 
+/// The board route component for a specific card.
+///
+/// # Examples
+///
+/// ```ignore
+/// rsx! {
+///     Board { card_id: my_card_id }
+/// }
+/// ```
 #[component]
 pub fn Board(card_id: CardId) -> Element {
     let registry = use_context::<Signal<CardRegistry>>();

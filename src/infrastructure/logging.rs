@@ -1,3 +1,11 @@
+//! Runtime logging and diagnostic capture for the Kanban Planner.
+//!
+//! This module provides the logging foundation for both native and web targets,
+//! including an in-memory diagnostic ring buffer for UI-level inspection.
+//!
+//! For a comparison of Rust logging vs Python logging, see
+//! `docs/rust-for-python-devs.md`.
+
 use std::collections::VecDeque;
 use std::sync::{LazyLock, Mutex};
 use thiserror::Error;

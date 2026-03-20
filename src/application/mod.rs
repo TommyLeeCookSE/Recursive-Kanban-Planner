@@ -1,3 +1,11 @@
+//! The application layer orchestrates domain logic and projections.
+//!
+//! This module provides the `Command` pattern for mutating the workspace and
+//! the projection logic for building UI-optimized views of the card tree.
+//!
+//! For a mapping of how this orchestration layer compares to Python's
+//! service or controller patterns, see `docs/rust-for-python-devs.md`.
+
 mod command;
 mod execute;
 mod projections;

@@ -1,7 +1,11 @@
 //! # Card Domain
 //!
-//! Cards are the only structural building block in the planner.
+//! Cards are the primary structural building block of the Kanban Planner.
+//! They represent tasks, projects, or any work item that can be nested.
+//!
 //! Every card may own ordered child cards, notes, and an optional due date.
+//!
+//! See `docs/rust-for-python-devs.md` for a guide on how this module maps to Python concepts.
 
 use crate::domain::due_date::DueDate;
 use crate::domain::error::DomainError;
@@ -11,6 +15,19 @@ use crate::domain::title::normalize_non_empty_title;
 
 use serde::{Deserialize, Serialize};
 
+/// Represents a single unit of work or a container for other work items.
+///
+/// Cards form a tree structure, where each card has a parent (except for the root
+/// workspace) and zero or more children.
+///
+/// # Examples
+///
+/// ```
+/// use kanban_planner::domain::card::Card;
+///
+/// let card = Card::new_root("My Project".to_string()).unwrap();
+/// assert_eq!(card.title(), "My Project");
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Card {
     id: CardId,
@@ -24,6 +41,16 @@ pub struct Card {
 }
 
 impl Card {
+    /// Creates a new root card (a workspace).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use kanban_planner::domain::card::Card;
+    ///
+    /// let card = Card::new_root("Workspace".to_string()).unwrap();
+    /// assert!(card.parent_id().is_none());
+    /// ```
     pub fn new_root(title: String) -> Result<Self, DomainError> {
         let title = normalize_non_empty_title(title)?;
 
@@ -37,6 +64,18 @@ impl Card {
         })
     }
 
+    /// Creates a new child card with a specified parent.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use kanban_planner::domain::card::Card;
+    /// use kanban_planner::domain::id::CardId;
+    ///
+    /// let parent_id = CardId::new();
+    /// let card = Card::new_child("Task".to_string(), parent_id).unwrap();
+    /// assert_eq!(card.parent_id(), Some(parent_id));
+    /// ```
     pub fn new_child(title: String, parent_id: CardId) -> Result<Self, DomainError> {
         let title = normalize_non_empty_title(title)?;
 
@@ -50,35 +89,63 @@ impl Card {
         })
     }
 
+    /// Returns the unique identifier of the card.
     pub fn id(&self) -> CardId {
         self.id
     }
 
+    /// Returns the current title of the card.
     pub fn title(&self) -> &str {
         &self.title
     }
 
+    /// Returns the ID of the parent card, if any.
     pub fn parent_id(&self) -> Option<CardId> {
         self.parent_id
     }
 
+    /// Returns a slice of the IDs of the child cards.
     pub fn children_ids(&self) -> &[CardId] {
         &self.children_ids
     }
 
+    /// Returns a slice of the note pages attached to this card.
     pub fn notes(&self) -> &[NotePage] {
         &self.notes
     }
 
+    /// Returns the due date of the card, if set.
     pub fn due_date(&self) -> Option<&DueDate> {
         self.due_date.as_ref()
     }
 
+    /// Renames the card.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use kanban_planner::domain::card::Card;
+    ///
+    /// let mut card = Card::new_root("Old Title".to_string()).unwrap();
+    /// card.rename("New Title".to_string()).unwrap();
+    /// assert_eq!(card.title(), "New Title");
+    /// ```
     pub fn rename(&mut self, new_title: String) -> Result<(), DomainError> {
         self.title = normalize_non_empty_title(new_title)?;
         Ok(())
     }
 
+    /// Reorders the immediate children of this card.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use kanban_planner::domain::card::Card;
+    /// use kanban_planner::domain::id::CardId;
+    ///
+    /// let mut card = Card::new_root("Parent".to_string()).unwrap();
+    /// // In practice, you'd add real children here.
+    /// ```
     pub fn reorder_children(&mut self, ordered_ids: Vec<CardId>) -> Result<(), DomainError> {
         if ordered_ids.len() != self.children_ids.len() {
             return Err(DomainError::InvalidOperation(
@@ -103,6 +170,16 @@ impl Card {
         Ok(())
     }
 
+    /// Adds a new note page to the card.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use kanban_planner::domain::card::Card;
+    ///
+    /// let mut card = Card::new_root("Task".to_string()).unwrap();
+    /// let note_id = card.add_note_page("Project Notes".to_string()).unwrap();
+    /// ```
     pub fn add_note_page(&mut self, title: String) -> Result<NotePageId, DomainError> {
         let note = NotePage::new(title)?;
         let id = note.id();
@@ -110,6 +187,7 @@ impl Card {
         Ok(id)
     }
 
+    /// Renames a note page on this card.
     pub fn rename_note_page(&mut self, id: NotePageId, title: String) -> Result<(), DomainError> {
         let note = self
             .notes
@@ -119,6 +197,7 @@ impl Card {
         note.rename(title)
     }
 
+    /// Saves the body content of a note page.
     pub fn save_note_page_body(&mut self, id: NotePageId, body: String) -> Result<(), DomainError> {
         let note = self
             .notes
@@ -129,6 +208,7 @@ impl Card {
         Ok(())
     }
 
+    /// Deletes a note page from this card.
     pub fn delete_note_page(&mut self, id: NotePageId) -> Result<(), DomainError> {
         let original_len = self.notes.len();
         self.notes.retain(|note| note.id() != id);
@@ -140,6 +220,18 @@ impl Card {
         Ok(())
     }
 
+    /// Sets or clears the due date of the card.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use kanban_planner::domain::card::Card;
+    /// use kanban_planner::domain::due_date::DueDate;
+    ///
+    /// let mut card = Card::new_root("Task".to_string()).unwrap();
+    /// let due = DueDate::parse("2023-12-31").unwrap();
+    /// card.set_due_date(Some(due));
+    /// ```
     pub fn set_due_date(&mut self, due_date: Option<DueDate>) {
         self.due_date = due_date;
     }

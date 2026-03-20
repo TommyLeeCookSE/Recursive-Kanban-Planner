@@ -1,3 +1,10 @@
+//! Web-specific utility components for workspace management.
+//!
+//! This module provides buttons and logic for exporting, importing, and
+//! clearing the card registry, primarily leveraging browser APIs (via `web-sys`).
+//!
+//! For more on Rust's module system and documentation, see `docs/rust-for-python-devs.md`.
+
 use crate::domain::registry::CardRegistry;
 #[cfg(target_arch = "wasm32")]
 use crate::infrastructure::repository::{AppPersistence, JsonRepository};
@@ -19,6 +26,17 @@ use wasm_bindgen::closure::Closure;
 #[cfg(target_arch = "wasm32")]
 use web_sys::{Blob, HtmlAnchorElement, HtmlInputElement, Url};
 
+/// Renders a button that triggers a JSON export of the current registry.
+///
+/// In non-WASM targets, this renders a disabled placeholder.
+///
+/// # Examples
+///
+/// ```ignore
+/// rsx! {
+///     render_export_button(registry, persistence_warning)
+/// }
+/// ```
 pub fn render_export_button(
     registry: Signal<CardRegistry>,
     persistence_warning: Signal<Option<String>>,
@@ -52,6 +70,17 @@ pub fn render_export_button(
     }
 }
 
+/// Renders a button that opens a file picker to import a JSON registry.
+///
+/// In non-WASM targets, this renders a disabled placeholder.
+///
+/// # Examples
+///
+/// ```ignore
+/// rsx! {
+///     render_import_button(registry, active_modal, persistence_warning, nav)
+/// }
+/// ```
 pub fn render_import_button(
     registry: Signal<CardRegistry>,
     active_modal: Signal<Option<ModalType>>,
@@ -89,6 +118,17 @@ pub fn render_import_button(
     }
 }
 
+/// Renders a button that clears the local cache and resets the registry.
+///
+/// In non-WASM targets, this renders a disabled placeholder.
+///
+/// # Examples
+///
+/// ```ignore
+/// rsx! {
+///     render_clear_cache_button(registry, active_modal, persistence_warning, nav)
+/// }
+/// ```
 pub fn render_clear_cache_button(
     registry: Signal<CardRegistry>,
     active_modal: Signal<Option<ModalType>>,

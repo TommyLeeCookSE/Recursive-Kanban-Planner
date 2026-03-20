@@ -573,6 +573,40 @@ button,
   font: inherit;
 }
 
+.container {
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .container {
+    max-width: 640px;
+  }
+}
+
+@media (min-width: 768px) {
+  .container {
+    max-width: 768px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .container {
+    max-width: 1024px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .container {
+    max-width: 1280px;
+  }
+}
+
+@media (min-width: 1536px) {
+  .container {
+    max-width: 1536px;
+  }
+}
+
 .app-shell {
   position: relative;
   min-height: 100vh;
@@ -2745,6 +2779,10 @@ button,
   display: block;
 }
 
+.inline {
+  display: inline;
+}
+
 .flex {
   display: flex;
 }
@@ -2767,10 +2805,6 @@ button,
 
 .h-14 {
   height: 3.5rem;
-}
-
-.h-4 {
-  height: 1rem;
 }
 
 .h-5 {

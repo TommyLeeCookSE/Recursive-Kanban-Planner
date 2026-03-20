@@ -1,3 +1,11 @@
+//! Persistence and serialization logic for the Kanban Planner.
+//!
+//! This module provides the repository patterns for storing the registry as JSON
+//! in browser `localStorage` or other future backends.
+//!
+//! For a conceptual overview of the repository pattern in this project, see
+//! `docs/rust-for-python-devs.md`.
+
 use crate::domain::error::DomainError;
 use crate::domain::registry::CardRegistry;
 use crate::infrastructure::logging::record_diagnostic;
@@ -13,9 +21,34 @@ struct PersistedRegistry {
     registry: CardRegistry,
 }
 
+/// A repository for serializing and deserializing the card registry to and from JSON.
+///
+/// # Examples
+///
+/// ```rust
+/// use kanban_planner::domain::registry::CardRegistry;
+/// use kanban_planner::infrastructure::repository::JsonRepository;
+///
+/// let registry = CardRegistry::new();
+/// let json = JsonRepository::serialize_registry(&registry).unwrap();
+/// let deserialized = JsonRepository::deserialize_registry(&json).unwrap();
+/// assert_eq!(registry, deserialized);
+/// ```
 pub struct JsonRepository;
 
 impl JsonRepository {
+    /// Serializes the given registry into a pretty-printed JSON string.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use kanban_planner::domain::registry::CardRegistry;
+    /// use kanban_planner::infrastructure::repository::JsonRepository;
+    ///
+    /// let registry = CardRegistry::new();
+    /// let json = JsonRepository::serialize_registry(&registry).unwrap();
+    /// assert!(json.contains("schema_version"));
+    /// ```
     pub fn serialize_registry(registry: &CardRegistry) -> Result<String, DomainError> {
         let workspace_child_count = registry.workspace_child_count();
         info!(workspace_child_count, "Serializing registry to JSON");
@@ -42,6 +75,19 @@ impl JsonRepository {
         })
     }
 
+    /// Deserializes a registry from a JSON string.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use kanban_planner::domain::registry::CardRegistry;
+    /// use kanban_planner::infrastructure::repository::JsonRepository;
+    ///
+    /// let registry = CardRegistry::new();
+    /// let json = JsonRepository::serialize_registry(&registry).unwrap();
+    /// let deserialized = JsonRepository::deserialize_registry(&json).unwrap();
+    /// assert_eq!(registry, deserialized);
+    /// ```
     pub fn deserialize_registry(json: &str) -> Result<CardRegistry, DomainError> {
         let payload_bytes = json.len();
         info!(payload_bytes, "Deserializing registry from JSON");
@@ -110,11 +156,35 @@ impl JsonRepository {
     }
 }
 
+/// A repository for storing the registry in the browser's `localStorage`.
+///
+/// # Examples
+///
+/// ```ignore
+/// use kanban_planner::domain::registry::CardRegistry;
+/// use kanban_planner::infrastructure::repository::LocalStorageRepository;
+///
+/// let registry = CardRegistry::new();
+/// LocalStorageRepository::save_to_local_storage(&registry).unwrap();
+/// let loaded = LocalStorageRepository::load_from_local_storage().unwrap().unwrap();
+/// assert_eq!(registry, loaded);
+/// ```
 pub struct LocalStorageRepository;
 
 impl LocalStorageRepository {
     const STORAGE_KEY: &'static str = "kanban_planner_state";
 
+    /// Saves the registry to the browser's `localStorage`.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use kanban_planner::domain::registry::CardRegistry;
+    /// use kanban_planner::infrastructure::repository::LocalStorageRepository;
+    ///
+    /// let registry = CardRegistry::new();
+    /// LocalStorageRepository::save_to_local_storage(&registry).unwrap();
+    /// ```
     pub fn save_to_local_storage(registry: &CardRegistry) -> Result<(), DomainError> {
         info!(
             storage_key = Self::STORAGE_KEY,
@@ -145,6 +215,17 @@ impl LocalStorageRepository {
         Ok(())
     }
 
+    /// Loads the registry from the browser's `localStorage`.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use kanban_planner::infrastructure::repository::LocalStorageRepository;
+    ///
+    /// if let Some(registry) = LocalStorageRepository::load_from_local_storage().unwrap() {
+    ///     println!("Loaded registry with {} children", registry.workspace_child_count());
+    /// }
+    /// ```
     pub fn load_from_local_storage() -> Result<Option<CardRegistry>, DomainError> {
         info!(
             storage_key = Self::STORAGE_KEY,
@@ -182,6 +263,15 @@ impl LocalStorageRepository {
         }
     }
 
+    /// Clears the registry from the browser's `localStorage`.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use kanban_planner::infrastructure::repository::LocalStorageRepository;
+    ///
+    /// LocalStorageRepository::clear_local_storage().unwrap();
+    /// ```
     pub fn clear_local_storage() -> Result<(), DomainError> {
         info!(
             storage_key = Self::STORAGE_KEY,
@@ -210,9 +300,33 @@ impl LocalStorageRepository {
     }
 }
 
+/// A facade for cross-platform persistence.
+///
+/// # Examples
+///
+/// ```ignore
+/// use kanban_planner::domain::registry::CardRegistry;
+/// use kanban_planner::infrastructure::repository::AppPersistence;
+///
+/// let registry = CardRegistry::new();
+/// AppPersistence::save_registry(&registry).unwrap();
+/// let loaded = AppPersistence::load_registry().unwrap().unwrap();
+/// assert_eq!(registry, loaded);
+/// ```
 pub struct AppPersistence;
 
 impl AppPersistence {
+    /// Loads the registry from the current platform's persistent storage.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use kanban_planner::infrastructure::repository::AppPersistence;
+    ///
+    /// if let Some(registry) = AppPersistence::load_registry().unwrap() {
+    ///     println!("Loaded registry");
+    /// }
+    /// ```
     #[cfg(target_arch = "wasm32")]
     pub fn load_registry() -> Result<Option<CardRegistry>, DomainError> {
         info!(
@@ -222,6 +336,17 @@ impl AppPersistence {
         LocalStorageRepository::load_from_local_storage()
     }
 
+    /// Loads the registry from the current platform's persistent storage.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use kanban_planner::infrastructure::repository::AppPersistence;
+    ///
+    /// if let Some(registry) = AppPersistence::load_registry().unwrap() {
+    ///     println!("Loaded registry");
+    /// }
+    /// ```
     #[cfg(not(target_arch = "wasm32"))]
     pub fn load_registry() -> Result<Option<CardRegistry>, DomainError> {
         let error = DomainError::InvalidOperation(
@@ -236,6 +361,17 @@ impl AppPersistence {
         Err(error)
     }
 
+    /// Saves the registry to the current platform's persistent storage.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use kanban_planner::domain::registry::CardRegistry;
+    /// use kanban_planner::infrastructure::repository::AppPersistence;
+    ///
+    /// let registry = CardRegistry::new();
+    /// AppPersistence::save_registry(&registry).unwrap();
+    /// ```
     #[cfg(target_arch = "wasm32")]
     pub fn save_registry(registry: &CardRegistry) -> Result<(), DomainError> {
         info!(
@@ -246,6 +382,15 @@ impl AppPersistence {
         LocalStorageRepository::save_to_local_storage(registry)
     }
 
+    /// Clears the registry from the current platform's persistent storage.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use kanban_planner::infrastructure::repository::AppPersistence;
+    ///
+    /// AppPersistence::clear_registry().unwrap();
+    /// ```
     #[cfg(target_arch = "wasm32")]
     pub fn clear_registry() -> Result<(), DomainError> {
         info!(
@@ -255,6 +400,17 @@ impl AppPersistence {
         LocalStorageRepository::clear_local_storage()
     }
 
+    /// Saves the registry to the current platform's persistent storage.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use kanban_planner::domain::registry::CardRegistry;
+    /// use kanban_planner::infrastructure::repository::AppPersistence;
+    ///
+    /// let registry = CardRegistry::new();
+    /// AppPersistence::save_registry(&registry).unwrap();
+    /// ```
     #[cfg(not(target_arch = "wasm32"))]
     pub fn save_registry(_registry: &CardRegistry) -> Result<(), DomainError> {
         let error = DomainError::InvalidOperation(
@@ -269,6 +425,15 @@ impl AppPersistence {
         Err(error)
     }
 
+    /// Clears the registry from the current platform's persistent storage.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use kanban_planner::infrastructure::repository::AppPersistence;
+    ///
+    /// AppPersistence::clear_registry().unwrap();
+    /// ```
     #[cfg(not(target_arch = "wasm32"))]
     pub fn clear_registry() -> Result<(), DomainError> {
         let error = DomainError::InvalidOperation(

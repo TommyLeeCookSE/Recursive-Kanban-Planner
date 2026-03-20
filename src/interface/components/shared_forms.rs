@@ -1,9 +1,25 @@
+//! Reusable form components and utility functions for the interface.
+//!
+//! This module includes small-scale UI elements like error displays,
+//! checkboxes, and data-transformation helpers for cards.
+//!
+//! For more on Rust's module system and documentation, see `docs/rust-for-python-devs.md`.
+
 use crate::application::Command;
 use crate::domain::due_date::DueDate;
 use crate::domain::error::DomainError;
 use crate::domain::id::CardId;
 use dioxus::prelude::*;
 
+/// Renders a small, inline error message, typically within a form or modal.
+///
+/// # Examples
+///
+/// ```ignore
+/// rsx! {
+///     inline_error("Invalid title".to_string())
+/// }
+/// ```
 pub fn inline_error(message: String) -> Element {
     rsx! {
         p { class: "app-inline-error app-inline-error--danger",
@@ -12,6 +28,22 @@ pub fn inline_error(message: String) -> Element {
     }
 }
 
+/// A labeled section that contains children and an action button.
+///
+/// Commonly used for grouping options in forms or modals.
+///
+/// # Examples
+///
+/// ```ignore
+/// rsx! {
+///     SelectorSection {
+///         title: "Children".to_string(),
+///         action_label: "Add".to_string(),
+///         on_action: move |_| println!("Action clicked"),
+///         p { "The list of children" }
+///     }
+/// }
+/// ```
 #[component]
 pub fn SelectorSection(
     title: String,
@@ -40,6 +72,19 @@ pub fn SelectorSection(
     }
 }
 
+/// A row containing a checkbox and a label.
+///
+/// # Examples
+///
+/// ```ignore
+/// rsx! {
+///     CheckboxOptionRow {
+///         label_text: "My Option".to_string(),
+///         checked: true,
+///         on_toggle: move |_| println!("Toggled")
+///     }
+/// }
+/// ```
 #[component]
 pub fn CheckboxOptionRow(
     label_text: String,
@@ -58,10 +103,32 @@ pub fn CheckboxOptionRow(
     }
 }
 
+/// Returns a user-friendly string representation of a domain error.
+///
+/// # Examples
+///
+/// ```
+/// use kanban_planner::domain::error::DomainError;
+/// use kanban_planner::interface::components::shared_forms::user_message_for_command_error;
+///
+/// let error = DomainError::InvalidOperation("Failed".to_string());
+/// assert_eq!(user_message_for_command_error(&error), "Invalid operation: Failed");
+/// ```
 pub fn user_message_for_command_error(error: &DomainError) -> String {
     error.to_string()
 }
 
+/// Displays a browser confirmation dialog for destructive actions.
+///
+/// Only functional in WASM targets; returns `true` automatically elsewhere.
+///
+/// # Examples
+///
+/// ```ignore
+/// if confirm_destructive_action("Are you sure?") {
+///     // delete something
+/// }
+/// ```
 pub fn confirm_destructive_action(message: &str) -> bool {
     #[cfg(target_arch = "wasm32")]
     {
@@ -77,6 +144,15 @@ pub fn confirm_destructive_action(message: &str) -> bool {
     }
 }
 
+/// Toggles an ID's presence in a vector signal.
+///
+/// # Examples
+///
+/// ```ignore
+/// let mut signal = use_signal(|| vec![1, 2, 3]);
+/// toggle_id(&mut signal, 2);
+/// // signal is now [1, 3]
+/// ```
 pub fn toggle_id<T>(signal: &mut Signal<Vec<T>>, id: T)
 where
     T: Copy + Eq + 'static,
@@ -90,6 +166,15 @@ where
     signal.set(values);
 }
 
+/// Utility for building a `Command` for card creation based on optional parent ID.
+///
+/// # Examples
+///
+/// ```
+/// use kanban_planner::interface::components::shared_forms::build_create_card_command;
+///
+/// let cmd = build_create_card_command("My Title".to_string(), None).unwrap();
+/// ```
 pub fn build_create_card_command(
     title: String,
     parent_id: Option<CardId>,
@@ -100,6 +185,18 @@ pub fn build_create_card_command(
     }
 }
 
+/// Provides a formatted string for a `DueDate`, or an empty string if it's `None`.
+///
+/// # Examples
+///
+/// ```
+/// use kanban_planner::domain::due_date::DueDate;
+/// use kanban_planner::interface::components::shared_forms::due_date_string;
+///
+/// let due = DueDate::parse("2023-12-31").unwrap();
+/// assert_eq!(due_date_string(Some(&due)), "2023-12-31");
+/// assert_eq!(due_date_string(None), "");
+/// ```
 pub fn due_date_string(due_date: Option<&DueDate>) -> String {
     due_date.map(|due| due.to_string()).unwrap_or_default()
 }

@@ -1,3 +1,11 @@
+//! The home route (root workspace).
+//!
+//! This module renders the workspace view, which is the root of the card
+//! hierarchy.
+//!
+//! For an overview of the routing structure, see
+//! `docs/rust-for-python-devs.md`.
+
 use crate::domain::registry::CardRegistry;
 use crate::infrastructure::logging::record_diagnostic;
 use crate::interface::app::{DraggedItemKind, IsDragging};
@@ -9,6 +17,15 @@ use crate::interface::routes::board_screen::load_workspace_screen_data;
 use dioxus::prelude::*;
 use tracing::{Level, error};
 
+/// The home route component representing the root workspace.
+///
+/// # Examples
+///
+/// ```ignore
+/// rsx! {
+///     Home {}
+/// }
+/// ```
 #[component]
 pub fn Home() -> Element {
     let registry = use_context::<Signal<CardRegistry>>();

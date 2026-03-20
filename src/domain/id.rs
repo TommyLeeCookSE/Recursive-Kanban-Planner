@@ -45,6 +45,15 @@ impl CardId {
 }
 
 impl Default for CardId {
+    /// Creates a new `CardId` with the default generation strategy (current time).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use kanban_planner::domain::id::CardId;
+    ///
+    /// let id = CardId::default();
+    /// ```
     fn default() -> Self {
         Self::new()
     }
@@ -65,16 +74,43 @@ impl FromStr for CardId {
 }
 
 /// Unique identifier for a note page stored on a card.
+///
+/// # Examples
+///
+/// ```
+/// use kanban_planner::domain::id::NotePageId;
+///
+/// let id = NotePageId::new();
+/// println!("Generated Note Page ID: {}", id);
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct NotePageId(Ulid);
 
 impl NotePageId {
+    /// Generates a new unique NotePageId using the current time.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use kanban_planner::domain::id::NotePageId;
+    ///
+    /// let id = NotePageId::new();
+    /// ```
     pub fn new() -> Self {
         Self(Ulid::new())
     }
 }
 
 impl Default for NotePageId {
+    /// Creates a new `NotePageId` with the default generation strategy (current time).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use kanban_planner::domain::id::NotePageId;
+    ///
+    /// let id = NotePageId::default();
+    /// ```
     fn default() -> Self {
         Self::new()
     }

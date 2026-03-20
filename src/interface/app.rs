@@ -1,3 +1,11 @@
+//! The root application shell and global state management.
+//!
+//! This module coordinates the high-level application lifecycle, including
+//! theme management, persistence synchronization, and modal orchestration.
+//!
+//! For an overview of how the app shell is structured, see
+//! `docs/rust-for-python-devs.md`.
+
 mod bootstrap;
 mod modal_dispatch;
 
@@ -7,12 +15,42 @@ use crate::interface::app::modal_dispatch::render_modal_overlay;
 use crate::interface::components::modal::ModalType;
 use dioxus::prelude::*;
 
+/// A wrapper for the application's dark mode preference.
+///
+/// # Examples
+///
+/// ```rust
+/// use kanban_planner::interface::app::IsDark;
+///
+/// let preference = IsDark(true);
+/// assert!(preference.0);
+/// ```
 #[derive(Clone, Copy, Default)]
 pub struct IsDark(pub bool);
 
+/// A wrapper for the global drag-and-drop state.
+///
+/// # Examples
+///
+/// ```rust
+/// use kanban_planner::interface::app::IsDragging;
+///
+/// let state = IsDragging(false);
+/// assert!(!state.0);
+/// ```
 #[derive(Clone, Copy, Default)]
 pub struct IsDragging(pub bool);
 
+/// The kind of item being dragged in the UI.
+///
+/// # Examples
+///
+/// ```rust
+/// use kanban_planner::interface::app::DraggedItemKind;
+///
+/// let kind = DraggedItemKind::Card;
+/// assert!(matches!(kind, DraggedItemKind::Card));
+/// ```
 #[derive(Clone, Copy, Default, PartialEq, Eq)]
 pub enum DraggedItemKind {
     #[default]

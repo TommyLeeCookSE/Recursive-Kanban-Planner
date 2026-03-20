@@ -1,3 +1,11 @@
+//! User interface actions and common command handlers.
+//!
+//! This module provides the bridge between UI events (clicks, drag-and-drop)
+//! and the application command layer.
+//!
+//! For a trace of how a UI action becomes a domain mutation, see
+//! `docs/rust-for-python-devs.md`.
+
 use crate::application::{Command, execute};
 use crate::domain::error::DomainError;
 use crate::domain::id::CardId;
@@ -14,6 +22,16 @@ use tracing::{Level, info, warn};
 use wasm_bindgen::{JsCast, JsValue, closure::Closure};
 
 /// Executes a UI-originated command and routes failures to diagnostics plus the warning banner.
+///
+/// # Examples
+///
+/// ```ignore
+/// use kanban_planner::application::Command;
+/// use kanban_planner::interface::actions::execute_command_with_feedback;
+///
+/// let command = Command::RenameCard { id, title: "New Title".into() };
+/// execute_command_with_feedback(command, registry, warning, "rename", "Renaming card");
+/// ```
 pub fn execute_command_with_feedback(
     command: Command,
     mut registry: Signal<CardRegistry>,
@@ -31,6 +49,14 @@ pub fn execute_command_with_feedback(
 }
 
 /// Deletes a card through the command layer and surfaces failures consistently.
+///
+/// # Examples
+///
+/// ```ignore
+/// use kanban_planner::interface::actions::delete_card_with_feedback;
+///
+/// delete_card_with_feedback(card_id, registry, warning, "delete", "Deleting card");
+/// ```
 pub fn delete_card_with_feedback(
     id: CardId,
     registry: Signal<CardRegistry>,
@@ -51,6 +77,16 @@ pub fn delete_card_with_feedback(
 }
 
 /// Runs a UI mutation inside the browser view-transition API when available.
+///
+/// # Examples
+///
+/// ```ignore
+/// use kanban_planner::interface::actions::run_with_view_transition;
+///
+/// run_with_view_transition(move || {
+///     show_modal.set(None);
+/// });
+/// ```
 pub fn run_with_view_transition<F>(callback: F)
 where
     F: FnOnce() + 'static,
@@ -95,6 +131,16 @@ where
 }
 
 /// Reorders a list by moving one item to a target index after removing the dragged item.
+///
+/// # Examples
+///
+/// ```rust
+/// use kanban_planner::interface::actions::reorder_ids;
+///
+/// let original = vec![1, 2, 3];
+/// let reordered = reorder_ids(&original, 3, 0);
+/// assert_eq!(reordered, vec![3, 1, 2]);
+/// ```
 pub fn reorder_ids<T>(ordered_ids: &[T], dragged_id: T, target_index: usize) -> Vec<T>
 where
     T: Copy + Eq,
@@ -110,6 +156,14 @@ where
 }
 
 /// Shared context for logging and surfacing reorder operations.
+///
+/// # Examples
+///
+/// ```ignore
+/// use kanban_planner::interface::actions::ReorderFeedbackContext;
+///
+/// let context = ReorderFeedbackContext::new(registry, warning, "board", "Reordering cards");
+/// ```
 #[derive(Clone)]
 pub struct ReorderFeedbackContext {
     pub registry: Signal<CardRegistry>,
@@ -119,6 +173,15 @@ pub struct ReorderFeedbackContext {
 }
 
 impl ReorderFeedbackContext {
+    /// Creates a new reorder feedback context.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use kanban_planner::interface::actions::ReorderFeedbackContext;
+    ///
+    /// let context = ReorderFeedbackContext::new(registry, warning, "board", "Reordering cards");
+    /// ```
     pub fn new(
         registry: Signal<CardRegistry>,
         warning_message: Signal<Option<String>>,
@@ -135,6 +198,16 @@ impl ReorderFeedbackContext {
 }
 
 /// Reorders a collection and executes the derived command only when the order actually changes.
+///
+/// # Examples
+///
+/// ```ignore
+/// use kanban_planner::interface::actions::execute_reorder_with_feedback;
+///
+/// execute_reorder_with_feedback(&ids, dragged_id, index, context, |new_ids| {
+///     Command::ReorderChildCards { parent_id, child_ids: new_ids }
+/// });
+/// ```
 pub fn execute_reorder_with_feedback<T, F>(
     ordered_ids: &[T],
     dragged_id: T,
@@ -174,6 +247,15 @@ where
 }
 
 /// Surfaces a command result through tracing, in-memory diagnostics, and the warning banner.
+///
+/// # Examples
+///
+/// ```ignore
+/// use kanban_planner::interface::actions::report_result;
+///
+/// let result = registry.write().rename_card(id, title);
+/// report_result(result, warning, "rename", "Renaming card");
+/// ```
 pub fn report_result(
     result: Result<(), DomainError>,
     mut warning_message: Signal<Option<String>>,
@@ -202,6 +284,14 @@ pub fn report_result(
 }
 
 /// Prepares a browser drag session with a concrete payload and explicit move semantics.
+///
+/// # Examples
+///
+/// ```ignore
+/// use kanban_planner::interface::actions::prime_drag_session;
+///
+/// prime_drag_session(&event, "board", format!("card:{}", id), DraggedItemKind::Card, kind, active);
+/// ```
 pub fn prime_drag_session(
     event: &DragEvent,
     log_target: &'static str,
@@ -248,11 +338,30 @@ pub fn prime_drag_session(
 }
 
 /// Keeps the browser drag interaction in explicit move mode while a target is hovered.
+///
+/// # Examples
+///
+/// ```ignore
+/// use kanban_planner::interface::actions::prime_drop_target;
+///
+/// prime_drop_target(&event);
+/// ```
 pub fn prime_drop_target(event: &DragEvent) {
     event.prevent_default();
     event.data().data_transfer().set_drop_effect("move");
 }
 
+/// Extracts a card ID from a browser drag event payload.
+///
+/// # Examples
+///
+/// ```ignore
+/// use kanban_planner::interface::actions::dragged_card_id;
+///
+/// if let Some(id) = dragged_card_id(&event, "board") {
+///     println!("Dragged card {}", id);
+/// }
+/// ```
 pub fn dragged_card_id(event: &DragEvent, log_target: &'static str) -> Option<CardId> {
     let payload = read_drag_payload(event, log_target)?;
     let raw_id = payload.strip_prefix("card:")?.split(':').next()?;
