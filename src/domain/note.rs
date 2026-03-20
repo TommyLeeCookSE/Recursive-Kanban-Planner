@@ -1,5 +1,6 @@
 use crate::domain::error::DomainError;
 use crate::domain::id::NotePageId;
+use crate::domain::title::normalize_non_empty_title;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -11,16 +12,11 @@ pub struct NotePage {
 
 impl NotePage {
     pub fn new(title: String) -> Result<Self, DomainError> {
-        let trimmed = title.trim();
-        if trimmed.is_empty() {
-            return Err(DomainError::InvalidOperation(
-                "Note page title cannot be empty or blank".to_string(),
-            ));
-        }
+        let title = normalize_non_empty_title(title)?;
 
         Ok(Self {
             id: NotePageId::new(),
-            title: trimmed.to_string(),
+            title,
             body: String::new(),
         })
     }
@@ -38,13 +34,7 @@ impl NotePage {
     }
 
     pub fn rename(&mut self, title: String) -> Result<(), DomainError> {
-        let trimmed = title.trim();
-        if trimmed.is_empty() {
-            return Err(DomainError::InvalidOperation(
-                "Note page title cannot be empty or blank".to_string(),
-            ));
-        }
-        self.title = trimmed.to_string();
+        self.title = normalize_non_empty_title(title)?;
         Ok(())
     }
 
@@ -61,7 +51,7 @@ mod tests {
     fn note_page_rejects_blank_title() {
         assert!(matches!(
             NotePage::new("  ".to_string()),
-            Err(DomainError::InvalidOperation(_))
+            Err(DomainError::EmptyTitle)
         ));
     }
 }

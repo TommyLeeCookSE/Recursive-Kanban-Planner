@@ -2,7 +2,9 @@ use crate::domain::card::Card;
 use crate::domain::due_date::DueDate;
 use crate::domain::error::DomainError;
 use crate::domain::id::{CardId, NotePageId};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
+mod traversal;
+mod validation;
 
 use serde::{Deserialize, Serialize};
 
@@ -80,103 +82,7 @@ impl CardRegistry {
     }
 
     pub fn validate(&self) -> Result<(), DomainError> {
-        let mut referenced_children = HashSet::new();
-        let mut top_level_cards = HashSet::new();
-
-        for (card_id, card) in &self.store {
-            if card.id() != *card_id {
-                return Err(corrupt_state(format!(
-                    "Registry key {card_id} does not match card id {}",
-                    card.id()
-                )));
-            }
-
-            if card.title().trim().is_empty() {
-                return Err(corrupt_state(format!(
-                    "Card {card_id} has a blank title in persisted state"
-                )));
-            }
-
-            validate_note_pages(card)?;
-
-            if let Some(parent_id) = card.parent_id() {
-                let parent = self.store.get(&parent_id).ok_or_else(|| {
-                    corrupt_state(format!(
-                        "Card {card_id} references missing parent {parent_id}"
-                    ))
-                })?;
-
-                if !parent.children_ids().contains(card_id) {
-                    return Err(corrupt_state(format!(
-                        "Parent {parent_id} is missing child reference to {card_id}"
-                    )));
-                }
-            }
-
-            let mut local_children = HashSet::new();
-            for child_id in card.children_ids() {
-                if *child_id == *card_id {
-                    return Err(corrupt_state(format!(
-                        "Card {card_id} cannot reference itself as a child"
-                    )));
-                }
-
-                if !local_children.insert(*child_id) {
-                    return Err(corrupt_state(format!(
-                        "Card {card_id} contains duplicate child reference {child_id}"
-                    )));
-                }
-
-                if !referenced_children.insert(*child_id) {
-                    return Err(corrupt_state(format!(
-                        "Child card {child_id} is referenced by more than one parent"
-                    )));
-                }
-
-                let child = self.store.get(child_id).ok_or_else(|| {
-                    corrupt_state(format!(
-                        "Card {card_id} references missing child {child_id}"
-                    ))
-                })?;
-
-                if child.parent_id() != Some(*card_id) {
-                    return Err(corrupt_state(format!(
-                        "Child {child_id} does not point back to parent {card_id}"
-                    )));
-                }
-            }
-
-            validate_parent_chain(self, *card_id)?;
-        }
-
-        for (card_id, card) in &self.store {
-            match card.parent_id() {
-                None => {
-                    top_level_cards.insert(*card_id);
-                    if referenced_children.contains(card_id) {
-                        return Err(corrupt_state(format!(
-                            "Workspace card {card_id} must not be referenced as a child"
-                        )));
-                    }
-                }
-                Some(_) => {
-                    if !referenced_children.contains(card_id) {
-                        return Err(corrupt_state(format!(
-                            "Non-workspace card {card_id} is not referenced by its parent"
-                        )));
-                    }
-                }
-            }
-        }
-
-        if top_level_cards.len() != 1 {
-            return Err(corrupt_state(format!(
-                "Registry must contain exactly one workspace card, found {}",
-                top_level_cards.len()
-            )));
-        }
-
-        Ok(())
+        validation::validate_registry(self)
     }
 
     pub fn create_workspace_child_card(&mut self, title: String) -> Result<CardId, DomainError> {
@@ -257,17 +163,33 @@ impl CardRegistry {
         self.get_card_mut(parent_id)?.reorder_children(ordered_ids)
     }
 
-    fn detect_cycle(&self, card_id: CardId, proposed_parent_id: CardId) -> Result<(), DomainError> {
-        let mut current_ancestor_id = Some(proposed_parent_id);
-        while let Some(ancestor_id) = current_ancestor_id {
-            if ancestor_id == card_id {
-                return Err(DomainError::CycleDetected);
-            }
-
-            current_ancestor_id = self.get_card(ancestor_id)?.parent_id();
+    pub fn drop_child_at_position(
+        &mut self,
+        parent_id: CardId,
+        card_id: CardId,
+        target_index: usize,
+    ) -> Result<(), DomainError> {
+        let parent = self.get_card(parent_id)?;
+        if !parent.children_ids().contains(&card_id) {
+            return Err(DomainError::InvalidOperation(format!(
+                "Card {card_id} is not a child of parent {parent_id}"
+            )));
         }
 
-        Ok(())
+        let mut reordered_children: Vec<CardId> = parent
+            .children_ids()
+            .iter()
+            .copied()
+            .filter(|child_id| *child_id != card_id)
+            .collect();
+        let insertion_index = target_index.min(reordered_children.len());
+        reordered_children.insert(insertion_index, card_id);
+
+        self.reorder_children(parent_id, reordered_children)
+    }
+
+    fn detect_cycle(&self, card_id: CardId, proposed_parent_id: CardId) -> Result<(), DomainError> {
+        traversal::detect_cycle(self, card_id, proposed_parent_id)
     }
 
     pub fn reparent_card(
@@ -344,55 +266,7 @@ impl CardRegistry {
     }
 }
 
-fn validate_note_pages(card: &Card) -> Result<(), DomainError> {
-    let mut ids = HashSet::new();
-    for note in card.notes() {
-        if note.title().trim().is_empty() {
-            return Err(corrupt_state(format!(
-                "Card {} contains a note page with a blank title",
-                card.id()
-            )));
-        }
-
-        if !ids.insert(note.id()) {
-            return Err(corrupt_state(format!(
-                "Card {} contains duplicate note page id {}",
-                card.id(),
-                note.id()
-            )));
-        }
-    }
-    Ok(())
-}
-
-fn validate_parent_chain(registry: &CardRegistry, card_id: CardId) -> Result<(), DomainError> {
-    let mut current_parent = registry
-        .store
-        .get(&card_id)
-        .ok_or_else(|| corrupt_state(format!("Card {card_id} is missing from the registry")))?
-        .parent_id();
-    let mut seen = HashSet::new();
-
-    while let Some(parent_id) = current_parent {
-        if !seen.insert(parent_id) {
-            return Err(corrupt_state(format!(
-                "Card {card_id} participates in a parent cycle involving {parent_id}"
-            )));
-        }
-
-        let parent = registry.store.get(&parent_id).ok_or_else(|| {
-            corrupt_state(format!(
-                "Card {card_id} references missing ancestor {parent_id}"
-            ))
-        })?;
-
-        current_parent = parent.parent_id();
-    }
-
-    Ok(())
-}
-
-fn corrupt_state(message: impl Into<String>) -> DomainError {
+pub(super) fn corrupt_state(message: impl Into<String>) -> DomainError {
     DomainError::InvalidOperation(message.into())
 }
 
@@ -443,6 +317,78 @@ mod tests {
             .map(|card| card.id())
             .collect();
         assert_eq!(children, vec![second, first]);
+    }
+
+    #[test]
+    fn test_drop_child_at_position_reorders_existing_child() {
+        let mut registry = CardRegistry::new();
+        let workspace_id = registry.workspace_card_id().unwrap();
+        let first = registry
+            .create_child_card("First".into(), workspace_id)
+            .unwrap();
+        let second = registry
+            .create_child_card("Second".into(), workspace_id)
+            .unwrap();
+        let third = registry
+            .create_child_card("Third".into(), workspace_id)
+            .unwrap();
+
+        registry
+            .drop_child_at_position(workspace_id, third, 0)
+            .unwrap();
+
+        let children: Vec<CardId> = registry
+            .get_children(workspace_id)
+            .unwrap()
+            .iter()
+            .map(|card| card.id())
+            .collect();
+        assert_eq!(children, vec![third, first, second]);
+    }
+
+    #[test]
+    fn test_drop_child_at_position_rejects_non_child_card() {
+        let mut registry = CardRegistry::new();
+        let workspace_id = registry.workspace_card_id().unwrap();
+        let project_id = registry
+            .create_child_card("Project".into(), workspace_id)
+            .unwrap();
+        let task_id = registry
+            .create_child_card("Task".into(), project_id)
+            .unwrap();
+
+        assert!(matches!(
+            registry.drop_child_at_position(workspace_id, task_id, 0),
+            Err(DomainError::InvalidOperation(message))
+                if message.contains("is not a child of parent")
+        ));
+    }
+
+    #[test]
+    fn test_drop_child_at_position_clamps_target_index_to_end() {
+        let mut registry = CardRegistry::new();
+        let workspace_id = registry.workspace_card_id().unwrap();
+        let first = registry
+            .create_child_card("First".into(), workspace_id)
+            .unwrap();
+        let second = registry
+            .create_child_card("Second".into(), workspace_id)
+            .unwrap();
+        let third = registry
+            .create_child_card("Third".into(), workspace_id)
+            .unwrap();
+
+        registry
+            .drop_child_at_position(workspace_id, first, usize::MAX)
+            .unwrap();
+
+        let children: Vec<CardId> = registry
+            .get_children(workspace_id)
+            .unwrap()
+            .iter()
+            .map(|card| card.id())
+            .collect();
+        assert_eq!(children, vec![second, third, first]);
     }
 
     #[test]

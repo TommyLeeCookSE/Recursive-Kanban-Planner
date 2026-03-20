@@ -1,10 +1,11 @@
-use crate::domain::registry::CardRegistry;
-use crate::infrastructure::logging::record_diagnostic;
-use crate::infrastructure::repository::AppPersistence;
+mod bootstrap;
+mod modal_dispatch;
+
 use crate::interface::Route;
-use crate::interface::components::modal::{CardModal, EditCardModal, ModalType, NotesModal};
+use crate::interface::app::bootstrap::{initialize_registry_signal, persist_registry_snapshot};
+use crate::interface::app::modal_dispatch::render_modal_overlay;
+use crate::interface::components::modal::ModalType;
 use dioxus::prelude::*;
-use tracing::{Level, info, warn};
 
 #[derive(Clone, Copy, Default)]
 pub struct IsDark(pub bool);
@@ -31,41 +32,13 @@ pub enum DraggedItemKind {
 /// ```
 pub fn App() -> Element {
     let persistence_warning = use_context_provider(|| Signal::new(None::<String>));
-
-    // Initialize the registry signal from persistence if available,
-    // otherwise create a new empty registry and surface a warning.
-    let mut load_warning = persistence_warning;
-    let registry = use_context_provider(move || {
-        let initial = match AppPersistence::load_registry() {
-            Ok(Some(registry)) => {
-                info!(
-                    workspace_child_count = registry.workspace_child_count(),
-                    "Initialized registry from persistence"
-                );
-                registry
-            }
-            Ok(None) => {
-                info!("Initialized registry with an empty in-memory state");
-                CardRegistry::default()
-            }
-            Err(error) => {
-                warn!(error = %error, "Falling back to in-memory registry after persistence load failure");
-                record_diagnostic(
-                    Level::WARN,
-                    "interface",
-                    format!("Persistence load warning shown to user: {error}"),
-                );
-                load_warning.set(Some(error.to_string()));
-                CardRegistry::default()
-            }
-        };
-        Signal::new(initial)
-    });
+    let registry =
+        use_context_provider(move || Signal::new(initialize_registry_signal(persistence_warning)));
 
     // Theme state: default to dark mode.
     let is_dark = use_context_provider(|| Signal::new(IsDark(true)));
     // Global modal state.
-    let mut active_modal = use_context_provider(|| Signal::new(None::<ModalType>));
+    let active_modal = use_context_provider(|| Signal::new(None::<ModalType>));
     let _is_dragging = use_context_provider(|| Signal::new(IsDragging(false)));
     let _dragged_item_kind = use_context_provider(|| Signal::new(DraggedItemKind::None));
 
@@ -74,19 +47,9 @@ pub fn App() -> Element {
     } else {
         "app-shell theme-light"
     };
-    // Side effect: Save to persistence only when the registry snapshot changes.
     let registry_snapshot = registry.read().clone();
-    let mut save_warning = persistence_warning;
     use_effect(use_reactive!(|(registry_snapshot,)| {
-        if let Err(error) = AppPersistence::save_registry(&registry_snapshot) {
-            warn!(error = %error, "Persistence save failed while app state changed");
-            record_diagnostic(
-                Level::WARN,
-                "interface",
-                format!("Persistence save warning shown to user: {error}"),
-            );
-            save_warning.set(Some(error.to_string()));
-        }
+        persist_registry_snapshot(&registry_snapshot, persistence_warning);
     }));
 
     rsx! {
@@ -105,37 +68,8 @@ pub fn App() -> Element {
                 Router::<Route> {}
             }
 
-            // Modal Overlay Dispatcher
             if let Some(modal) = active_modal() {
-                match modal {
-                    ModalType::CreateCard { parent_id } => {
-                        rsx! {
-                            CardModal {
-                                on_close: move |_| active_modal.set(None),
-                                parent_id,
-                                registry,
-                            }
-                        }
-                    },
-                    ModalType::EditCard { id } => {
-                        rsx! {
-                            EditCardModal {
-                                on_close: move |_| active_modal.set(None),
-                                id,
-                                registry,
-                            }
-                        }
-                    },
-                    ModalType::CardNotes { card_id } => {
-                        rsx! {
-                            NotesModal {
-                                on_close: move |_| active_modal.set(None),
-                                card_id,
-                                registry,
-                            }
-                        }
-                    }
-                }
+                {render_modal_overlay(modal, active_modal, registry)}
             }
         }
     }

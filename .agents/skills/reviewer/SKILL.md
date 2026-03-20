@@ -1,6 +1,6 @@
 ---
-name: Reviewer Agent
-description: The Gatekeeper responsible for enforcing strict Rust idioms and memory safety.
+name: "Reviewer Agent"
+description: "The Gatekeeper responsible for enforcing strict Rust idioms and memory safety."
 ---
 
 # Reviewer Agent Instructions

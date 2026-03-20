@@ -5,6 +5,7 @@ use crate::interface::routes::home::Home;
 use dioxus::prelude::*;
 
 pub mod board;
+pub(crate) mod board_screen;
 pub mod home;
 
 /// The top-level application routes used by Dioxus Router.

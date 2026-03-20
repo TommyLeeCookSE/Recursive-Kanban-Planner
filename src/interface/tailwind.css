@@ -403,19 +403,51 @@
     gap: var(--app-navbar-action-gap);
   }
 
-  .app-navbar-theme-toggle {
-    @apply app-button-secondary inline-flex items-center text-sm;
-    gap: var(--app-navbar-theme-gap);
-    padding: var(--app-navbar-theme-padding-y) var(--app-navbar-theme-padding-x);
+  .app-theme-toggle {
+    @apply relative inline-flex h-10 w-[4.5rem] shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-sunfire/40 active:scale-95;
+    background-color: var(--app-surface-soft);
+    border-color: var(--app-border-strong);
   }
 
-  .app-navbar-theme-icon {
-    @apply inline-flex shrink-0 items-center justify-center;
-    font-size: var(--app-navbar-theme-icon-size);
+  .app-theme-toggle:hover {
+    border-color: rgba(255, 140, 0, 0.45);
   }
 
-  .app-navbar-theme-label {
-    font-size: var(--app-navbar-theme-text-size);
+  .app-theme-toggle-track {
+    @apply pointer-events-none relative flex h-full w-full items-center justify-between px-2;
+  }
+
+  .app-theme-toggle-icon {
+    @apply flex h-5 w-5 items-center justify-center transition-all duration-300;
+    color: var(--app-text-soft);
+  }
+
+  .theme-light .app-theme-toggle-icon--sunrise {
+    @apply text-sunfire scale-110 opacity-100;
+  }
+
+  .theme-light .app-theme-toggle-icon--evening {
+    @apply opacity-30 grayscale;
+  }
+
+  .theme-dark .app-theme-toggle-icon--sunrise {
+    @apply opacity-30 grayscale;
+  }
+
+  .theme-dark .app-theme-toggle-icon--evening {
+    @apply text-indigo-400 scale-110 opacity-100;
+  }
+
+  .app-theme-toggle-thumb {
+    @apply pointer-events-none absolute left-1 inline-block h-8 w-8 transform rounded-full shadow-lg transition duration-300 ease-in-out;
+    background: linear-gradient(135deg, #ff8c00 0%, #ffb454 100%);
+    top: 50%;
+    transform: translateY(-50%);
+  }
+
+  .theme-dark .app-theme-toggle-thumb {
+    @apply translate-x-8;
+    background: linear-gradient(135deg, #818cf8 0%, #6366f1 100%);
   }
 
   .app-topbar-shell {

@@ -22,22 +22,30 @@ Recursive Kanban Planner is a local-first planning app built with Rust and Dioxu
 - Native and web runtime logging
 - Dioxus router-based workspace and board views
 
-## Verified Status
+## Validation
 
-Validated in this worktree on 2026-03-19:
+The canonical local verification command is:
 
-```bash
-cargo test
-cargo clippy --all-targets -- -D warnings
-cargo fmt --check
-cargo check --target wasm32-unknown-unknown
-cargo check --no-default-features --features desktop
+```powershell
+pwsh ./scripts/test-all.ps1
 ```
 
-What is not fully verified yet:
+That script runs:
 
-- Manual `dx serve --platform desktop` runtime launch in this environment
-- Manual browser sanity pass for the newer notebook, due-date, and drag/drop flows
+```text
+cargo fmt -- --check
+cargo clippy --all-targets -- -D warnings
+cargo test --all
+cargo test --doc
+cargo check --target wasm32-unknown-unknown
+cargo check --no-default-features --features desktop
+npm run check:css
+```
+
+What still requires manual sanity checking:
+
+- `dx serve --platform desktop` runtime launch in this environment
+- Browser interaction feel for drag/drop, notes, and navigation flows
 
 ## Getting Started
 
@@ -103,6 +111,8 @@ To publish it:
 1. In the repository settings, set GitHub Pages source to `GitHub Actions`.
 2. Push to `main`.
 3. Let the workflow in `.github/workflows/github-pages.yml` build and deploy the site.
+
+The Pages workflow now runs the same verification matrix as `./scripts/test-all.ps1` before it builds the deploy artifact.
 
 If GitHub Pages ever starts showing the repository `README.md` instead of the app, the site has usually been switched back to legacy branch publishing (`main` / `/`). Change it back to `GitHub Actions`.
 

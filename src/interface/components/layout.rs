@@ -1,7 +1,9 @@
 use crate::interface::Route;
 use crate::interface::app::IsDark;
 use crate::interface::components::modal::ModalType;
-use crate::interface::components::visuals::{render_back_icon, render_day_night_icon};
+use crate::interface::components::visuals::{
+    render_back_icon, render_evening_icon, render_sunrise_icon,
+};
 use crate::interface::components::web_utilities::{
     render_clear_cache_button, render_export_button, render_import_button,
 };
@@ -29,7 +31,6 @@ pub fn NavbarLayout() -> Element {
     } else {
         "Switch to Evening mode"
     };
-    let theme_label = if is_dark().0 { "Evening" } else { "Sunrise" };
 
     rsx! {
         div { class: "app-root-shell",
@@ -55,13 +56,16 @@ pub fn NavbarLayout() -> Element {
 
                 div { class: "app-navbar-trailing",
                     button {
-                        class: "app-navbar-theme-toggle",
+                        class: "app-theme-toggle",
                         onclick: move |_| is_dark.set(IsDark(!is_dark().0)),
                         title: "{theme_title}",
                         "aria-label": "{theme_title}",
                         "aria-pressed": is_dark().0,
-                        span { class: "app-navbar-theme-icon", {render_day_night_icon()} }
-                        span { class: "app-navbar-theme-label", "{theme_label}" }
+                        div { class: "app-theme-toggle-track",
+                            span { class: "app-theme-toggle-icon app-theme-toggle-icon--sunrise", {render_sunrise_icon()} }
+                            span { class: "app-theme-toggle-icon app-theme-toggle-icon--evening", {render_evening_icon()} }
+                            div { class: "app-theme-toggle-thumb" }
+                        }
                     }
                 }
             }

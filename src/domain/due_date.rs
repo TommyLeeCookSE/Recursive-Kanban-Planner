@@ -22,7 +22,11 @@ impl DueDate {
     }
 
     pub fn is_overdue(&self) -> bool {
-        self.0.as_str() < current_local_date().as_str()
+        self.is_overdue_on(current_local_date())
+    }
+
+    pub fn is_overdue_on(&self, today: impl AsRef<str>) -> bool {
+        self.0.as_str() < today.as_ref()
     }
 }
 
@@ -52,5 +56,13 @@ mod tests {
     fn due_date_normalizes_valid_input() {
         let due_date = DueDate::parse("2026-03-18").unwrap();
         assert_eq!(due_date.as_str(), "2026-03-18");
+    }
+
+    #[test]
+    fn due_date_overdue_check_is_deterministic() {
+        let due_date = DueDate::parse("2026-03-18").unwrap();
+        assert!(due_date.is_overdue_on("2026-03-19"));
+        assert!(!due_date.is_overdue_on("2026-03-18"));
+        assert!(!due_date.is_overdue_on("2026-03-17"));
     }
 }

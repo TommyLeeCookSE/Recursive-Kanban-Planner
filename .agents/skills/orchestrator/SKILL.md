@@ -1,6 +1,6 @@
 ---
-name: Orchestrator Agent
-description: The central router and decision-maker overseeing the multi-agent development lifecycle.
+name: "Orchestrator Agent"
+description: "The central router and decision-maker overseeing the multi-agent development lifecycle."
 ---
 
 # Orchestrator Agent Instructions

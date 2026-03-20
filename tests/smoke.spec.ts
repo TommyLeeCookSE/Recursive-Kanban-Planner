@@ -7,11 +7,11 @@ test('smoke: app boots and core board actions are visible', async ({ page }) => 
 
   await page.goto('/');
 
-  await expect(page.getByText('My Workspace')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'My Workspace' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Export' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Import' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Clear Cache' })).toBeVisible();
-  await expect(page.getByTitle('Back to Workspace')).toBeDisabled();
+  await expect(page.getByTitle('Back to My Workspace')).toBeDisabled();
   await expect(page.getByRole('button', { name: 'Create Card' })).toBeVisible();
 
   await page.locator('main').getByRole('button', { name: 'Create Card' }).click();

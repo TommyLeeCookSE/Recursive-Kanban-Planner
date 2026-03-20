@@ -233,7 +233,7 @@ pub fn render_trash_icon() -> Element {
     }
 }
 
-pub fn render_day_night_icon() -> Element {
+pub fn render_sunrise_icon() -> Element {
     rsx! {
         svg {
             class: "app-icon-md",
@@ -244,8 +244,31 @@ pub fn render_day_night_icon() -> Element {
             stroke_linecap: "round",
             stroke_linejoin: "round",
             "aria-hidden": "true",
-            path { d: "M12 3.75a8.25 8.25 0 1 0 8.25 8.25 6.75 6.75 0 0 1-8.25-8.25Z" }
-            circle { cx: "12", cy: "12", r: "2" }
+            circle { cx: "12", cy: "12", r: "5" }
+            path { d: "M12 1v2" }
+            path { d: "M12 21v2" }
+            path { d: "M4.22 4.22l1.42 1.42" }
+            path { d: "M18.36 18.36l1.42 1.42" }
+            path { d: "M1 12h2" }
+            path { d: "M21 12h2" }
+            path { d: "M4.22 19.78l1.42-1.42" }
+            path { d: "M18.36 5.64l1.42-1.42" }
+        }
+    }
+}
+
+pub fn render_evening_icon() -> Element {
+    rsx! {
+        svg {
+            class: "app-icon-md",
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "1.8",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            "aria-hidden": "true",
+            path { d: "M12 3a9 9 0 1 0 9 9 9.75 9.75 0 0 1-9-9Z" }
         }
     }
 }

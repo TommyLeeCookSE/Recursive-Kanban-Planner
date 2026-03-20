@@ -7,6 +7,7 @@ use crate::domain::due_date::DueDate;
 use crate::domain::error::DomainError;
 use crate::domain::id::{CardId, NotePageId};
 use crate::domain::note::NotePage;
+use crate::domain::title::normalize_non_empty_title;
 
 use serde::{Deserialize, Serialize};
 
@@ -24,9 +25,7 @@ pub struct Card {
 
 impl Card {
     pub fn new_root(title: String) -> Result<Self, DomainError> {
-        if title.trim().is_empty() {
-            return Err(DomainError::EmptyTitle);
-        }
+        let title = normalize_non_empty_title(title)?;
 
         Ok(Self {
             id: CardId::new(),
@@ -39,9 +38,7 @@ impl Card {
     }
 
     pub fn new_child(title: String, parent_id: CardId) -> Result<Self, DomainError> {
-        if title.trim().is_empty() {
-            return Err(DomainError::EmptyTitle);
-        }
+        let title = normalize_non_empty_title(title)?;
 
         Ok(Self {
             id: CardId::new(),
@@ -78,11 +75,7 @@ impl Card {
     }
 
     pub fn rename(&mut self, new_title: String) -> Result<(), DomainError> {
-        if new_title.trim().is_empty() {
-            return Err(DomainError::EmptyTitle);
-        }
-
-        self.title = new_title;
+        self.title = normalize_non_empty_title(new_title)?;
         Ok(())
     }
 
