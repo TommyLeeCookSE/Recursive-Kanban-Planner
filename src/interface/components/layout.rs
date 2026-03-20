@@ -64,7 +64,6 @@ pub fn NavbarLayout() -> Element {
                         div { class: "app-theme-toggle-track",
                             span { class: "app-theme-toggle-icon app-theme-toggle-icon--sunrise", {render_sunrise_icon()} }
                             span { class: "app-theme-toggle-icon app-theme-toggle-icon--evening", {render_evening_icon()} }
-                            div { class: "app-theme-toggle-thumb" }
                         }
                     }
                 }
