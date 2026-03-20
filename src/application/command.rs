@@ -201,6 +201,15 @@ impl Command {
     }
 
     /// Logs the start of command execution using `tracing`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use kanban_planner::application::Command;
+    ///
+    /// let cmd = Command::ClearDueDate { card_id: Default::default() };
+    /// cmd.log_start();
+    /// ```
     pub fn log_start(&self) {
         let descriptor = self.descriptor();
         info!(

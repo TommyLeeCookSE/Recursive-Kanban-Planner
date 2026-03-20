@@ -58,6 +58,38 @@ pub enum DraggedItemKind {
     Card,
 }
 
+/// A collection of signals used across the board UI.
+#[derive(Clone, Copy)]
+pub struct BoardSignals {
+    /// The central card registry.
+    pub registry: Signal<crate::domain::registry::CardRegistry>,
+    /// The currently active modal, if any.
+    pub active_modal: Signal<Option<crate::interface::components::modal::ModalType>>,
+    /// The global warning message banner content.
+    pub warning_message: Signal<Option<String>>,
+    /// Whether a drag operation is currently in progress.
+    pub is_dragging: Signal<IsDragging>,
+    /// The kind of item being dragged.
+    pub dragged_item_kind: Signal<DraggedItemKind>,
+}
+
+/// A hook to access all standard board signals from the context.
+///
+/// # Examples
+///
+/// ```ignore
+/// let signals = use_board_signals();
+/// ```
+pub fn use_board_signals() -> BoardSignals {
+    BoardSignals {
+        registry: use_context::<Signal<crate::domain::registry::CardRegistry>>(),
+        active_modal: use_context::<Signal<Option<crate::interface::components::modal::ModalType>>>(),
+        warning_message: use_context::<Signal<Option<String>>>(),
+        is_dragging: use_context::<Signal<IsDragging>>(),
+        dragged_item_kind: use_context::<Signal<DraggedItemKind>>(),
+    }
+}
+
 /// The root application component.
 ///
 /// Sets up the global state (Persistence, Registry, Theme, Active Modal)

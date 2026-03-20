@@ -37,9 +37,13 @@ static DIAGNOSTICS: LazyLock<Mutex<VecDeque<DiagnosticEntry>>> =
 /// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct DiagnosticEntry {
+    /// Unix timestamp in seconds when the entry was recorded.
     pub timestamp_unix_secs: u64,
+    /// The string representation of the log level (e.g., "INFO", "ERROR").
     pub level: String,
+    /// The log target, typically the module path.
     pub target: String,
+    /// The actual log message content.
     pub message: String,
 }
 
@@ -67,14 +71,17 @@ pub struct LoggingGuard {
 /// ```
 #[derive(Debug, Error)]
 pub enum LoggingInitError {
+    /// Failed to create the directory for runtime logs on disk.
     #[cfg(not(target_arch = "wasm32"))]
     #[error("Failed to create runtime log directory: {0}")]
     CreateLogDir(#[source] std::io::Error),
 
+    /// Failed to determine the current working directory.
     #[cfg(not(target_arch = "wasm32"))]
     #[error("Failed to resolve the current working directory: {0}")]
     ResolveCurrentDir(#[source] std::io::Error),
 
+    /// Failed to install the tracing subscriber globally.
     #[error("Failed to initialize tracing subscriber: {0}")]
     Subscriber(#[from] tracing_subscriber::util::TryInitError),
 }
@@ -314,7 +321,7 @@ fn unix_timestamp_secs() -> u64 {
     }
     #[cfg(target_arch = "wasm32")]
     {
-        // SystemTime is not available on wasm32; return 0 as a safe fallback.
+        // SystemTime is unavailable on wasm32; returning 0 as a placeholder.
         0
     }
 }

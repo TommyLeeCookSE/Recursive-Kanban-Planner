@@ -10,7 +10,7 @@ use crate::domain::id::CardId;
 use crate::domain::registry::CardRegistry;
 use crate::infrastructure::logging::record_diagnostic;
 use crate::interface::Route;
-use crate::interface::app::{DraggedItemKind, IsDragging};
+use crate::interface::app::use_board_signals;
 use crate::interface::components::board_view::{
     BoardDragSignals, BoardRenderContext, render_board_screen,
 };
@@ -30,14 +30,10 @@ use tracing::{Level, error};
 /// ```
 #[component]
 pub fn Board(card_id: CardId) -> Element {
-    let registry = use_context::<Signal<CardRegistry>>();
-    let active_modal = use_context::<Signal<Option<ModalType>>>();
-    let warning_message = use_context::<Signal<Option<String>>>();
-    let is_dragging = use_context::<Signal<IsDragging>>();
-    let dragged_item_kind = use_context::<Signal<DraggedItemKind>>();
+    let signals = use_board_signals();
     let card_drop_index = use_signal(|| None::<usize>);
 
-    let reg_guard = registry.read();
+    let reg_guard = signals.registry.read();
     let screen_data = match load_board_screen_data(card_id, &reg_guard) {
         Ok(screen_data) => screen_data,
         Err(error_value) => {
@@ -53,12 +49,12 @@ pub fn Board(card_id: CardId) -> Element {
 
     let render_context = BoardRenderContext {
         board_id: card_id,
-        registry,
-        active_modal,
-        warning_message,
+        registry: signals.registry,
+        active_modal: signals.active_modal,
+        warning_message: signals.warning_message,
         drag: BoardDragSignals { card_drop_index },
-        dragged_item_kind,
-        is_dragging,
+        dragged_item_kind: signals.dragged_item_kind,
+        is_dragging: signals.is_dragging,
     };
 
     render_board_screen(
