@@ -1,0 +1,14 @@
+{
+  "css.customData": [
+    ".vscode/css_custom_data.json"
+  ],
+  "scss.customData": [
+    ".vscode/css_custom_data.json"
+  ],
+  "less.customData": [
+    ".vscode/css_custom_data.json"
+  ],
+  "css.lint.unknownAtRules": "ignore",
+  "scss.lint.unknownAtRules": "ignore",
+  "less.lint.unknownAtRules": "ignore"
+}

@@ -1,0 +1,33 @@
+{
+  "version": 1.1,
+  "atDirectives": [
+    {
+      "name": "@tailwind",
+      "description": "Injects Tailwind's base, components, or utilities layers into the generated stylesheet."
+    },
+    {
+      "name": "@apply",
+      "description": "Inlines Tailwind utility classes into a semantic CSS rule."
+    },
+    {
+      "name": "@layer",
+      "description": "Places custom styles into Tailwind's base, components, or utilities layers."
+    },
+    {
+      "name": "@responsive",
+      "description": "Legacy Tailwind directive for generating responsive variants."
+    },
+    {
+      "name": "@screen",
+      "description": "Applies nested rules at a configured Tailwind breakpoint."
+    },
+    {
+      "name": "@variants",
+      "description": "Legacy Tailwind directive for generating state variants."
+    },
+    {
+      "name": "@config",
+      "description": "Points Tailwind to an alternate configuration file."
+    }
+  ]
+}

@@ -144,12 +144,12 @@ fn load_board_state<'a>(
 
 fn render_board_load_error() -> Element {
     rsx! {
-        div { class: "mx-auto max-w-3xl px-6 py-20 text-center lg:px-12",
-            div { class: "app-empty-state rounded-[2rem] px-8 py-16",
-                h2 { class: "mb-4 text-2xl font-bold text-red-500", "Board could not be loaded" }
-                p { class: "app-text-muted", "The board data is unavailable or inconsistent. Check the logs for the full error." }
+        div { class: "app-page-shell",
+            div { class: "app-empty-state app-empty-state-panel",
+                h2 { class: "app-error-title", "Board could not be loaded" }
+                p { class: "app-error-message", "The board data is unavailable or inconsistent. Check the logs for the full error." }
                 button {
-                    class: "app-button-primary mt-8 px-6 py-3",
+                    class: "app-button-primary-compact app-empty-state-action",
                     onclick: |_| {
                         navigator().push(Route::Home {});
                     },

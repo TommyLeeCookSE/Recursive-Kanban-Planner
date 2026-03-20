@@ -49,7 +49,7 @@ pub fn CardItem(
 
     rsx! {
         article {
-            class: "app-card-surface group flex flex-col rounded-[1.75rem] transition-all hover:border-sunfire/50 hover:-translate-y-0.5",
+            class: "app-card-surface app-card-shell group",
 
             button {
                 class: if draggable {
@@ -81,7 +81,7 @@ pub fn CardItem(
                     }
                     if let Some(due_date) = due_date {
                         p {
-                            class: if is_overdue { "mt-4 text-left text-sm font-semibold text-red-500" } else { "app-text-muted mt-4 text-left text-sm font-semibold" },
+                            class: if is_overdue { "app-card-due app-card-due--overdue" } else { "app-card-due app-card-due-normal" },
                             "Due {due_date}"
                         }
                     }
@@ -101,8 +101,8 @@ pub fn CardItem(
             }
 
             if on_rename.is_some() || on_delete.is_some() {
-                div { class: "flex items-center justify-end rounded-b-[1.75rem] border-t px-5 py-4", style: "border-color: var(--app-border); background-color: color-mix(in srgb, var(--app-surface-soft) 74%, transparent);",
-                    div { class: "flex items-center gap-2",
+                div { class: "app-card-actions",
+                    div { class: "app-card-actions-inner",
                         if let Some(delete_handler) = on_delete {
                             button {
                                 class: "{surface_destructive_icon_button_classes()}",
@@ -115,7 +115,7 @@ pub fn CardItem(
                                         delete_handler.call(());
                                     }
                                 },
-                                span { class: "shrink-0", {render_trash_icon()} }
+                                span { class: "app-icon-slot", {render_trash_icon()} }
                             }
                         }
                         if let Some(rename_handler) = on_rename {

@@ -51,8 +51,8 @@ pub fn NotesModal(
         Modal {
             on_close: move |_| on_close.call(()),
             title: "Notebook",
-            div { class: "flex max-h-[75vh] flex-col gap-4 lg:flex-row",
-                div { class: "w-full space-y-3 lg:w-56",
+            div { class: "app-notes-layout",
+                div { class: "app-notes-sidebar",
                     input {
                         class: "app-input",
                         placeholder: "New page title",
@@ -60,7 +60,7 @@ pub fn NotesModal(
                         oninput: move |e| new_page_title.set(e.value()),
                     }
                     button {
-                        class: "app-button-secondary w-full px-4 py-2 text-sm",
+                        class: "app-button-secondary-compact app-button-block",
                         title: "Add a new note page",
                         onclick: move |_| {
                             let title = new_page_title().trim().to_string();
@@ -81,10 +81,11 @@ pub fn NotesModal(
                         },
                         "Add Page"
                     }
-                    div { class: "max-h-64 space-y-2 overflow-y-auto pr-1",
+                    div { class: "app-notes-list",
+                        div { class: "app-notes-list-stack",
                         for note in current_notes.iter().cloned() {
                             button {
-                                class: if Some(note.id()) == selected_note_id() { "app-button-primary w-full px-4 py-2 text-left text-sm" } else { "app-button-secondary w-full px-4 py-2 text-left text-sm" },
+                                class: if Some(note.id()) == selected_note_id() { "app-note-list-button--active" } else { "app-note-list-button" },
                                 title: "Open note page {note.title()}",
                                 onclick: move |_| {
                                     selected_note_id.set(Some(note.id()));
@@ -94,10 +95,11 @@ pub fn NotesModal(
                                 "{note.title()}"
                             }
                         }
+                        }
                     }
                 }
 
-                div { class: "flex min-h-[24rem] flex-1 flex-col gap-3",
+                div { class: "app-notes-editor",
                     if selected_note.is_some() {
                         input {
                             class: "app-input",
@@ -106,14 +108,14 @@ pub fn NotesModal(
                             oninput: move |e| title_input.set(e.value()),
                         }
                         textarea {
-                            class: "app-input min-h-[18rem]",
+                            class: "app-input app-notes-textarea",
                             placeholder: "Write your notes here...",
                             value: "{body_input}",
                             oninput: move |e| body_input.set(e.value()),
                         }
-                        div { class: "flex flex-wrap justify-end gap-2",
+                        div { class: "app-notes-toolbar",
                             button {
-                                class: "app-button-secondary px-4 py-2",
+                                class: "app-button-secondary-compact",
                                 title: "Save this note page",
                                 onclick: move |_| {
                                     let Some(note_id) = selected_note_id() else { return; };
@@ -135,7 +137,7 @@ pub fn NotesModal(
                                 "Save Page"
                             }
                             button {
-                                class: "app-danger-button px-4 py-2",
+                                class: "app-danger-button app-button-compact",
                                 title: "Delete this note page",
                                 onclick: move |_| {
                                     let Some(note_id) = selected_note_id() else { return; };
@@ -155,8 +157,8 @@ pub fn NotesModal(
                             }
                         }
                     } else {
-                        div { class: "app-empty-state flex min-h-[18rem] items-center justify-center rounded-[1.5rem] p-6 text-center",
-                            p { class: "app-text-muted", "No note pages yet. Add one to start writing." }
+                        div { class: "app-notes-empty",
+                            p { class: "app-empty-message", "No note pages yet. Add one to start writing." }
                         }
                     }
                 }

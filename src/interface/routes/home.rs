@@ -126,10 +126,10 @@ fn build_workspace_screen_data(registry: &CardRegistry) -> Option<WorkspaceScree
 
 fn render_workspace_load_error() -> Element {
     rsx! {
-        div { class: "mx-auto max-w-3xl px-6 py-20 text-center lg:px-12",
-            div { class: "app-empty-state rounded-[2rem] px-8 py-16",
-                h2 { class: "mb-4 text-2xl font-bold text-red-500", "Workspace could not be loaded" }
-                p { class: "app-text-muted", "The workspace data is unavailable or inconsistent. Check the logs for the full error." }
+        div { class: "app-page-shell",
+            div { class: "app-empty-state app-empty-state-panel",
+                h2 { class: "app-error-title", "Workspace could not be loaded" }
+                p { class: "app-error-message", "The workspace data is unavailable or inconsistent. Check the logs for the full error." }
             }
         }
     }

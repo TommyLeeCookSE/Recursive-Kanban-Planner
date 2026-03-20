@@ -60,6 +60,12 @@ To refresh the committed stylesheet after editing `src/interface/tailwind.css`, 
 npm run build:css
 ```
 
+If you want live stylesheet rebuilding while you work, run this in a second terminal:
+
+```bash
+npm run watch:css
+```
+
 To run the browser smoke test and CSS parity check together:
 
 ```bash

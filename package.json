@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "build:css": "tailwindcss -c ./tailwind.config.js -i ./src/interface/tailwind.css -o ./assets/app.css",
+    "watch:css": "tailwindcss -c ./tailwind.config.js -i ./src/interface/tailwind.css -o ./assets/app.css --watch",
     "check:css": "node ./scripts/check-css.mjs",
     "smoke": "npm run check:css && playwright test",
     "smoke:headed": "npm run check:css && playwright test --headed"

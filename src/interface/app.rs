@@ -127,7 +127,7 @@ pub fn App() -> Element {
 
             div { class: "app-content{route_motion_class}",
                 if let Some(message) = persistence_warning() {
-                    div { class: "app-warning-banner px-6 py-3 text-sm font-semibold lg:px-12",
+                    div { class: "app-warning-banner app-warning-banner-content app-warning-banner-strong",
                         "{message}"
                     }
                 }

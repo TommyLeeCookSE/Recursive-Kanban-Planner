@@ -18,21 +18,21 @@ pub enum ModalType {
 pub fn Modal(on_close: EventHandler<()>, title: String, children: Element) -> Element {
     rsx! {
         div {
-            class: "fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm animate-in fade-in duration-200",
+            class: "app-modal-backdrop-animated",
             onclick: move |_| on_close.call(()),
             div {
-                class: "app-modal-surface w-full max-w-md overflow-hidden rounded-[2rem] animate-in zoom-in-95 duration-200",
+                class: "app-modal-shell-animated",
                 onclick: |e| e.stop_propagation(),
-                div { class: "flex items-center justify-between border-b px-6 py-4", style: "border-color: var(--app-border);",
-                    h2 { class: "app-text-primary text-lg font-bold", "{title}" }
+                div { class: "app-modal-header",
+                    h2 { class: "app-modal-title-text app-modal-title", "{title}" }
                     button {
-                        class: "app-button-ghost p-2",
+                        class: "app-modal-close-button",
                         title: "Close dialog",
                         onclick: move |_| on_close.call(()),
                         "X"
                     }
                 }
-                div { class: "p-6", {children} }
+                div { class: "app-modal-content", {children} }
             }
         }
     }

@@ -23,7 +23,7 @@ pub fn CardModal(
         Modal {
             on_close: move |_| on_close.call(()),
             title: if parent_id.is_some() { "New Card" } else { "New Board" },
-            div { class: "flex flex-col gap-4",
+            div { class: "app-form-stack",
                 input {
                     class: "app-input",
                     placeholder: "Enter title...",
@@ -34,15 +34,15 @@ pub fn CardModal(
                 if let Some(message) = error_message() {
                     {inline_error(message)}
                 }
-                div { class: "flex justify-end gap-2",
+                div { class: "app-form-actions",
                     button {
-                        class: "app-button-ghost px-4 py-2",
+                        class: "app-button-ghost-compact",
                         title: "Cancel card creation",
                         onclick: move |_| on_close.call(()),
                         "Cancel"
                     }
                     button {
-                        class: "app-button-primary px-6 py-3 disabled:opacity-50",
+                        class: "app-button-primary-compact disabled:opacity-50",
                         title: "Create this card",
                         disabled: input_title().trim().is_empty(),
                         onclick: move |_| {
@@ -94,7 +94,7 @@ pub fn EditCardModal(
             Err(_) => {
                 return rsx! {
                     Modal { on_close: move |_| on_close.call(()), title: "Edit Item".to_string(),
-                        p { class: "app-text-muted", "Card could not be loaded." }
+                        p { class: "app-error-message", "Card could not be loaded." }
                     }
                 };
             }
@@ -115,7 +115,7 @@ pub fn EditCardModal(
         Modal {
             on_close: move |_| on_close.call(()),
             title: "Edit Card",
-            div { class: "flex flex-col gap-4",
+            div { class: "app-form-stack",
                 label { class: "app-kicker", "Title" }
                 input {
                     class: "app-input",
@@ -134,15 +134,15 @@ pub fn EditCardModal(
 
                 if let Some(message) = error_message() { {inline_error(message)} }
 
-                div { class: "flex justify-end gap-2",
+                div { class: "app-form-actions",
                     button {
-                        class: "app-button-ghost px-4 py-2",
+                        class: "app-button-ghost-compact",
                         title: "Cancel editing this card",
                         onclick: move |_| on_close.call(()),
                         "Cancel"
                     }
                     button {
-                        class: "app-button-primary px-6 py-3 disabled:opacity-50",
+                        class: "app-button-primary-compact disabled:opacity-50",
                         title: "Save card changes",
                         disabled: input_title().trim().is_empty(),
                         onclick: move |_| {

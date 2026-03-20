@@ -32,14 +32,14 @@ pub fn NavbarLayout() -> Element {
     let theme_label = if is_dark().0 { "Evening" } else { "Sunrise" };
 
     rsx! {
-        div { class: "flex min-h-0 flex-1 flex-col selection:bg-sunfire/30 selection:text-white",
+        div { class: "app-root-shell",
             nav { class: "app-navbar",
-                div { class: "min-w-0 shrink-0",
+                div { class: "app-navbar-section",
                     Link {
                         to: Route::Home {},
                         class: "app-navbar-brand group",
                         div { class: "app-navbar-brand-mark",
-                            span { class: "text-white text-xl font-black", "K" }
+                            span { class: "app-navbar-brand-initial", "K" }
                         }
                         span { class: "app-navbar-brand-text",
                             "Kanban"
@@ -53,20 +53,20 @@ pub fn NavbarLayout() -> Element {
                     {render_clear_cache_button(registry, active_modal, persistence_warning, nav)}
                 }
 
-                div { class: "flex min-w-0 shrink-0 flex-wrap items-center gap-2 sm:gap-3",
+                div { class: "app-navbar-trailing",
                     button {
                         class: "app-navbar-theme-toggle",
                         onclick: move |_| is_dark.set(IsDark(!is_dark().0)),
                         title: "{theme_title}",
                         "aria-label": "{theme_title}",
                         "aria-pressed": is_dark().0,
-                        span { class: "shrink-0", {render_day_night_icon()} }
-                        span { class: "hidden sm:inline", "{theme_label}" }
+                        span { class: "app-navbar-theme-icon", {render_day_night_icon()} }
+                        span { class: "app-navbar-theme-label", "{theme_label}" }
                     }
                 }
             }
 
-            main { class: "flex-1 min-h-0 overflow-auto",
+            main { class: "app-router-main",
                 Outlet::<Route> {}
             }
         }
@@ -111,8 +111,8 @@ pub fn TopBar(
                     },
                 title: "Back to {back_label}",
                 "aria-label": "Back to {back_label}",
-                span { class: "inline-flex shrink-0 items-center justify-center text-lg leading-none transform transition-transform group-hover:-translate-x-1", {render_back_icon()} }
-                span { class: "hidden truncate sm:inline", "Back to: {back_label}" }
+                span { class: "app-topbar-back-icon", {render_back_icon()} }
+                span { class: "app-topbar-back-label", "Back to: {back_label}" }
             }
         }
     } else {
@@ -123,8 +123,8 @@ pub fn TopBar(
                 title: "Back to {back_label}",
                 "aria-label": "Back to {back_label}",
                 "aria-disabled": "true",
-                span { class: "inline-flex shrink-0 items-center justify-center text-lg leading-none", {render_back_icon()} }
-                span { class: "hidden truncate sm:inline", "Back to: {back_label}" }
+                span { class: "app-topbar-back-icon", {render_back_icon()} }
+                span { class: "app-topbar-back-label", "Back to: {back_label}" }
             }
         }
     };
@@ -132,15 +132,15 @@ pub fn TopBar(
     rsx! {
         div { class: "app-topbar-shell",
             div { class: "app-topbar-grid",
-                div { class: "min-w-0 shrink-0 justify-self-start",
+                div { class: "app-topbar-back-shell",
                     {back_button}
                 }
 
-                div { class: "min-w-0 flex-1 basis-[18rem] px-2 text-center",
+                div { class: "app-topbar-title-group",
                     h1 { class: "app-topbar-title",
                         "{title}"
                     }
-                    p { class: "app-kicker mt-2 block",
+                    p { class: "app-topbar-context",
                         "Board Context / {back_label}"
                     }
                 }

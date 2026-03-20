@@ -46,7 +46,7 @@ pub(crate) fn render_board_screen(
     let board_id = render_context.board_id;
     rsx! {
         div {
-            class: "flex h-full flex-col",
+            class: "app-board-screen",
             style: format!("view-transition-name: card-{};", board_id),
             {render_board_header(
                 board_title,
@@ -55,7 +55,7 @@ pub(crate) fn render_board_screen(
                 board_due_date,
                 render_context.clone(),
             )}
-            div { class: "flex-grow overflow-x-hidden px-6 py-10 lg:px-12",
+            div { class: "app-board-screen-content",
                 {render_board_grid(child_models, render_context)}
             }
         }
@@ -78,7 +78,7 @@ fn render_board_header(
             back_route,
             back_label: back_label.clone(),
             button {
-                class: "{toolbar_button_classes()} text-sunfire",
+                class: "{toolbar_button_classes()} app-toolbar-button-accent",
                 onclick: move |_| active_modal.set(Some(ModalType::CreateCard { parent_id: Some(board_id) })),
                 title: "Create Card",
                 "aria-label": "Create Card",
@@ -105,8 +105,8 @@ fn render_board_header(
             }
         }
 
-        div { class: "app-panel flex flex-wrap items-center justify-between gap-4 border-b px-6 py-5 lg:px-12",
-            div { class: "flex flex-wrap items-center gap-4",
+        div { class: "app-board-status",
+            div { class: "app-board-status-inner",
                 p { class: "app-kicker", "Status: Active | Due: {board_due_date}" }
             }
         }
@@ -115,12 +115,12 @@ fn render_board_header(
 
 fn render_board_grid(child_models: Vec<CardDisplayData>, context: BoardRenderContext) -> Element {
     rsx! {
-        div { class: "flex flex-wrap items-stretch gap-6 lg:gap-8",
+        div { class: "app-board-grid",
             if child_models.is_empty() {
                 {render_empty_drop_zone(context.clone())}
             } else {
                 div {
-                    class: "flex flex-wrap items-stretch gap-6 lg:gap-8",
+                    class: "app-board-grid",
                     for (index, card) in child_models.iter().cloned().enumerate() {
                         {render_card_slot(
                             card,
@@ -147,7 +147,7 @@ fn render_empty_drop_zone(context: BoardRenderContext) -> Element {
 
     rsx! {
         div {
-            class: "{class_name} min-h-[10rem] rounded-[1.75rem] border-2 border-dashed",
+            class: "{class_name} app-drop-empty-zone app-drop-empty-zone-outline",
             ondragover: move |event| {
                 prime_drop_target(&event);
                 card_drop_index.set(Some(0));
@@ -180,12 +180,12 @@ fn render_empty_drop_zone(context: BoardRenderContext) -> Element {
                 });
             },
             if is_dragging().0 {
-                div { class: "flex h-full items-center justify-center p-6 text-center",
+                div { class: "app-drop-empty-zone-content",
                     span { class: "app-kicker", "Drop a card here" }
                 }
             } else {
-                div { class: "flex h-full items-center justify-center p-6 text-center",
-                    p { class: "app-text-muted", "No child cards yet. Create one to start this board." }
+                div { class: "app-drop-empty-zone-content",
+                    p { class: "app-empty-message", "No child cards yet. Create one to start this board." }
                 }
             }
         }
@@ -201,17 +201,17 @@ fn render_card_slot(
     let card_id = card.id;
     rsx! {
         div {
-            class: "flex min-w-[21rem] flex-[1_1_21rem] items-stretch gap-2 lg:gap-3",
+            class: "app-board-slot",
             {render_card_drop_zone(index, false, context.clone(), true)}
             div {
-                class: "min-w-0 flex-1",
+                class: "app-board-slot-card",
                 style: format!("view-transition-name: card-{};", card_id),
                 {render_card_item(card, context.clone())}
             }
             if is_last {
                 {render_card_drop_zone(index + 1, false, context, true)}
             } else {
-                div { class: "w-0 shrink-0" }
+                div { class: "app-drop-slot-spacer" }
             }
         }
     }
@@ -228,7 +228,7 @@ fn render_card_item(card: CardDisplayData, context: BoardRenderContext) -> Eleme
     rsx! {
         div {
             key: "{card_id}",
-            class: "flex min-w-0 flex-col gap-3",
+            class: "app-board-card-wrapper",
             CardItem {
                 title: card.title,
                 subtitle: None,
@@ -304,7 +304,7 @@ fn render_card_drop_zone(
             class: if emphasized {
                 "{class_name} min-h-[3.25rem] rounded-2xl"
             } else if side_oriented {
-                "{class_name} h-full min-h-[12rem] w-5 shrink-0 self-stretch rounded-full sm:w-6"
+                "{class_name} app-drop-slot-lane"
             } else {
                 "{class_name} h-4 rounded-full"
             },
@@ -340,7 +340,7 @@ fn render_card_drop_zone(
                 });
             },
             if emphasized && is_dragging().0 {
-                div { class: "flex h-full items-center justify-center px-4 py-3",
+                div { class: "app-drop-zone-content",
                     span { class: "app-kicker", "Drop Here" }
                 }
             }

@@ -6,7 +6,7 @@ use dioxus::prelude::*;
 
 pub fn inline_error(message: String) -> Element {
     rsx! {
-        p { class: "rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-200",
+        p { class: "app-inline-error app-inline-error--danger",
             "{message}"
         }
     }
@@ -21,16 +21,16 @@ pub fn SelectorSection(
     children: Element,
 ) -> Element {
     rsx! {
-        div { class: "flex flex-col gap-4",
-            div { class: "flex items-center justify-between gap-4",
-                label { class: "app-kicker flex items-center gap-2",
+        div { class: "app-form-section",
+            div { class: "app-form-section-header",
+                label { class: "app-kicker-inline",
                     if let Some(icon) = title_icon {
-                        span { class: "shrink-0", {icon} }
+                        span { class: "app-icon-slot", {icon} }
                     }
                     "{title}"
                 }
                 button {
-                    class: "app-button-secondary px-4 py-2 text-xs",
+                    class: "app-button-secondary app-form-button-compact app-form-button-compact-xs",
                     onclick: move |_| on_action.call(()),
                     "{action_label}"
                 }
@@ -47,13 +47,13 @@ pub fn CheckboxOptionRow(
     on_toggle: EventHandler<()>,
 ) -> Element {
     rsx! {
-        label { class: "flex items-center gap-3 rounded-xl border px-4 py-3", style: "border-color: var(--app-border);",
+        label { class: "app-checkbox-row",
             input {
                 r#type: "checkbox",
                 checked: checked,
                 onclick: move |_| on_toggle.call(()),
             }
-            span { class: "app-text-primary text-sm font-medium", "{label_text}" }
+            span { class: "app-checkbox-label-text app-checkbox-label app-checkbox-label-strong", "{label_text}" }
         }
     }
 }

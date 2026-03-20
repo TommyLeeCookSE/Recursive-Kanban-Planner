@@ -77,15 +77,15 @@ pub fn drop_zone_classes(
 }
 
 pub fn surface_action_button_classes() -> &'static str {
-    "app-button-secondary inline-flex h-8 min-w-[4.5rem] items-center justify-center rounded-full px-3 text-[11px] font-black uppercase tracking-widest"
+    "app-surface-action-button"
 }
 
 pub fn surface_icon_button_classes() -> &'static str {
-    "app-button-secondary inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-dashed p-0 text-sm leading-none"
+    "app-surface-icon-button"
 }
 
 pub fn surface_destructive_icon_button_classes() -> &'static str {
-    "app-button-secondary inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full p-0 text-sm leading-none text-red-400 hover:text-red-500"
+    "app-surface-icon-button app-surface-icon-button--danger"
 }
 
 pub fn toolbar_button_classes() -> &'static str {
@@ -97,17 +97,17 @@ pub fn toolbar_icon_button_classes() -> &'static str {
 }
 
 pub fn toolbar_button_label_classes() -> &'static str {
-    "hidden sm:inline"
+    "app-toolbar-label"
 }
 
 pub fn toolbar_action_icon_classes() -> &'static str {
-    "text-lg leading-none"
+    "app-toolbar-icon"
 }
 
 pub fn render_plus_icon() -> Element {
     rsx! {
         svg {
-            class: "h-5 w-5",
+            class: "app-icon-md",
             view_box: "0 0 20 20",
             fill: "none",
             stroke: "currentColor",
@@ -124,7 +124,7 @@ pub fn render_plus_icon() -> Element {
 pub fn render_note_icon() -> Element {
     rsx! {
         svg {
-            class: "h-5 w-5",
+            class: "app-icon-md",
             view_box: "0 0 24 24",
             fill: "none",
             stroke: "currentColor",
@@ -143,7 +143,7 @@ pub fn render_note_icon() -> Element {
 pub fn render_book_icon() -> Element {
     rsx! {
         svg {
-            class: "h-5 w-5",
+            class: "app-icon-md",
             view_box: "0 0 24 24",
             fill: "none",
             stroke: "currentColor",
@@ -162,7 +162,7 @@ pub fn render_book_icon() -> Element {
 pub fn render_label_icon() -> Element {
     rsx! {
         svg {
-            class: "h-5 w-5",
+            class: "app-icon-md",
             view_box: "0 0 24 24",
             fill: "none",
             stroke: "currentColor",
@@ -179,7 +179,7 @@ pub fn render_label_icon() -> Element {
 pub fn render_import_icon() -> Element {
     rsx! {
         svg {
-            class: "h-5 w-5",
+            class: "app-icon-md",
             view_box: "0 0 24 24",
             fill: "none",
             stroke: "currentColor",
@@ -197,7 +197,7 @@ pub fn render_import_icon() -> Element {
 pub fn render_export_icon() -> Element {
     rsx! {
         svg {
-            class: "h-5 w-5",
+            class: "app-icon-md",
             view_box: "0 0 24 24",
             fill: "none",
             stroke: "currentColor",
@@ -215,7 +215,7 @@ pub fn render_export_icon() -> Element {
 pub fn render_trash_icon() -> Element {
     rsx! {
         svg {
-            class: "h-5 w-5",
+            class: "app-icon-md",
             view_box: "0 0 24 24",
             fill: "none",
             stroke: "currentColor",
@@ -236,7 +236,7 @@ pub fn render_trash_icon() -> Element {
 pub fn render_day_night_icon() -> Element {
     rsx! {
         svg {
-            class: "h-5 w-5",
+            class: "app-icon-md",
             view_box: "0 0 24 24",
             fill: "none",
             stroke: "currentColor",
@@ -253,7 +253,7 @@ pub fn render_day_night_icon() -> Element {
 pub fn render_settings_icon() -> Element {
     rsx! {
         svg {
-            class: "h-5 w-5",
+            class: "app-icon-md",
             view_box: "0 0 24 24",
             fill: "none",
             stroke: "currentColor",
@@ -270,7 +270,7 @@ pub fn render_settings_icon() -> Element {
 pub fn render_back_icon() -> Element {
     rsx! {
         svg {
-            class: "h-5 w-5 shrink-0 overflow-visible",
+            class: "app-icon-back",
             view_box: "0 0 20 20",
             fill: "none",
             stroke: "currentColor",
