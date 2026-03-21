@@ -110,4 +110,62 @@ mod tests {
 
         assert!(matches!(result, Err(DomainError::CardNotFound(id)) if id == missing_id));
     }
+
+    #[test]
+    fn test_execute_cross_parent_drag_and_drop() {
+        let mut registry = CardRegistry::new();
+        let workspace_id = registry.workspace_card_id().unwrap();
+
+        let board_a = registry
+            .create_child_card("Board A".into(), workspace_id)
+            .unwrap();
+        let board_b = registry
+            .create_child_card("Board B".into(), workspace_id)
+            .unwrap();
+
+        let card_to_move = registry
+            .create_child_card("Card 1".into(), board_a)
+            .unwrap();
+
+        let b_card_1 = registry
+            .create_child_card("B1".into(), board_b)
+            .unwrap();
+        let b_card_2 = registry
+            .create_child_card("B2".into(), board_b)
+            .unwrap();
+
+        assert_eq!(registry.get_children(board_a).unwrap().len(), 1);
+        assert_eq!(registry.get_children(board_b).unwrap().len(), 2);
+
+        execute(
+            Command::ReparentCard {
+                card_id: card_to_move,
+                new_parent_id: board_b,
+            },
+            &mut registry,
+        )
+        .unwrap();
+
+        execute(
+            Command::DropChildAtPosition {
+                parent_id: board_b,
+                card_id: card_to_move,
+                target_index: 1,
+            },
+            &mut registry,
+        )
+        .unwrap();
+
+        assert_eq!(registry.get_children(board_a).unwrap().len(), 0);
+
+        let b_children: Vec<CardId> = registry
+            .get_children(board_b)
+            .unwrap()
+            .iter()
+            .map(|c| c.id())
+            .collect();
+
+        assert_eq!(b_children.len(), 3);
+        assert_eq!(b_children, vec![b_card_1, card_to_move, b_card_2]);
+    }
 }

@@ -45,11 +45,10 @@ The codebase follows **Clean Architecture** principles strictly, separating Doma
   - Excellent documentation with runnable `# Examples`.
   - Consistent naming and project structure.
   - Responsive UI that handles extreme viewport widths gracefully.
+  - Robust integration tests for complex cross-parent drag-and-drop sequences.
 - **Areas for Growth**:
   - Desktop-specific persistence implementation.
-  - Integration tests for complex cross-parent drag-and-drop sequences.
 
 ## 🧪 Testing & Quality Assurance
-- **Current State**: 83 passed tests (unit + doc tests).
-- **Coverage**: Domain logic is heavily tested. UI and application layers are verified through smoke tests and build checks.
-- **Recommendation**: Expand integration tests to cover the recently implemented cross-parent reparenting logic in the `apply_card_drop` function.
+- **Current State**: 84 passed tests (unit + doc tests).
+- **Coverage**: Domain logic is heavily tested. UI and application layers are verified through smoke tests, integration tests, and build checks.
