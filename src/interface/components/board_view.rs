@@ -18,7 +18,7 @@ use crate::interface::components::board_view::grid::render_board_grid;
 use crate::interface::components::layout::BottomBar;
 use crate::interface::components::modal::ModalType;
 use crate::interface::components::visuals::{
-    render_note_icon, render_plus_icon, render_settings_icon, CardDisplayData,
+    CardDisplayData, render_note_icon, render_plus_icon, render_settings_icon,
 };
 use dioxus::prelude::*;
 

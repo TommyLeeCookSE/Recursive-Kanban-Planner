@@ -51,12 +51,12 @@
     --app-navbar-theme-text-size: 0.875rem;
 
     /* Unified Action Bar Tokens */
-    --app-bar-height: clamp(4.5rem, 10dvh, 6rem);
-    --app-bar-icon-size: clamp(1.125rem, 2.8dvh, 1.5rem);
-    --app-bar-button-min-width: clamp(3rem, 8dvw, 5rem);
-    --app-bar-padding-x: clamp(1rem, 4dvw, 3rem);
-    --app-bar-gap: clamp(0.5rem, 1.5dvw, 1rem);
-    --app-bar-label-size: clamp(0.75rem, 1.2dvh, 0.875rem);
+    --app-bar-height: clamp(3.5rem, min(10vw, 10dvh), 6rem);
+    --app-bar-icon-size: clamp(1rem, min(3.5vw, 3.5dvh), 2rem);
+    --app-bar-button-min-width: clamp(2.5rem, min(8vw, 8dvh), 6rem);
+    --app-bar-padding-x: clamp(0.5rem, min(4vw, 4dvh), 3rem);
+    --app-bar-gap: clamp(0.25rem, min(1.5vw, 1.5dvh), 1rem);
+    --app-bar-label-size: clamp(0.75rem, min(1.2vw, 1.2dvh), 1rem);
     --app-bar-radius: 1.25rem;
 
     --app-topbar-shell-padding-x: 1rem;
@@ -375,9 +375,10 @@
   }
 
   .app-bar-button {
-    @apply inline-flex items-center justify-center gap-2 rounded-[var(--app-bar-radius)] border font-bold transition-all active:scale-95;
+    @apply inline-flex min-w-0 shrink items-center justify-center gap-2 rounded-[var(--app-bar-radius)] border font-bold transition-all active:scale-95;
     min-height: calc(var(--app-bar-height) * 0.7);
-    min-width: var(--app-bar-button-min-width);
+    width: max(var(--app-bar-button-min-width), max-content);
+    max-width: 100%;
     padding: 0.5rem 0.75rem;
     border-color: var(--app-border-strong);
     background-color: var(--app-surface-soft);
@@ -394,10 +395,18 @@
   }
 
   .app-bar-button-icon {
-    @apply flex shrink-0 items-center justify-center;
+    @apply flex min-w-0 shrink items-center justify-center;
     width: var(--app-bar-icon-size);
     height: var(--app-bar-icon-size);
-    font-size: var(--app-bar-icon-size);
+    max-width: 100%;
+    max-height: 100%;
+  }
+
+  .app-bar-button-icon > svg {
+    width: 100%;
+    height: 100%;
+    max-width: var(--app-bar-icon-size);
+    max-height: var(--app-bar-icon-size);
   }
 
   .app-bar-button-label {
