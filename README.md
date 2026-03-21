@@ -80,16 +80,6 @@ To run the browser smoke test and CSS parity check together:
 npm run smoke
 ```
 
-### Learning Bundle
-
-If you want a single text file to feed into NotebookLM, use:
-
-- `docs/notebooklm_context.txt`
-
-For a guided Rust primer written for Python developers, read:
-
-- `docs/rust-for-python-devs.md`
-
 ### Run the Desktop App
 
 ```bash
