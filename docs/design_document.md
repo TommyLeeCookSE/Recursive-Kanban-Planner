@@ -32,7 +32,7 @@ Stack:
 
 ## Current Implementation Status
 
-Last reconciled: 2026-03-19
+Last reconciled: 2026-03-20
 
 Canonical verification command:
 
@@ -57,18 +57,20 @@ Implemented in the current worktree:
 | `NotePage`, `DueDate` | `src/domain/note.rs`, `src/domain/due_date.rs` | Feature-specific value objects and definitions |
 | `DomainError` | `src/domain/error.rs` | Typed domain errors throughout the domain/application layers |
 | `CardRegistry` | `src/domain/registry.rs` | Cross-card invariant boundary plus ordered tree management |
-| `Command` dispatcher | `src/application/mod.rs` | `execute` owns command lifecycle logging |
-| `BoardView`, `CardPreviewView` | `src/application/mod.rs` | Read-only UI projections |
+| `Command` dispatcher | `src/application/command.rs` | Refactored match-based dispatch for reduced boilerplate |
+| `execute` wrapper | `src/application/execute.rs` | Owns command lifecycle logging and diagnostics |
+| `BoardView`, `CardPreviewView` | `src/application/projections.rs` | Read-only UI-friendly data views |
 | JSON persistence | `src/infrastructure/repository.rs` | Serialize/deserialize full registry state |
 | Browser persistence | `src/infrastructure/repository.rs` | `localStorage` on `wasm32` |
 | `AppPersistence` facade | `src/infrastructure/repository.rs` | Explicit browser-first persistence boundary |
 | Runtime logging | `src/infrastructure/logging.rs` | `tracing`, diagnostics buffer, native/web setup |
 | Dioxus shell and routing | `src/interface/` | App shell, routes, modal system, board/home views |
-| `TopBar`, `CardItem`, modal flows | `src/interface/components/` | Create/edit card, notes, and settings UI |
+| Unified Navigation | `src/interface/tailwind.css` | Shared `.app-bar` system with responsive `clamp()` sizing |
+| Small Card Actions | `src/interface/components/card_item.rs` | Halved-size action buttons for better card ergonomics |
+| `BottomBar`, `CardItem`, modal flows | `src/interface/components/` | Create/edit card, notes, and settings UI |
 | Deterministic child-card creation | `src/interface/components/modal.rs` | Child creation requires a real parent card |
 | Fail-loud board fallback | `src/interface/routes/board.rs` | Board load preserves the real `DomainError` for logs |
 | Public API docs with examples | `src/application/`, `src/infrastructure/`, `src/interface/` | Public entry points now have `# Examples` blocks |
-| Dynamic "Smart" Navigation | `src/interface/components/layout.rs` | Content-aware auto-collapse based on real-time measurement |
 
 Not yet implemented or not yet fully verified:
 
@@ -85,7 +87,11 @@ Recent binding decisions already implemented:
 4. The board route must keep the underlying `DomainError` for logs and show a user-safe fallback.
 5. Command lifecycle logging belongs to `application::execute`.
 6. Split navigation: Action bar at bottom, centered title at top.
-7. "Math-based" responsive: Measure rendered content to toggle icon-only labels.
+7. Always-visible centered title in top bar across all screen sizes.
+8. Equal icon distribution in `BottomBar` using dynamic CSS Grid.
+9. Refactored `Command` dispatch to remove repetitive descriptor functions.
+10. Optimized $O(N)$ reorder validation in `Card`.
+11. Unified icon-only buttons with hover tooltips for all navigation actions.
 
 ---
 
@@ -373,107 +379,6 @@ Ownership rules:
 - `application::execute` logs command start, success, and failure
 - UI code may log UI-only concerns such as board load failures or invalid modal context
 - UI code should not duplicate command failure logs already emitted by `execute`
-
----
-
-## Planned Hotspot Decomposition
-
-These changes are planned-only and must preserve current behavior:
-
-- card-only domain model stays intact
-- workspace-first routing stays intact
-- command names and lifecycle logging stay stable
-- no new user-facing flows are introduced
-
-### 1. `board_view/grid`
-
-Current problem:
-
-- `src/interface/components/board_view/grid.rs` currently mixes layout composition, card rendering, drag lifecycle, drop-zone rendering, navigation, modal dispatch, delete flows, and diagnostics.
-
-Target split:
-
-- `src/interface/components/board_view/grid/mod.rs`
-  - keeps `render_board_grid(...)` as the only entry point used by `board_view.rs`
-  - owns only grid composition and slot sequencing
-  - keeps the simple `render_card_slot(...)` wrapper because it is pure layout glue
-- `src/interface/components/board_view/grid/card.rs`
-  - owns `render_board_card(...)`
-  - owns board-card interactions only: open board route, open edit modal, start drag, end drag, delete card
-  - may use private helper functions for drag-start diagnostics and drag-state reset, but exposes no new public API
-- `src/interface/components/board_view/grid/drop_zone.rs`
-  - owns `render_empty_board_drop_zone(...)`
-  - owns `render_board_drop_zone(...)`
-  - owns drop-zone presentation selection, hover-state updates, dragged-card extraction, and transition-wrapped `DropChildAtPosition` dispatch
-  - keeps the duplicated empty/non-empty drop logic out of `mod.rs`
-
-Implementation notes:
-
-- keep `BoardRenderContext` in `src/interface/components/board_view/models.rs` for now; do not widen its public surface unless a private helper struct is clearly needed
-- if the Implementer needs an extra seam for testing, prefer a private `DropZoneSpec` or pure class-selection helper inside `drop_zone.rs` instead of creating more files
-- `board_view.rs` should continue importing only `render_board_grid(...)`; all new files remain private to the `board_view::grid` module
-
-### 2. `application/command` + `application/execute`
-
-Current problem:
-
-- the command catalog is maintained separately in the enum definition, `name()`, `log_start()`, and the `execute(...)` match
-- child-drop policy lives in `application::execute` even though it is really ordered-child domain behavior
-
-Target split:
-
-- `src/application/command/mod.rs`
-  - remains the home of the public `Command` enum
-  - no public command names change
-- `src/application/command/dispatch.rs`
-  - becomes the single authoritative command catalog
-  - owns one `match` over `Command`
-  - each branch does three things together: emit the existing start log fields, call the correct domain/application operation, and return the stable command label used by `execute`
-  - this removes the need for separate `Command::name()` and `Command::log_start()` tables
-- `src/application/execute.rs`
-  - becomes a thin lifecycle wrapper only
-  - responsibilities: call dispatch, emit generic success/failure logs, write diagnostics on failure, return the domain result
-
-Child-drop relocation:
-
-- add `CardRegistry::drop_child_at_position(parent_id, card_id, target_index)` as the domain entry point
-- move the remove-clamp-insert policy out of `application::execute`
-- inside the domain, prefer:
-  - `CardRegistry` for parent lookup and cross-card error ownership
-  - `Card` for the local ordered-children mutation helper if the Implementer wants the reorder algorithm fully owned by the entity
-- `Command::DropChildAtPosition` continues to exist with the same name, but its dispatch branch should delegate directly to the new registry method
-
-Why this is the minimal stable shape:
-
-- the public application surface stays `application::Command` plus `application::execute`
-- only one place enumerates the command catalog for behavior and start-logging
-- child-drop semantics become domain-owned without changing UI routing or drag/drop command names
-
-### Public API and test impact
-
-Public API changes the Implementer should expect:
-
-- `CardRegistry` gains a new public ordered-child operation for drop-at-position
-- `application::Command` remains externally unchanged
-- `application::execute(...)` remains externally unchanged
-- `board_view` public entry points remain unchanged; the split is internal module structure only
-
-Tests the Implementer should add or move:
-
-- domain tests for the new child-drop entry point:
-  - moves an existing child to a lower index
-  - clamps insertion past the end
-  - rejects dropping a non-child into the parent
-- if a `Card`-level helper is introduced, add direct entity tests there for the reorder algorithm
-- keep one application-level regression test proving `execute(Command::DropChildAtPosition { .. })` still works end-to-end
-- for the grid split, prefer small tests around any extracted pure helper/spec logic rather than brittle RSX snapshot tests
-
-Non-goals for this decomposition:
-
-- no bucket/column model
-- no routing changes away from workspace-first navigation
-- no drag payload format redesign unless needed purely as a private helper extraction
-- no modal or command-name changes
 
 ---
 

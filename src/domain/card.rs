@@ -153,7 +153,9 @@ impl Card {
             ));
         }
 
+        let existing_set: std::collections::HashSet<_> = self.children_ids.iter().collect();
         let mut seen = std::collections::HashSet::new();
+
         for id in &ordered_ids {
             if !seen.insert(*id) {
                 return Err(DomainError::InvalidOperation(format!(
@@ -161,7 +163,7 @@ impl Card {
                 )));
             }
 
-            if !self.children_ids.contains(id) {
+            if !existing_set.contains(id) {
                 return Err(DomainError::CardNotFound(*id));
             }
         }
@@ -189,21 +191,13 @@ impl Card {
 
     /// Renames a note page on this card.
     pub fn rename_note_page(&mut self, id: NotePageId, title: String) -> Result<(), DomainError> {
-        let note = self
-            .notes
-            .iter_mut()
-            .find(|note| note.id() == id)
-            .ok_or_else(|| DomainError::InvalidOperation(format!("Note page not found: {id}")))?;
+        let note = self.find_note_page_mut(id)?;
         note.rename(title)
     }
 
     /// Saves the body content of a note page.
     pub fn save_note_page_body(&mut self, id: NotePageId, body: String) -> Result<(), DomainError> {
-        let note = self
-            .notes
-            .iter_mut()
-            .find(|note| note.id() == id)
-            .ok_or_else(|| DomainError::InvalidOperation(format!("Note page not found: {id}")))?;
+        let note = self.find_note_page_mut(id)?;
         note.set_body(body);
         Ok(())
     }
@@ -218,6 +212,13 @@ impl Card {
             )));
         }
         Ok(())
+    }
+
+    fn find_note_page_mut(&mut self, id: NotePageId) -> Result<&mut NotePage, DomainError> {
+        self.notes
+            .iter_mut()
+            .find(|note| note.id() == id)
+            .ok_or_else(|| DomainError::InvalidOperation(format!("Note page not found: {id}")))
     }
 
     /// Sets or clears the due date of the card.

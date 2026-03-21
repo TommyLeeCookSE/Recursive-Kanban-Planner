@@ -13,12 +13,6 @@ use crate::domain::id::{CardId, NotePageId};
 use crate::domain::registry::{CardRegistry, DeleteStrategy};
 use tracing::info;
 
-#[derive(Clone, Copy)]
-struct CommandDescriptor {
-    name: &'static str,
-    apply: fn(Command, &mut CardRegistry) -> Result<(), DomainError>,
-}
-
 /// A request to mutate the application state.
 ///
 /// # Examples
@@ -129,63 +123,6 @@ pub enum Command {
 }
 
 impl Command {
-    fn descriptor(&self) -> CommandDescriptor {
-        match self {
-            Command::CreateWorkspaceChildCard { .. } => CommandDescriptor {
-                name: "CreateWorkspaceChildCard",
-                apply: apply_create_workspace_child_card,
-            },
-            Command::CreateChildCard { .. } => CommandDescriptor {
-                name: "CreateChildCard",
-                apply: apply_create_child_card,
-            },
-            Command::RenameCard { .. } => CommandDescriptor {
-                name: "RenameCard",
-                apply: apply_rename_card,
-            },
-            Command::AddNotePage { .. } => CommandDescriptor {
-                name: "AddNotePage",
-                apply: apply_add_note_page,
-            },
-            Command::RenameNotePage { .. } => CommandDescriptor {
-                name: "RenameNotePage",
-                apply: apply_rename_note_page,
-            },
-            Command::SaveNotePageBody { .. } => CommandDescriptor {
-                name: "SaveNotePageBody",
-                apply: apply_save_note_page_body,
-            },
-            Command::DeleteNotePage { .. } => CommandDescriptor {
-                name: "DeleteNotePage",
-                apply: apply_delete_note_page,
-            },
-            Command::SetDueDate { .. } => CommandDescriptor {
-                name: "SetDueDate",
-                apply: apply_set_due_date,
-            },
-            Command::ClearDueDate { .. } => CommandDescriptor {
-                name: "ClearDueDate",
-                apply: apply_clear_due_date,
-            },
-            Command::DeleteCard { .. } => CommandDescriptor {
-                name: "DeleteCard",
-                apply: apply_delete_card,
-            },
-            Command::ReparentCard { .. } => CommandDescriptor {
-                name: "ReparentCard",
-                apply: apply_reparent_card,
-            },
-            Command::ReorderChildren { .. } => CommandDescriptor {
-                name: "ReorderChildren",
-                apply: apply_reorder_children,
-            },
-            Command::DropChildAtPosition { .. } => CommandDescriptor {
-                name: "DropChildAtPosition",
-                apply: apply_drop_child_at_position,
-            },
-        }
-    }
-
     /// Returns the string name of the command variant.
     ///
     /// # Examples
@@ -197,7 +134,21 @@ impl Command {
     /// assert_eq!(cmd.name(), "ClearDueDate");
     /// ```
     pub fn name(&self) -> &'static str {
-        self.descriptor().name
+        match self {
+            Command::CreateWorkspaceChildCard { .. } => "CreateWorkspaceChildCard",
+            Command::CreateChildCard { .. } => "CreateChildCard",
+            Command::RenameCard { .. } => "RenameCard",
+            Command::AddNotePage { .. } => "AddNotePage",
+            Command::RenameNotePage { .. } => "RenameNotePage",
+            Command::SaveNotePageBody { .. } => "SaveNotePageBody",
+            Command::DeleteNotePage { .. } => "DeleteNotePage",
+            Command::SetDueDate { .. } => "SetDueDate",
+            Command::ClearDueDate { .. } => "ClearDueDate",
+            Command::DeleteCard { .. } => "DeleteCard",
+            Command::ReparentCard { .. } => "ReparentCard",
+            Command::ReorderChildren { .. } => "ReorderChildren",
+            Command::DropChildAtPosition { .. } => "DropChildAtPosition",
+        }
     }
 
     /// Logs the start of command execution using `tracing`.
@@ -211,9 +162,8 @@ impl Command {
     /// cmd.log_start();
     /// ```
     pub fn log_start(&self) {
-        let descriptor = self.descriptor();
         info!(
-            command = descriptor.name,
+            command = self.name(),
             details = ?self,
             "Executing application command"
         );
@@ -232,151 +182,70 @@ impl Command {
     /// cmd.apply(&mut registry).unwrap();
     /// ```
     pub fn apply(self, registry: &mut CardRegistry) -> Result<(), DomainError> {
-        let descriptor = self.descriptor();
-        (descriptor.apply)(self, registry)
+        match self {
+            Command::CreateWorkspaceChildCard { title } => {
+                registry.create_workspace_child_card(title)?;
+            }
+            Command::CreateChildCard { title, parent_id } => {
+                registry.create_child_card(title, parent_id)?;
+            }
+            Command::RenameCard { id, title } => {
+                registry.rename_card(id, title)?;
+            }
+            Command::AddNotePage { card_id, title } => {
+                registry.add_note_page(card_id, title)?;
+            }
+            Command::RenameNotePage {
+                card_id,
+                note_page_id,
+                title,
+            } => {
+                registry.rename_note_page(card_id, note_page_id, title)?;
+            }
+            Command::SaveNotePageBody {
+                card_id,
+                note_page_id,
+                body,
+            } => {
+                registry.save_note_page_body(card_id, note_page_id, body)?;
+            }
+            Command::DeleteNotePage {
+                card_id,
+                note_page_id,
+            } => {
+                registry.delete_note_page(card_id, note_page_id)?;
+            }
+            Command::SetDueDate { card_id, due_date } => {
+                registry.set_due_date(card_id, due_date)?;
+            }
+            Command::ClearDueDate { card_id } => {
+                registry.clear_due_date(card_id)?;
+            }
+            Command::DeleteCard { id, strategy } => {
+                registry.delete_card(id, strategy)?;
+            }
+            Command::ReparentCard {
+                card_id,
+                new_parent_id,
+            } => {
+                registry.reparent_card(card_id, new_parent_id)?;
+            }
+            Command::ReorderChildren {
+                parent_id,
+                ordered_ids,
+            } => {
+                registry.reorder_children(parent_id, ordered_ids)?;
+            }
+            Command::DropChildAtPosition {
+                parent_id,
+                card_id,
+                target_index,
+            } => {
+                registry.drop_child_at_position(parent_id, card_id, target_index)?;
+            }
+        }
+        Ok(())
     }
-}
-
-fn apply_create_workspace_child_card(
-    command: Command,
-    registry: &mut CardRegistry,
-) -> Result<(), DomainError> {
-    let Command::CreateWorkspaceChildCard { title } = command else {
-        unreachable!("descriptor/apply mismatch for CreateWorkspaceChildCard");
-    };
-    registry.create_workspace_child_card(title)?;
-    Ok(())
-}
-
-fn apply_create_child_card(
-    command: Command,
-    registry: &mut CardRegistry,
-) -> Result<(), DomainError> {
-    let Command::CreateChildCard { title, parent_id } = command else {
-        unreachable!("descriptor/apply mismatch for CreateChildCard");
-    };
-    registry.create_child_card(title, parent_id)?;
-    Ok(())
-}
-
-fn apply_rename_card(command: Command, registry: &mut CardRegistry) -> Result<(), DomainError> {
-    let Command::RenameCard { id, title } = command else {
-        unreachable!("descriptor/apply mismatch for RenameCard");
-    };
-    registry.rename_card(id, title)
-}
-
-fn apply_add_note_page(command: Command, registry: &mut CardRegistry) -> Result<(), DomainError> {
-    let Command::AddNotePage { card_id, title } = command else {
-        unreachable!("descriptor/apply mismatch for AddNotePage");
-    };
-    registry.add_note_page(card_id, title)?;
-    Ok(())
-}
-
-fn apply_rename_note_page(
-    command: Command,
-    registry: &mut CardRegistry,
-) -> Result<(), DomainError> {
-    let Command::RenameNotePage {
-        card_id,
-        note_page_id,
-        title,
-    } = command
-    else {
-        unreachable!("descriptor/apply mismatch for RenameNotePage");
-    };
-    registry.rename_note_page(card_id, note_page_id, title)
-}
-
-fn apply_save_note_page_body(
-    command: Command,
-    registry: &mut CardRegistry,
-) -> Result<(), DomainError> {
-    let Command::SaveNotePageBody {
-        card_id,
-        note_page_id,
-        body,
-    } = command
-    else {
-        unreachable!("descriptor/apply mismatch for SaveNotePageBody");
-    };
-    registry.save_note_page_body(card_id, note_page_id, body)
-}
-
-fn apply_delete_note_page(
-    command: Command,
-    registry: &mut CardRegistry,
-) -> Result<(), DomainError> {
-    let Command::DeleteNotePage {
-        card_id,
-        note_page_id,
-    } = command
-    else {
-        unreachable!("descriptor/apply mismatch for DeleteNotePage");
-    };
-    registry.delete_note_page(card_id, note_page_id)
-}
-
-fn apply_set_due_date(command: Command, registry: &mut CardRegistry) -> Result<(), DomainError> {
-    let Command::SetDueDate { card_id, due_date } = command else {
-        unreachable!("descriptor/apply mismatch for SetDueDate");
-    };
-    registry.set_due_date(card_id, due_date)
-}
-
-fn apply_clear_due_date(command: Command, registry: &mut CardRegistry) -> Result<(), DomainError> {
-    let Command::ClearDueDate { card_id } = command else {
-        unreachable!("descriptor/apply mismatch for ClearDueDate");
-    };
-    registry.clear_due_date(card_id)
-}
-
-fn apply_delete_card(command: Command, registry: &mut CardRegistry) -> Result<(), DomainError> {
-    let Command::DeleteCard { id, strategy } = command else {
-        unreachable!("descriptor/apply mismatch for DeleteCard");
-    };
-    registry.delete_card(id, strategy)
-}
-
-fn apply_reparent_card(command: Command, registry: &mut CardRegistry) -> Result<(), DomainError> {
-    let Command::ReparentCard {
-        card_id,
-        new_parent_id,
-    } = command
-    else {
-        unreachable!("descriptor/apply mismatch for ReparentCard");
-    };
-    registry.reparent_card(card_id, new_parent_id)
-}
-
-fn apply_reorder_children(
-    command: Command,
-    registry: &mut CardRegistry,
-) -> Result<(), DomainError> {
-    let Command::ReorderChildren {
-        parent_id,
-        ordered_ids,
-    } = command
-    else {
-        unreachable!("descriptor/apply mismatch for ReorderChildren");
-    };
-    registry.reorder_children(parent_id, ordered_ids)
-}
-
-fn apply_drop_child_at_position(
-    command: Command,
-    registry: &mut CardRegistry,
-) -> Result<(), DomainError> {
-    let Command::DropChildAtPosition {
-        parent_id,
-        card_id,
-        target_index,
-    } = command
-    else {
-        unreachable!("descriptor/apply mismatch for DropChildAtPosition");
-    };
-    registry.drop_child_at_position(parent_id, card_id, target_index)
 }
 
 #[cfg(test)]
@@ -384,7 +253,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn command_name_comes_from_descriptor() {
+    fn command_name_is_correct() {
         let command = Command::DropChildAtPosition {
             parent_id: CardId::default(),
             card_id: CardId::default(),
@@ -395,7 +264,7 @@ mod tests {
     }
 
     #[test]
-    fn command_apply_uses_descriptor_function() {
+    fn command_apply_works() {
         let mut registry = CardRegistry::new();
         let command = Command::CreateWorkspaceChildCard {
             title: "Top Level Board".into(),
