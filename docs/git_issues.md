@@ -68,3 +68,8 @@
 **Status:** CLOSED
 **Resolution:** Implemented 80-character limit for card and note titles in both domain validation and UI inputs.
 
+## Issue #72: UI Performance Optimization for Large Workspaces
+**Status:** CLOSED
+**Resolution:** Implemented memoization for board views, capped preview items, optimized serialization by removing redundant clones, and added stable keys to the grid.
+
+

@@ -31,9 +31,15 @@ pub fn Board(card_id: CardId) -> Element {
     let signals = use_board_signals();
     let card_drop_index = use_signal(|| None::<usize>);
 
-    let reg_guard = signals.registry.read();
-    let screen_data = match load_board_screen_data(card_id, &reg_guard) {
-        Ok(screen_data) => screen_data,
+    // Memoize the board data so we don't re-calculate it (and all card previews)
+    // during drag-and-drop operations or other transient state changes.
+    let screen_data_result = use_memo(move || {
+        let reg = signals.registry.read();
+        load_board_screen_data(card_id, &reg)
+    });
+
+    let screen_data = match screen_data_result() {
+        Ok(data) => data,
         Err(error_value) => {
             error!(%card_id, error = %error_value, "Board route failed to load board state");
             record_diagnostic(

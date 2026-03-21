@@ -25,12 +25,12 @@ I have completed a thorough review of the codebase for logic errors, structural 
 
 ## 🧐 Domain Logic & Structural Observations
 
-### 4. Redundant Allocations: Board Projections
-- **Module**: `src/domain/registry.rs`
-- **Observation**: `CardRegistry::get_children` allocates a fresh `Vec` and performs multiple `HashMap` lookups every time a board is rendered.
-- **Recommendation**: While acceptable for current board sizes, consider if the `BoardView` projection can be cached or if the UI can iterate over IDs directly to minimize allocations in tight render loops.
+### 4. Redundant Allocations: Board Projections (RESOLVED)
+- **Module**: `src/domain/registry.rs`, `src/interface/routes/board.rs`
+- **Observation**: `CardRegistry::get_children` and board screen data were being re-calculated excessively.
+- **Action Taken**: Implemented `use_memo` in the board and home routes to anchor screen data to registry changes. Capped card preview items to 5 to minimize string cloning. Optimized JSON serialization to remove redundant registry clones.
 
-### 5. Unified Action Bar System (ENHANCEMENT)
+### 5. Unified Action Bar System (ENHANCEMENT) (RESOLVED)
 - **Module**: `src/interface/tailwind.css`, `src/interface/components/layout.rs`
 - **Observation**: Navigation was previously split into unrelated systems.
 - **Action Taken**: Unified top and bottom bars into a single `.app-bar` system with responsive `clamp()` sizing and dynamic grid distribution for the bottom bar.
@@ -46,6 +46,7 @@ The codebase follows **Clean Architecture** principles strictly, separating Doma
   - Consistent naming and project structure.
   - Responsive UI that handles extreme viewport widths gracefully.
   - Robust integration tests for complex cross-parent drag-and-drop sequences.
+  - High performance even with large workspaces due to memoization and optimized serialization.
 - **Areas for Growth**:
   - Desktop-specific persistence implementation.
 

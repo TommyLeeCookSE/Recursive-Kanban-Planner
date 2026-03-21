@@ -53,12 +53,22 @@ impl JsonRepository {
         let workspace_child_count = registry.workspace_child_count();
         info!(workspace_child_count, "Serializing registry to JSON");
 
-        let persisted = PersistedRegistry {
+        // We wrap the registry reference in our persistence envelope to avoid a redundant clone
+        // of the entire registry before serialization.
+        #[derive(Serialize)]
+        struct PersistedRegistryRef<'a> {
+            schema_version: u8,
+            registry: &'a CardRegistry,
+        }
+
+        let persisted = PersistedRegistryRef {
             schema_version: CURRENT_SCHEMA_VERSION,
-            registry: registry.clone(),
+            registry,
         };
 
-        serde_json::to_string_pretty(&persisted).map_err(|e| {
+        // Use compact serialization for internal persistence to improve performance
+        // when the registry contains many cards.
+        serde_json::to_string(&persisted).map_err(|e| {
             let error =
                 DomainError::InvalidOperation(format!("Failed to serialize registry to JSON: {e}"));
             error!(

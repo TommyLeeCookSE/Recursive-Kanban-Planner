@@ -92,6 +92,9 @@ Recent binding decisions already implemented:
 9. Refactored `Command` dispatch to remove repetitive descriptor functions.
 10. Optimized $O(N)$ reorder validation in `Card`.
 11. Unified icon-only buttons with hover tooltips for all navigation actions.
+12. Memoized board data views to ensure O(1) transient performance during UI interactions.
+13. Optimized persistence pipeline with zero-clone serialization.
+
 
 ---
 

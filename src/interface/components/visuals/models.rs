@@ -52,6 +52,7 @@ pub fn build_card_display(card: &Card, preview_view: Option<&CardPreviewView>) -
         .map(|view| {
             view.children
                 .iter()
+                .take(5)
                 .map(|child| child.title().to_string())
                 .collect()
         })

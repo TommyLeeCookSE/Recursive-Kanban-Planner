@@ -29,9 +29,13 @@ pub fn Home() -> Element {
     let signals = use_board_signals();
     let card_drop_index = use_signal(|| None::<usize>);
 
-    let reg_guard = signals.registry.read();
-    let screen_data = match load_workspace_screen_data(&reg_guard) {
-        Ok(screen_data) => screen_data,
+    let screen_data_result = use_memo(move || {
+        let reg = signals.registry.read();
+        load_workspace_screen_data(&reg)
+    });
+
+    let screen_data = match screen_data_result() {
+        Ok(data) => data,
         Err(error_value) => {
             error!(error = %error_value, "Workspace route failed to load workspace card");
             record_diagnostic(
