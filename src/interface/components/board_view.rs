@@ -63,7 +63,6 @@ pub(crate) fn render_board_screen(
                     title: "Create Card",
                     "aria-label": "Create Card",
                     span { class: "app-bar-button-icon", {render_plus_icon()} }
-                    span { class: "app-bar-button-label", "Create Card" }
                 }
                 button {
                     class: "app-bar-button",
@@ -73,7 +72,6 @@ pub(crate) fn render_board_screen(
                     title: "Open notes",
                     "aria-label": "Notes",
                     span { class: "app-bar-button-icon", {render_note_icon()} }
-                    span { class: "app-bar-button-label", "Notes" }
                 }
                 button {
                     class: "app-bar-button",
@@ -83,7 +81,6 @@ pub(crate) fn render_board_screen(
                     title: "Open settings",
                     "aria-label": "Settings",
                     span { class: "app-bar-button-icon", {render_settings_icon()} }
-                    span { class: "app-bar-button-label", "Settings" }
                 }
             }
         }

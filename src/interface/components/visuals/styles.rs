@@ -61,42 +61,6 @@ pub fn drop_zone_classes(
     }
 }
 
-/// Standard CSS classes for a primary action button on a surface.
-///
-/// # Examples
-///
-/// ```
-/// use kanban_planner::interface::components::visuals::surface_action_button_classes;
-/// assert_eq!(surface_action_button_classes(), "app-surface-action-button");
-/// ```
-pub fn surface_action_button_classes() -> &'static str {
-    "app-surface-action-button"
-}
-
-/// Standard CSS classes for an icon-only button on a surface.
-///
-/// # Examples
-///
-/// ```
-/// use kanban_planner::interface::components::visuals::surface_icon_button_classes;
-/// assert_eq!(surface_icon_button_classes(), "app-surface-icon-button");
-/// ```
-pub fn surface_icon_button_classes() -> &'static str {
-    "app-surface-icon-button"
-}
-
-/// Standard CSS classes for a destructive icon-only button on a surface.
-///
-/// # Examples
-///
-/// ```
-/// use kanban_planner::interface::components::visuals::surface_destructive_icon_button_classes;
-/// assert_eq!(surface_destructive_icon_button_classes(), "app-surface-icon-button app-surface-icon-button--danger");
-/// ```
-pub fn surface_destructive_icon_button_classes() -> &'static str {
-    "app-surface-icon-button app-surface-icon-button--danger"
-}
-
 /// Standard CSS classes for a button in the main toolbar.
 ///
 /// # Examples
@@ -119,18 +83,6 @@ pub fn toolbar_button_classes() -> &'static str {
 /// ```
 pub fn toolbar_icon_button_classes() -> &'static str {
     "app-bar-button"
-}
-
-/// Standard CSS classes for a label within a toolbar button.
-///
-/// # Examples
-///
-/// ```
-/// use kanban_planner::interface::components::visuals::toolbar_button_label_classes;
-/// assert_eq!(toolbar_button_label_classes(), "app-bar-button-label");
-/// ```
-pub fn toolbar_button_label_classes() -> &'static str {
-    "app-bar-button-label"
 }
 
 /// Standard CSS classes for an icon within a toolbar button.

@@ -126,7 +126,6 @@ pub fn BottomBar(back_route: Option<Route>, back_label: String, children: Elemen
                 },
                 title: "Back to {back_label}",
                 span { class: "app-bar-button-icon", {render_back_icon()} }
-                span { class: "app-bar-button-label", "Back to: {back_label}" }
             }
         }
     } else {
@@ -134,8 +133,8 @@ pub fn BottomBar(back_route: Option<Route>, back_label: String, children: Elemen
             button {
                 class: "app-bar-button group",
                 disabled: true,
+                title: "Back to {back_label}",
                 span { class: "app-bar-button-icon", {render_back_icon()} }
-                span { class: "app-bar-button-label", "Back to: {back_label}" }
             }
         }
     };

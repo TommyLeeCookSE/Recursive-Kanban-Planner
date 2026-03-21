@@ -57,7 +57,6 @@ pub fn render_export_button(
                     }
                 },
                 span { class: "app-bar-button-icon", {render_export_icon()} }
-                span { class: "app-bar-button-label", "Export" }
             }
         };
     }
@@ -103,7 +102,6 @@ pub fn render_import_button(
                     );
                 },
                 span { class: "app-bar-button-icon", {render_import_icon()} }
-                span { class: "app-bar-button-label", "Import" }
             }
         };
     }
@@ -158,7 +156,6 @@ pub fn render_clear_cache_button(
                     }
                 },
                 span { class: "app-bar-button-icon", {render_trash_icon()} }
-                span { class: "app-bar-button-label", "Clear Cache" }
             }
         };
     }
@@ -181,7 +178,6 @@ fn disabled_utility_button(label: &str, title: &str) -> Element {
             disabled: true,
             title: "{title}",
             "aria-label": "{label}",
-            span { class: "app-bar-button-label", "{label}" }
         }
         span { class: "app-kicker",
             "Soon"

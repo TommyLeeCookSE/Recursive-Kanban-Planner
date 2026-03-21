@@ -223,3 +223,18 @@ pub fn render_back_icon() -> Element {
         }
     }
 }
+
+/// Renders an edit/pencil icon.
+///
+/// # Examples
+///
+/// ```ignore
+/// rsx! { render_edit_icon() }
+/// ```
+pub fn render_edit_icon() -> Element {
+    rsx! {
+        Icon { view_box: "0 0 24 24", stroke_width: "1.8",
+            path { d: "M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" }
+        }
+    }
+}

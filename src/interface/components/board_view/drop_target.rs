@@ -76,19 +76,19 @@ pub(super) fn apply_card_drop(
             .ok()
             .and_then(|c| c.parent_id());
 
-        if let Some(old_parent) = current_parent_id {
-            if old_parent != board_id {
-                let _ = execute_command_with_feedback(
-                    Command::ReparentCard {
-                        card_id,
-                        new_parent_id: board_id,
-                    },
-                    registry,
-                    warning_message,
-                    BOARD_ROUTE_TARGET,
-                    format!("Reparenting card for {diagnostic_message}"),
-                );
-            }
+        if let Some(old_parent) = current_parent_id
+            && old_parent != board_id
+        {
+            let _ = execute_command_with_feedback(
+                Command::ReparentCard {
+                    card_id,
+                    new_parent_id: board_id,
+                },
+                registry,
+                warning_message,
+                BOARD_ROUTE_TARGET,
+                format!("Reparenting card for {diagnostic_message}"),
+            );
         }
 
         let _ = execute_command_with_feedback(

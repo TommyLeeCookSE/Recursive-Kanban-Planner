@@ -7,9 +7,7 @@
 //! `docs/rust-for-python-devs.md`.
 
 use crate::interface::components::shared_forms::confirm_destructive_action;
-use crate::interface::components::visuals::{
-    render_trash_icon, surface_action_button_classes, surface_destructive_icon_button_classes,
-};
+use crate::interface::components::visuals::{render_edit_icon, render_trash_icon};
 use dioxus::prelude::*;
 
 /// A premium, reusable card component for both Workspace and Board views.
@@ -113,7 +111,7 @@ pub fn CardItem(
                     div { class: "app-card-actions-inner",
                         if let Some(delete_handler) = on_delete {
                             button {
-                                class: "{surface_destructive_icon_button_classes()}",
+                                class: "app-bar-button app-bar-button--danger",
                                 title: "Delete this card",
                                 draggable: false,
                                 onclick: move |_| {
@@ -123,16 +121,16 @@ pub fn CardItem(
                                         delete_handler.call(());
                                     }
                                 },
-                                span { class: "app-icon-slot", {render_trash_icon()} }
+                                span { class: "app-bar-button-icon", {render_trash_icon()} }
                             }
                         }
                         if let Some(rename_handler) = on_rename {
                             button {
-                                class: "{surface_action_button_classes()}",
+                                class: "app-bar-button",
                                 title: "Edit this card",
                                 draggable: false,
                                 onclick: move |_| rename_handler.call(()),
-                                "Edit"
+                                span { class: "app-bar-button-icon", {render_edit_icon()} }
                             }
                         }
                     }
