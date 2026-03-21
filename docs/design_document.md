@@ -68,6 +68,7 @@ Implemented in the current worktree:
 | Deterministic child-card creation | `src/interface/components/modal.rs` | Child creation requires a real parent card |
 | Fail-loud board fallback | `src/interface/routes/board.rs` | Board load preserves the real `DomainError` for logs |
 | Public API docs with examples | `src/application/`, `src/infrastructure/`, `src/interface/` | Public entry points now have `# Examples` blocks |
+| Dynamic "Smart" Navigation | `src/interface/components/layout.rs` | Content-aware auto-collapse based on real-time measurement |
 
 Not yet implemented or not yet fully verified:
 
@@ -83,6 +84,8 @@ Recent binding decisions already implemented:
 3. Child-card creation in the UI must never synthesize a fallback id.
 4. The board route must keep the underlying `DomainError` for logs and show a user-safe fallback.
 5. Command lifecycle logging belongs to `application::execute`.
+6. Split navigation: Action bar at bottom, centered title at top.
+7. "Math-based" responsive: Measure rendered content to toggle icon-only labels.
 
 ---
 

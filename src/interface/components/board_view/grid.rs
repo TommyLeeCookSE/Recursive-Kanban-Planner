@@ -13,16 +13,13 @@ pub(super) fn render_board_grid(
             if child_models.is_empty() {
                 {render_empty_drop_zone(context.clone())}
             } else {
-                div {
-                    class: "app-board-grid",
-                    for (index, card) in child_models.iter().cloned().enumerate() {
-                        {render_card_slot(
-                            card,
-                            index,
-                            index + 1 == child_models.len(),
-                            context.clone(),
-                        )}
-                    }
+                for (index, card) in child_models.iter().cloned().enumerate() {
+                    {render_card_slot(
+                        card,
+                        index,
+                        index + 1 == child_models.len(),
+                        context.clone(),
+                    )}
                 }
             }
         }

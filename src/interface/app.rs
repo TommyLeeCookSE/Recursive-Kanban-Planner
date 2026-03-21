@@ -83,7 +83,8 @@ pub struct BoardSignals {
 pub fn use_board_signals() -> BoardSignals {
     BoardSignals {
         registry: use_context::<Signal<crate::domain::registry::CardRegistry>>(),
-        active_modal: use_context::<Signal<Option<crate::interface::components::modal::ModalType>>>(),
+        active_modal: use_context::<Signal<Option<crate::interface::components::modal::ModalType>>>(
+        ),
         warning_message: use_context::<Signal<Option<String>>>(),
         is_dragging: use_context::<Signal<IsDragging>>(),
         dragged_item_kind: use_context::<Signal<DraggedItemKind>>(),
@@ -117,10 +118,10 @@ pub fn App() -> Element {
     } else {
         "app-shell theme-light"
     };
-    let registry_snapshot = registry.read().clone();
-    use_effect(use_reactive!(|(registry_snapshot,)| {
+    use_effect(move || {
+        let registry_snapshot = registry.read().clone();
         persist_registry_snapshot(&registry_snapshot, persistence_warning);
-    }));
+    });
 
     rsx! {
         div { class: "{shell_class}",

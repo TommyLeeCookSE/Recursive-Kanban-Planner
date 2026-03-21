@@ -142,7 +142,7 @@ pub fn render_clear_cache_button(
         let mut persistence_warning = persistence_warning;
         return rsx! {
             button {
-                class: "app-danger-button app-utility-button-row",
+                class: "app-utility-button app-utility-button--danger app-utility-button-row",
                 title: "Clear saved data and reset the workspace",
                 "aria-label": "Clear Cache",
                 onclick: move |_| {

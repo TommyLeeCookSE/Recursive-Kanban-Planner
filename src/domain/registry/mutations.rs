@@ -291,6 +291,12 @@ pub(super) fn reparent_card(
     card_id: CardId,
     new_parent_id: CardId,
 ) -> Result<(), DomainError> {
+    if card_id == registry.workspace_card_id()? {
+        return Err(DomainError::InvalidOperation(
+            "The workspace root cannot be reparented".to_string(),
+        ));
+    }
+
     if card_id == new_parent_id {
         return Err(DomainError::CycleDetected);
     }

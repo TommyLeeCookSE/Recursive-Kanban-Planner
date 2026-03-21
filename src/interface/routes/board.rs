@@ -7,14 +7,12 @@
 //! `docs/rust-for-python-devs.md`.
 
 use crate::domain::id::CardId;
-use crate::domain::registry::CardRegistry;
 use crate::infrastructure::logging::record_diagnostic;
 use crate::interface::Route;
 use crate::interface::app::use_board_signals;
 use crate::interface::components::board_view::{
     BoardDragSignals, BoardRenderContext, render_board_screen,
 };
-use crate::interface::components::modal::ModalType;
 use crate::interface::routes::board_screen::load_board_screen_data;
 use dioxus::prelude::*;
 use tracing::{Level, error};
@@ -89,6 +87,7 @@ fn render_board_load_error() -> Element {
 mod tests {
     use super::*;
     use crate::domain::error::DomainError;
+    use crate::domain::registry::CardRegistry;
     use crate::interface::routes::board_screen::load_board_screen_data;
 
     #[test]

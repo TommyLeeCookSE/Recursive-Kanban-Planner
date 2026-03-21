@@ -6,13 +6,11 @@
 //! For an overview of the routing structure, see
 //! `docs/rust-for-python-devs.md`.
 
-use crate::domain::registry::CardRegistry;
 use crate::infrastructure::logging::record_diagnostic;
 use crate::interface::app::use_board_signals;
 use crate::interface::components::board_view::{
     BoardDragSignals, BoardRenderContext, render_board_screen,
 };
-use crate::interface::components::modal::ModalType;
 use crate::interface::routes::board_screen::load_workspace_screen_data;
 use dioxus::prelude::*;
 use tracing::{Level, error};

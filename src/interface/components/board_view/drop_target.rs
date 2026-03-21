@@ -70,6 +70,27 @@ pub(super) fn apply_card_drop(
     let board_id = context.board_id;
 
     run_with_view_transition(move || {
+        let current_parent_id = registry
+            .read()
+            .get_card(card_id)
+            .ok()
+            .and_then(|c| c.parent_id());
+
+        if let Some(old_parent) = current_parent_id {
+            if old_parent != board_id {
+                let _ = execute_command_with_feedback(
+                    Command::ReparentCard {
+                        card_id,
+                        new_parent_id: board_id,
+                    },
+                    registry,
+                    warning_message,
+                    BOARD_ROUTE_TARGET,
+                    format!("Reparenting card for {diagnostic_message}"),
+                );
+            }
+        }
+
         let _ = execute_command_with_feedback(
             Command::DropChildAtPosition {
                 parent_id: board_id,

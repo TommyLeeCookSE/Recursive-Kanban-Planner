@@ -575,6 +575,21 @@ mod tests {
     }
 
     #[test]
+    fn test_reparent_workspace_is_rejected() {
+        let mut registry = CardRegistry::new();
+        let workspace_id = registry.workspace_card_id().unwrap();
+        let child_id = registry
+            .create_child_card("Child".into(), workspace_id)
+            .unwrap();
+
+        assert!(matches!(
+            registry.reparent_card(workspace_id, child_id),
+            Err(DomainError::InvalidOperation(message))
+                if message.contains("workspace root cannot be reparented")
+        ));
+    }
+
+    #[test]
     fn test_delete_workspace_is_rejected() {
         let mut registry = CardRegistry::new();
         let workspace_id = registry.workspace_card_id().unwrap();

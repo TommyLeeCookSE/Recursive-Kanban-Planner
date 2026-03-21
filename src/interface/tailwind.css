@@ -94,6 +94,10 @@
     --app-toolbar-button-pad-y: 0.75rem;
     --app-toolbar-button-font-size: 0.875rem;
     --app-toolbar-button-gap: 0.5rem;
+    --app-utility-button-padding-x: 1rem;
+    --app-utility-button-padding-y: 0.75rem;
+    --app-utility-button-font-size: 0.875rem;
+    --app-utility-button-letter-spacing: 0.14em;
     --app-card-actions-gap: 0.5rem;
     --app-card-actions-padding-x: 1.25rem;
     --app-card-actions-padding-y: 1rem;
@@ -111,6 +115,12 @@
     --app-board-screen-padding-x: 1.5rem;
     --app-board-screen-padding-y: 2.5rem;
     --app-board-screen-padding-x-lg: 3rem;
+    --app-board-hero-padding-x: 1.5rem;
+    --app-board-hero-padding-y: 1.5rem;
+    --app-board-hero-max-width: 42rem;
+    --app-board-hero-title-size: 2.25rem;
+    --app-board-hero-title-line-height: 1;
+    --app-board-hero-title-tracking: -0.08em;
     --app-board-status-padding-x: 1.5rem;
     --app-board-status-padding-y: 1.25rem;
     --app-board-status-padding-x-lg: 3rem;
@@ -391,6 +401,32 @@
     height: var(--app-navbar-brand-mark-size);
   }
 
+  .app-navbar-center {
+    @apply absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none z-10 hidden sm:block;
+    max-width: 40%;
+  }
+
+  .app-navbar-title {
+    @apply app-text-primary truncate font-black tracking-tighter;
+    font-size: 1.875rem;
+    line-height: 1;
+  }
+
+  .app-navbar-title-shell {
+    @apply app-panel-strong inline-flex max-w-full items-center justify-center rounded-[1.75rem] border px-5 py-3;
+    border-color: var(--app-border-strong);
+    background-color: color-mix(in srgb, var(--app-surface-strong) 92%, transparent);
+  }
+
+  .app-navbar-title-shell:hover {
+    border-color: rgba(255, 140, 0, 0.45);
+  }
+
+  .app-navbar-title--hero {
+    font-size: 1.75rem;
+    color: var(--app-text);
+  }
+
   .app-navbar-brand-text {
     @apply app-text-primary hidden font-black transition-colors group-hover:text-sunfire sm:inline;
     font-size: var(--app-navbar-brand-text-size);
@@ -485,8 +521,46 @@
   }
 
   .app-topbar-actions {
-    @apply flex min-w-0 shrink-0 flex-wrap items-center justify-end;
+    @apply flex min-w-0 shrink-0 flex-nowrap items-center justify-end;
     gap: var(--app-topbar-actions-gap);
+  }
+
+  .app-bottombar {
+    @apply z-40 grid h-20 flex-none grid-cols-4 items-stretch gap-4 overflow-hidden px-4 sm:px-6 lg:px-12 border-t;
+    background-color: color-mix(in srgb, var(--app-surface-strong) 92%, transparent);
+    backdrop-filter: blur(28px);
+    border-color: var(--app-border);
+    box-shadow: 0 -12px 48px rgba(0, 0, 0, 0.12);
+  }
+
+  .app-bottombar-back {
+    @apply flex min-w-0 items-stretch justify-stretch;
+  }
+
+  .app-bottombar-actions {
+    @apply contents min-w-0;
+  }
+
+  .app-bottombar > * {
+    @apply w-full;
+  }
+
+  .app-topbar-back--board {
+    @apply min-w-0;
+  }
+
+  .app-smart-bar-measurement {
+    @apply absolute invisible whitespace-nowrap opacity-0 pointer-events-none;
+    top: -999px;
+    left: -9999px;
+  }
+
+  .app-toolbar-label {
+    @apply transition-opacity duration-200;
+  }
+
+  .app-toolbar-label--hidden {
+    @apply hidden;
   }
 
   .app-card-body {
@@ -690,19 +764,39 @@
   }
 
   .app-utility-button {
-    @apply rounded-2xl px-4 py-2 text-xs font-black uppercase tracking-widest transition-all;
+    @apply inline-flex items-center justify-center gap-2 rounded-2xl border font-black transition-all active:scale-95;
+    border-color: var(--app-border-strong);
+    background-color: var(--app-surface-soft);
+    padding: var(--app-utility-button-padding-y) var(--app-utility-button-padding-x);
+    font-size: var(--app-utility-button-font-size);
+    letter-spacing: var(--app-utility-button-letter-spacing);
     color: var(--app-text-muted);
   }
 
   .app-utility-button:hover {
+    border-color: rgba(255, 140, 0, 0.45);
     color: #ff8c00;
     background-color: rgba(255, 140, 0, 0.08);
   }
 
   .app-utility-button-disabled {
-    @apply cursor-not-allowed rounded-2xl border px-4 py-2 text-xs font-black uppercase tracking-widest opacity-70;
-    border-color: transparent;
+    @apply cursor-not-allowed rounded-2xl border opacity-70;
+    border-color: var(--app-border-strong);
+    background-color: var(--app-surface-soft);
+    padding: var(--app-utility-button-padding-y) var(--app-utility-button-padding-x);
+    font-size: var(--app-utility-button-font-size);
+    letter-spacing: var(--app-utility-button-letter-spacing);
     color: color-mix(in srgb, var(--app-text-soft) 82%, transparent);
+  }
+
+  .app-utility-button--danger {
+    color: #ef4444;
+  }
+
+  .app-utility-button--danger:hover {
+    border-color: rgba(239, 68, 68, 0.55);
+    color: #dc2626;
+    background-color: rgba(239, 68, 68, 0.08);
   }
 
   .app-danger-button {
@@ -854,22 +948,30 @@
   }
 
   .app-board-screen {
-    @apply flex h-full flex-col;
+    @apply flex flex-1 min-h-0 flex-col;
   }
 
   .app-board-screen-content {
-    @apply flex-grow overflow-x-hidden;
+    @apply flex-1 min-h-0 overflow-x-hidden overflow-y-auto;
     padding: var(--app-board-screen-padding-y) var(--app-board-screen-padding-x);
   }
 
-  .app-board-status {
-    @apply app-panel flex flex-wrap items-center justify-between gap-4 border-b;
-    padding: var(--app-board-status-padding-y) var(--app-board-status-padding-x);
+  .app-board-hero {
+    @apply flex min-h-0 items-center justify-center;
+    padding: var(--app-board-screen-padding-y) var(--app-board-screen-padding-x);
   }
 
-  .app-board-status-inner {
-    @apply flex flex-wrap items-center;
-    gap: var(--app-board-status-gap);
+  .app-board-hero-card {
+    @apply app-card-surface flex w-full items-center justify-center text-center;
+    max-width: var(--app-board-hero-max-width);
+    padding: var(--app-board-hero-padding-y) var(--app-board-hero-padding-x);
+  }
+
+  .app-board-hero-title {
+    @apply app-text-primary text-center font-black;
+    font-size: var(--app-board-hero-title-size);
+    line-height: var(--app-board-hero-title-line-height);
+    letter-spacing: var(--app-board-hero-title-tracking);
   }
 
   .app-board-grid {

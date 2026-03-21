@@ -16,6 +16,8 @@ use crate::interface::components::web_utilities::{
     render_clear_cache_button, render_export_button, render_import_button,
 };
 use dioxus::prelude::*;
+// use_route is imported through the router module or prelude depending on features
+// In Dioxus 0.7 it should be accessible from the main prelude if router feature is on
 
 /// The main layout wrapper with a sticky top navigation bar.
 ///
@@ -32,7 +34,17 @@ pub fn NavbarLayout() -> Element {
     let active_modal = use_context::<Signal<Option<ModalType>>>();
     let registry = use_context::<Signal<crate::domain::registry::CardRegistry>>();
     let persistence_warning = use_context::<Signal<Option<String>>>();
+    let route = use_route::<Route>();
     let nav = navigator();
+
+    let active_title = match route {
+        Route::Board { card_id } => registry
+            .read()
+            .get_card(card_id)
+            .ok()
+            .map(|c| c.title().to_string()),
+        _ => None,
+    };
 
     let theme_title = if is_dark().0 {
         "Switch to Sunrise mode"
@@ -50,19 +62,24 @@ pub fn NavbarLayout() -> Element {
                         div { class: "app-navbar-brand-mark",
                             span { class: "app-navbar-brand-initial", "K" }
                         }
-                        span { class: "app-navbar-brand-text",
-                            "Kanban"
+                        span { class: "app-navbar-brand-text", "Kanban" }
+                    }
+                }
+
+                if let Some(title) = active_title {
+                    div { class: "app-navbar-center",
+                        div { class: "app-navbar-title-shell",
+                            h1 { class: "app-navbar-title app-navbar-title--hero", "{title}" }
                         }
                     }
                 }
 
-                div { class: "app-navbar-actions",
-                    {render_export_button(registry, persistence_warning)}
-                    {render_import_button(registry, active_modal, persistence_warning, nav)}
-                    {render_clear_cache_button(registry, active_modal, persistence_warning, nav)}
-                }
-
                 div { class: "app-navbar-trailing",
+                    div { class: "app-navbar-actions mr-4",
+                        {render_export_button(registry, persistence_warning)}
+                        {render_import_button(registry, active_modal, persistence_warning, nav)}
+                        {render_clear_cache_button(registry, active_modal, persistence_warning, nav)}
+                    }
                     button {
                         class: "app-theme-toggle",
                         onclick: move |_| is_dark.set(IsDark(!is_dark().0)),
@@ -77,9 +94,7 @@ pub fn NavbarLayout() -> Element {
                 }
             }
 
-            main { class: "app-router-main",
-                Outlet::<Route> {}
-            }
+            main { class: "app-router-main", Outlet::<Route> {} }
         }
     }
 }
@@ -90,8 +105,7 @@ pub fn NavbarLayout() -> Element {
 ///
 /// ```ignore
 /// rsx! {
-///     TopBar {
-///         title: "Roadmap".to_string(),
+///     BottomBar {
 ///         back_route: Route::Home {},
 ///         back_label: "Workspace".to_string(),
 ///         button {
@@ -102,36 +116,26 @@ pub fn NavbarLayout() -> Element {
 ///     }
 /// }
 /// ```
+/// A smart navigation bar that automatically collapses labels based on content width.
 #[component]
-pub fn TopBar(
-    title: String,
-    back_route: Option<Route>,
-    back_label: String,
-    children: Element,
-) -> Element {
+pub fn BottomBar(back_route: Option<Route>, back_label: String, children: Element) -> Element {
     let back_button = if let Some(route) = back_route {
         rsx! {
-                button {
-                    class: "app-topbar-back group",
-                    onclick: move |_| {
-                        let nav = navigator();
-                        let destination = route.clone();
-                        nav.push(destination);
-                    },
+            button {
+                class: "app-topbar-back group",
+                onclick: move |_| {
+                    navigator().push(route.clone());
+                },
                 title: "Back to {back_label}",
-                "aria-label": "Back to {back_label}",
                 span { class: "app-topbar-back-icon", {render_back_icon()} }
                 span { class: "app-topbar-back-label", "Back to: {back_label}" }
             }
         }
     } else {
         rsx! {
-                button {
-                    class: "app-topbar-back app-topbar-back--disabled group",
+            button {
+                class: "app-topbar-back app-topbar-back--disabled group",
                 disabled: true,
-                title: "Back to {back_label}",
-                "aria-label": "Back to {back_label}",
-                "aria-disabled": "true",
                 span { class: "app-topbar-back-icon", {render_back_icon()} }
                 span { class: "app-topbar-back-label", "Back to: {back_label}" }
             }
@@ -139,24 +143,13 @@ pub fn TopBar(
     };
 
     rsx! {
-        div { class: "app-topbar-shell",
-            div { class: "app-topbar-grid",
-                div { class: "app-topbar-back-shell",
-                    {back_button}
-                }
+        footer { class: "app-bottombar",
+            div { class: "app-bottombar-back",
+                {back_button}
+            }
 
-                div { class: "app-topbar-title-group",
-                    h1 { class: "app-topbar-title",
-                        "{title}"
-                    }
-                    p { class: "app-topbar-context",
-                        "Board Context / {back_label}"
-                    }
-                }
-
-                div { class: "app-topbar-actions",
-                    {children}
-                }
+            div { class: "app-bottombar-actions",
+                {children}
             }
         }
     }

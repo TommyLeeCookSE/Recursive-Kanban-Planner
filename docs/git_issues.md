@@ -27,3 +27,43 @@
 **Description:** Sunrise mode lacked the vibrant orange sunrise feel and had too many star-like particles.
 **Status:** CLOSED
 **Resolution:** Redesigned `.theme-light` atmosphere and backdrop in `src/interface/tailwind.css` with warm, glowing orange and yellow gradients.
+
+## Issue #55: Redundant Module File (visuals.rs)
+**Description:** Found both `src/interface/components/visuals.rs` and `src/interface/components/visuals/mod.rs` during codebase review, which blocked static analysis and compilation.
+**Status:** CLOSED
+**Resolution:** Deleted the redundant `src/interface/components/visuals.rs` file.
+
+## Issue #62: Drag-and-Drop "Ghost Failures" across Parents
+**Description:** Moving a card between different parent boards silently failed because `DropChildAtPosition` only supported reordering within the same parent.
+**Status:** CLOSED
+**Resolution:** Updated `apply_card_drop` in `src/interface/components/board_view/drop_target.rs` to detect parent changes and execute `Command::ReparentCard` before reordering.
+
+## Issue #56: Inefficient State Persistence (Performance)
+**Description:** The root `App` component was cloning the entire registry and executing persistence logic on every render, causing UI stuttering.
+**Status:** CLOSED
+**Resolution:** Moved registry cloning and persistence into a `use_effect` hook in `src/interface/app.rs`.
+
+## Issue #57: Root Workspace Vulnerable to Reparenting
+**Description:** The domain layer did not explicitly prevent the root workspace card from being reparented, which could lead to a "dangling" root or corrupt tree state.
+**Status:** CLOSED
+**Resolution:** Added an explicit check in `reparent_card` in `src/domain/registry/mutations.rs` to reject operations on the workspace root.
+
+## Issue #58: Redundant DIV Nesting in Board Grid
+**Description:** The board grid was using nested `.app-board-grid` divs, complicating the DOM and flexbox layout.
+**Status:** CLOSED
+**Resolution:** Flattened the structure in `src/interface/components/board_view/grid.rs`.
+
+## Issue #59: Repetitive Note Page Lookup (DRY)
+**Description:** Methods in `src/domain/card.rs` (rename, save body, delete) manually iterate over `self.notes` to find a page by ID.
+**Status:** OPEN
+**Recommendation:** Implement a private helper method `find_note_page_mut(&mut self, id: NotePageId) -> Result<&mut NotePage, DomainError>`.
+
+## Issue #60: Boilerplate Heavy Command Dispatch
+**Description:** The `Command` enum requires maintaining repetitive `descriptor()` match arms and separate `apply_...` functions for every variant.
+**Status:** OPEN
+**Recommendation:** Refactor `src/application/command.rs` to use a macro or direct matching in `apply` to reduce boilerplate.
+
+## Issue #61: O(N^2) Child Reordering Validation
+**Description:** `Card::reorder_children` uses `Vec::contains` inside a loop, leading to suboptimal performance as board sizes grow.
+**Status:** OPEN
+**Recommendation:** Optimize the validation loop in `src/domain/card.rs` using a temporary `HashSet` to achieve O(N) complexity.

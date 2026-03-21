@@ -6,6 +6,7 @@
 //! For more on Rust's `Result` handling in UI applications, see
 //! `docs/rust-for-python-devs.md`.
 
+use super::logic::reorder_ids;
 use crate::application::{Command, execute};
 use crate::domain::error::DomainError;
 use crate::domain::id::CardId;
@@ -13,7 +14,6 @@ use crate::domain::registry::{CardRegistry, DeleteStrategy};
 use crate::infrastructure::logging::record_diagnostic;
 use dioxus::prelude::*;
 use tracing::{Level, info, warn};
-use super::logic::reorder_ids;
 
 /// Executes a UI-originated command and routes failures to diagnostics plus the warning banner.
 ///
