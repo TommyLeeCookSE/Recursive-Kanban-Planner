@@ -68,7 +68,18 @@ function Invoke-LoggedCommand {
     Write-LogHeader -LogFile $logFile -CommandLine $CommandLine
 
     Write-Host "Writing build log to $logFile"
-    & cmd.exe /c "$CommandLine 2>&1" | Tee-Object -FilePath $logFile -Append
+
+    $isWindowsPlatform = [System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform(
+        [System.Runtime.InteropServices.OSPlatform]::Windows
+    )
+
+    if ($isWindowsPlatform) {
+        & cmd.exe /c "$CommandLine 2>&1" | Tee-Object -FilePath $logFile -Append
+    }
+    else {
+        & /bin/bash -lc "$CommandLine 2>&1" | Tee-Object -FilePath $logFile -Append
+    }
+
     $exitCode = $LASTEXITCODE
     if ($null -eq $exitCode) {
         $exitCode = 0
