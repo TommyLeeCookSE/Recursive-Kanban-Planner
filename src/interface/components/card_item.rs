@@ -111,7 +111,7 @@ pub fn CardItem(
                     div { class: "app-card-actions-inner",
                         if let Some(delete_handler) = on_delete {
                             button {
-                                class: "app-bar-button app-bar-button--danger",
+                                class: "app-bar-button app-bar-button--danger app-bar-button--sm",
                                 title: "Delete this card",
                                 draggable: false,
                                 onclick: move |_| {
@@ -126,7 +126,7 @@ pub fn CardItem(
                         }
                         if let Some(rename_handler) = on_rename {
                             button {
-                                class: "app-bar-button",
+                                class: "app-bar-button app-bar-button--sm",
                                 title: "Edit this card",
                                 draggable: false,
                                 onclick: move |_| rename_handler.call(()),

@@ -360,17 +360,23 @@
     box-shadow: 0 -12px 48px rgba(0, 0, 0, 0.12);
   }
 
+  .app-bar--distributed {
+    @apply grid grid-flow-col items-center justify-items-center;
+    grid-auto-columns: 1fr;
+    gap: var(--app-bar-gap);
+  }
+
   .app-bar-left {
-    @apply flex min-w-0 flex-1 items-center justify-start;
+    @apply flex min-w-0 flex-initial items-center justify-start;
     gap: var(--app-bar-gap);
   }
 
   .app-bar-center {
-    @apply hidden min-w-0 flex-1 items-center justify-center text-center pointer-events-none sm:flex;
+    @apply flex min-w-0 flex-1 items-center justify-center text-center pointer-events-none;
   }
 
   .app-bar-right {
-    @apply flex min-w-0 flex-1 items-center justify-end;
+    @apply flex min-w-0 flex-initial items-center justify-end;
     gap: var(--app-bar-gap);
   }
 
@@ -383,6 +389,14 @@
     border-color: var(--app-border-strong);
     background-color: var(--app-surface-soft);
     color: var(--app-text);
+  }
+
+  .app-bar-button--sm {
+    --app-bar-height: clamp(1.75rem, min(5vw, 5dvh), 3rem);
+    --app-bar-icon-size: clamp(0.75rem, min(2vw, 2dvh), 1.25rem);
+    --app-bar-button-min-width: clamp(1.5rem, min(4vw, 4dvh), 3rem);
+    --app-bar-radius: 0.75rem;
+    padding: 0.25rem 0.375rem;
   }
 
   .app-bar-button:hover:not(:disabled) {
@@ -479,12 +493,12 @@
 
   .app-navbar-title {
     @apply app-text-primary truncate font-black tracking-tighter;
-    font-size: 1.875rem;
+    font-size: 1.25rem;
     line-height: 1;
   }
 
   .app-navbar-title-shell {
-    @apply app-panel-strong inline-flex min-w-0 max-w-full items-center justify-center rounded-[1.75rem] border px-5 py-3;
+    @apply app-panel-strong flex min-w-0 max-w-full items-center justify-center rounded-2xl border px-3 py-1;
     border-color: var(--app-border-strong);
     background-color: color-mix(in srgb, var(--app-surface-strong) 92%, transparent);
   }

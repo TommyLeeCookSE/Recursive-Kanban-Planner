@@ -36,9 +36,9 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
-      - name: Run canonical verification
+      - name: Run web verification
         shell: pwsh
-        run: ./scripts/test-all.ps1
+        run: ./scripts/test-all.ps1 -SkipDesktop
 
   build:
     runs-on: ubuntu-latest

@@ -43,8 +43,13 @@ pub fn NavbarLayout() -> Element {
             .get_card(card_id)
             .ok()
             .map(|c| c.title().to_string()),
-        _ => None,
-    };
+        _ => registry
+            .read()
+            .workspace_card()
+            .ok()
+            .map(|c| c.title().to_string()),
+    }
+    .unwrap_or_else(|| "My Workspace".to_string());
 
     let theme_title = if is_dark().0 {
         "Switch to Sunrise mode"
@@ -66,11 +71,9 @@ pub fn NavbarLayout() -> Element {
                     }
                 }
 
-                if let Some(title) = active_title {
-                    div { class: "app-bar-center",
-                        div { class: "app-navbar-title-shell",
-                            h1 { class: "app-navbar-title app-navbar-title--hero", "{title}" }
-                        }
+                div { class: "app-bar-center",
+                    div { class: "app-navbar-title-shell",
+                        h1 { class: "app-navbar-title", "{active_title}" }
                     }
                 }
 
@@ -140,12 +143,12 @@ pub fn BottomBar(back_route: Option<Route>, back_label: String, children: Elemen
     };
 
     rsx! {
-        footer { class: "app-bar app-bar--bottom",
-            div { class: "app-bar-left",
+        footer { class: "app-bar app-bar--bottom app-bar--distributed",
+            div { class: "app-bar-left contents",
                 {back_button}
             }
 
-            div { class: "app-bar-right",
+            div { class: "app-bar-right contents",
                 {children}
             }
         }
