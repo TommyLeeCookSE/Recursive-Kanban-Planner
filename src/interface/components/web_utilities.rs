@@ -46,7 +46,7 @@ pub fn render_export_button(
         let mut persistence_warning = persistence_warning;
         return rsx! {
             button {
-                class: "app-utility-button app-utility-button-row",
+                class: "app-bar-button",
                 title: "Download a JSON backup of your workspace",
                 "aria-label": "Export",
                 onclick: move |_| {
@@ -56,8 +56,8 @@ pub fn render_export_button(
                         Err(error) => persistence_warning.set(Some(error.to_string())),
                     }
                 },
-                span { class: "app-icon-slot", {render_export_icon()} }
-                span { class: "app-utility-button-label", "Export" }
+                span { class: "app-bar-button-icon", {render_export_icon()} }
+                span { class: "app-bar-button-label", "Export" }
             }
         };
     }
@@ -91,7 +91,7 @@ pub fn render_import_button(
     {
         return rsx! {
             button {
-                class: "app-utility-button app-utility-button-row",
+                class: "app-bar-button",
                 title: "Replace your workspace with a validated JSON import",
                 "aria-label": "Import",
                 onclick: move |_| {
@@ -102,8 +102,8 @@ pub fn render_import_button(
                         nav.clone(),
                     );
                 },
-                span { class: "app-icon-slot", {render_import_icon()} }
-                span { class: "app-utility-button-label", "Import" }
+                span { class: "app-bar-button-icon", {render_import_icon()} }
+                span { class: "app-bar-button-label", "Import" }
             }
         };
     }
@@ -142,7 +142,7 @@ pub fn render_clear_cache_button(
         let mut persistence_warning = persistence_warning;
         return rsx! {
             button {
-                class: "app-utility-button app-utility-button--danger app-utility-button-row",
+                class: "app-bar-button app-bar-button--danger",
                 title: "Clear saved data and reset the workspace",
                 "aria-label": "Clear Cache",
                 onclick: move |_| {
@@ -157,8 +157,8 @@ pub fn render_clear_cache_button(
                         Err(error) => persistence_warning.set(Some(error.to_string())),
                     }
                 },
-                span { class: "app-icon-slot", {render_trash_icon()} }
-                span { class: "app-utility-button-label", "Clear Cache" }
+                span { class: "app-bar-button-icon", {render_trash_icon()} }
+                span { class: "app-bar-button-label", "Clear Cache" }
             }
         };
     }
@@ -177,11 +177,11 @@ pub fn render_clear_cache_button(
 fn disabled_utility_button(label: &str, title: &str) -> Element {
     rsx! {
         button {
-            class: "app-utility-button-disabled",
+            class: "app-bar-button",
             disabled: true,
             title: "{title}",
             "aria-label": "{label}",
-            "{label}"
+            span { class: "app-bar-button-label", "{label}" }
         }
         span { class: "app-kicker",
             "Soon"

@@ -10,15 +10,15 @@ mod card;
 mod drop_target;
 mod empty_state;
 mod grid;
-mod header;
 mod models;
 mod slots;
 
 use crate::interface::Route;
 use crate::interface::components::board_view::grid::render_board_grid;
+use crate::interface::components::layout::BottomBar;
 use crate::interface::components::modal::ModalType;
 use crate::interface::components::visuals::{
-    render_back_icon, render_note_icon, render_plus_icon, render_settings_icon, CardDisplayData,
+    render_note_icon, render_plus_icon, render_settings_icon, CardDisplayData,
 };
 use dioxus::prelude::*;
 
@@ -39,10 +39,10 @@ pub(crate) use models::{BoardDragSignals, BoardRenderContext};
 /// )
 /// ```
 pub(crate) fn render_board_screen(
-    board_title: String,
+    _board_title: String,
     back_route: Option<Route>,
     back_label: String,
-    board_due_date: String,
+    _board_due_date: String,
     child_models: Vec<CardDisplayData>,
     render_context: BoardRenderContext,
 ) -> Element {
@@ -56,53 +56,34 @@ pub(crate) fn render_board_screen(
             div { class: "app-board-screen-content",
                 {render_board_grid(child_models, render_context)}
             }
-            footer { class: "app-bottombar",
-                if let Some(route) = back_route {
-                    button {
-                        class: "app-topbar-back app-topbar-back--board group w-full",
-                        onclick: move |_| {
-                            navigator().push(route.clone());
-                        },
-                        title: "Back to {back_label_for_button}",
-                        span { class: "app-topbar-back-icon", {render_back_icon()} }
-                        span { class: "app-topbar-back-label", "Back to: {back_label_for_button}" }
-                    }
-                } else {
-                    button {
-                        class: "app-topbar-back app-topbar-back--disabled app-topbar-back--board group w-full",
-                        disabled: true,
-                        span { class: "app-topbar-back-icon", {render_back_icon()} }
-                        span { class: "app-topbar-back-label", "Back to: {back_label_for_button}" }
-                    }
-                }
-
+            BottomBar { back_route: back_route.clone(), back_label: back_label_for_button,
                 button {
-                    class: "app-toolbar-button app-toolbar-button-accent w-full",
+                    class: "app-bar-button app-bar-button--accent",
                     onclick: move |_| active_modal.set(Some(ModalType::CreateCard { parent_id: Some(board_id) })),
                     title: "Create Card",
                     "aria-label": "Create Card",
-                    span { class: "app-toolbar-icon", {render_plus_icon()} }
-                    span { class: "app-toolbar-label", "Create Card" }
+                    span { class: "app-bar-button-icon", {render_plus_icon()} }
+                    span { class: "app-bar-button-label", "Create Card" }
                 }
                 button {
-                    class: "app-toolbar-button w-full",
+                    class: "app-bar-button",
                     onclick: move |_| {
                         active_modal.set(Some(ModalType::CardNotes { card_id: board_id }));
                     },
                     title: "Open notes",
                     "aria-label": "Notes",
-                    span { class: "app-toolbar-icon", {render_note_icon()} }
-                    span { class: "app-toolbar-label", "Notes" }
+                    span { class: "app-bar-button-icon", {render_note_icon()} }
+                    span { class: "app-bar-button-label", "Notes" }
                 }
                 button {
-                    class: "app-toolbar-button w-full",
+                    class: "app-bar-button",
                     onclick: move |_| {
                         active_modal.set(Some(ModalType::EditCard { id: board_id }));
                     },
                     title: "Open settings",
                     "aria-label": "Settings",
-                    span { class: "app-toolbar-icon", {render_settings_icon()} }
-                    span { class: "app-toolbar-label", "Settings" }
+                    span { class: "app-bar-button-icon", {render_settings_icon()} }
+                    span { class: "app-bar-button-label", "Settings" }
                 }
             }
         }

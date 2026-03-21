@@ -54,8 +54,8 @@ pub fn NavbarLayout() -> Element {
 
     rsx! {
         div { class: "app-root-shell",
-            nav { class: "app-navbar",
-                div { class: "app-navbar-section",
+            nav { class: "app-bar app-bar--top",
+                div { class: "app-bar-left",
                     Link {
                         to: Route::Home {},
                         class: "app-navbar-brand group",
@@ -67,19 +67,17 @@ pub fn NavbarLayout() -> Element {
                 }
 
                 if let Some(title) = active_title {
-                    div { class: "app-navbar-center",
+                    div { class: "app-bar-center",
                         div { class: "app-navbar-title-shell",
                             h1 { class: "app-navbar-title app-navbar-title--hero", "{title}" }
                         }
                     }
                 }
 
-                div { class: "app-navbar-trailing",
-                    div { class: "app-navbar-actions mr-4",
-                        {render_export_button(registry, persistence_warning)}
-                        {render_import_button(registry, active_modal, persistence_warning, nav)}
-                        {render_clear_cache_button(registry, active_modal, persistence_warning, nav)}
-                    }
+                div { class: "app-bar-right",
+                    {render_export_button(registry, persistence_warning)}
+                    {render_import_button(registry, active_modal, persistence_warning, nav)}
+                    {render_clear_cache_button(registry, active_modal, persistence_warning, nav)}
                     button {
                         class: "app-theme-toggle",
                         onclick: move |_| is_dark.set(IsDark(!is_dark().0)),
@@ -122,33 +120,33 @@ pub fn BottomBar(back_route: Option<Route>, back_label: String, children: Elemen
     let back_button = if let Some(route) = back_route {
         rsx! {
             button {
-                class: "app-topbar-back group",
+                class: "app-bar-button group",
                 onclick: move |_| {
                     navigator().push(route.clone());
                 },
                 title: "Back to {back_label}",
-                span { class: "app-topbar-back-icon", {render_back_icon()} }
-                span { class: "app-topbar-back-label", "Back to: {back_label}" }
+                span { class: "app-bar-button-icon", {render_back_icon()} }
+                span { class: "app-bar-button-label", "Back to: {back_label}" }
             }
         }
     } else {
         rsx! {
             button {
-                class: "app-topbar-back app-topbar-back--disabled group",
+                class: "app-bar-button group",
                 disabled: true,
-                span { class: "app-topbar-back-icon", {render_back_icon()} }
-                span { class: "app-topbar-back-label", "Back to: {back_label}" }
+                span { class: "app-bar-button-icon", {render_back_icon()} }
+                span { class: "app-bar-button-label", "Back to: {back_label}" }
             }
         }
     };
 
     rsx! {
-        footer { class: "app-bottombar",
-            div { class: "app-bottombar-back",
+        footer { class: "app-bar app-bar--bottom",
+            div { class: "app-bar-left",
                 {back_button}
             }
 
-            div { class: "app-bottombar-actions",
+            div { class: "app-bar-right",
                 {children}
             }
         }

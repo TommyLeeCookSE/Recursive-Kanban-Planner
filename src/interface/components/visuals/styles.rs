@@ -103,10 +103,10 @@ pub fn surface_destructive_icon_button_classes() -> &'static str {
 ///
 /// ```
 /// use kanban_planner::interface::components::visuals::toolbar_button_classes;
-/// assert_eq!(toolbar_button_classes(), "app-toolbar-button");
+/// assert_eq!(toolbar_button_classes(), "app-bar-button");
 /// ```
 pub fn toolbar_button_classes() -> &'static str {
-    "app-toolbar-button"
+    "app-bar-button"
 }
 
 /// Standard CSS classes for an icon-only button in the main toolbar.
@@ -115,10 +115,10 @@ pub fn toolbar_button_classes() -> &'static str {
 ///
 /// ```
 /// use kanban_planner::interface::components::visuals::toolbar_icon_button_classes;
-/// assert_eq!(toolbar_icon_button_classes(), "app-toolbar-button app-toolbar-button--icon");
+/// assert_eq!(toolbar_icon_button_classes(), "app-bar-button");
 /// ```
 pub fn toolbar_icon_button_classes() -> &'static str {
-    "app-toolbar-button app-toolbar-button--icon"
+    "app-bar-button"
 }
 
 /// Standard CSS classes for a label within a toolbar button.
@@ -127,10 +127,10 @@ pub fn toolbar_icon_button_classes() -> &'static str {
 ///
 /// ```
 /// use kanban_planner::interface::components::visuals::toolbar_button_label_classes;
-/// assert_eq!(toolbar_button_label_classes(), "app-toolbar-label");
+/// assert_eq!(toolbar_button_label_classes(), "app-bar-button-label");
 /// ```
 pub fn toolbar_button_label_classes() -> &'static str {
-    "app-toolbar-label"
+    "app-bar-button-label"
 }
 
 /// Standard CSS classes for an icon within a toolbar button.
@@ -139,8 +139,8 @@ pub fn toolbar_button_label_classes() -> &'static str {
 ///
 /// ```
 /// use kanban_planner::interface::components::visuals::toolbar_action_icon_classes;
-/// assert_eq!(toolbar_action_icon_classes(), "app-toolbar-icon");
+/// assert_eq!(toolbar_action_icon_classes(), "app-bar-button-icon");
 /// ```
 pub fn toolbar_action_icon_classes() -> &'static str {
-    "app-toolbar-icon"
+    "app-bar-button-icon"
 }
