@@ -1,6 +1,7 @@
 use crate::application::{Command, execute};
 use crate::domain::id::CardId;
 use crate::domain::registry::CardRegistry;
+use crate::domain::title::MAX_TITLE_LENGTH;
 use crate::interface::components::modal::Modal;
 use crate::interface::components::shared_forms::{inline_error, user_message_for_command_error};
 use dioxus::prelude::*;
@@ -58,6 +59,7 @@ pub fn NotesModal(
                         placeholder: "New page title",
                         value: "{new_page_title}",
                         oninput: move |e| new_page_title.set(e.value()),
+                        maxlength: MAX_TITLE_LENGTH as i64,
                     }
                     button {
                         class: "app-button-secondary-compact app-button-block",
@@ -106,6 +108,7 @@ pub fn NotesModal(
                             placeholder: "Page title",
                             value: "{title_input}",
                             oninput: move |e| title_input.set(e.value()),
+                            maxlength: MAX_TITLE_LENGTH as i64,
                         }
                         textarea {
                             class: "app-input app-notes-textarea",

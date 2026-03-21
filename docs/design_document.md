@@ -129,6 +129,7 @@ This section is the source-of-truth contract for the implemented domain layer.
 pub enum DomainError {
     CardNotFound(CardId),
     EmptyTitle,
+    TitleTooLong(usize),
     CardHasChildren,
     CycleDetected,
     InvalidOperation(String),
@@ -217,7 +218,7 @@ pub fn build_card_preview_view(card_id: CardId, registry: &CardRegistry) -> Resu
 
 These do not require cross-card lookup:
 
-- Title must be non-empty in constructors and `rename`
+- Title must be non-empty and within 80 characters in constructors and `rename`
 - Child reorder must reject duplicates, omissions, and unknown ids
 - Notes and due dates validate their own local shape
 

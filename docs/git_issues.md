@@ -63,3 +63,8 @@
 ## Issue #65: App Bar Refinement and Card Action Sizing
 **Status:** CLOSED
 **Resolution:** Made title always visible, implemented equal icon distribution in BottomBar, and reduced card action sizes.
+
+## Issue #71: Card Title Character Limit
+**Status:** CLOSED
+**Resolution:** Implemented 80-character limit for card and note titles in both domain validation and UI inputs.
+

@@ -30,6 +30,10 @@ pub enum DomainError {
     #[error("Card title cannot be empty or blank")]
     EmptyTitle,
 
+    /// A card or note page title exceeded the maximum allowed length.
+    #[error("Card title is too long (max {0} characters)")]
+    TitleTooLong(usize),
+
     /// An attempt was made to delete a card without specifying how to handle its children.
     #[error("Cannot delete a card that still has children; choose a DeleteStrategy")]
     CardHasChildren,

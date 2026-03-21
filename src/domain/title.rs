@@ -8,10 +8,14 @@
 
 use crate::domain::error::DomainError;
 
-/// Validates and trims a title, ensuring it is not empty.
+/// The maximum allowed length for card and note page titles.
+pub const MAX_TITLE_LENGTH: usize = 80;
+
+/// Validates and trims a title, ensuring it is not empty and fits within
+/// `MAX_TITLE_LENGTH`.
 ///
-/// Returns the trimmed `String` if valid, or a `DomainError::EmptyTitle` if
-/// the input is empty or contains only whitespace.
+/// Returns the trimmed `String` if valid, or a `DomainError` if
+/// the input is empty or too long.
 ///
 /// # Examples
 ///
@@ -28,6 +32,10 @@ pub fn normalize_non_empty_title(title: impl Into<String>) -> Result<String, Dom
         return Err(DomainError::EmptyTitle);
     }
 
+    if trimmed.chars().count() > MAX_TITLE_LENGTH {
+        return Err(DomainError::TitleTooLong(MAX_TITLE_LENGTH));
+    }
+
     Ok(trimmed.to_string())
 }
 
@@ -40,6 +48,15 @@ mod tests {
         assert!(matches!(
             normalize_non_empty_title("   "),
             Err(DomainError::EmptyTitle)
+        ));
+    }
+
+    #[test]
+    fn normalize_non_empty_title_rejects_long_values() {
+        let long_title = "a".repeat(MAX_TITLE_LENGTH + 1);
+        assert!(matches!(
+            normalize_non_empty_title(long_title),
+            Err(DomainError::TitleTooLong(MAX_TITLE_LENGTH))
         ));
     }
 

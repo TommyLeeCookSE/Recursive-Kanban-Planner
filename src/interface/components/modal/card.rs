@@ -2,6 +2,7 @@ use crate::application::{Command, execute};
 use crate::domain::due_date::DueDate;
 use crate::domain::id::CardId;
 use crate::domain::registry::CardRegistry;
+use crate::domain::title::MAX_TITLE_LENGTH;
 use crate::infrastructure::logging::record_diagnostic;
 use crate::interface::components::modal::Modal;
 use crate::interface::components::shared_forms::{
@@ -29,6 +30,7 @@ pub fn CardModal(
                     placeholder: "Enter title...",
                     value: "{input_title}",
                     oninput: move |e| input_title.set(e.value()),
+                    maxlength: MAX_TITLE_LENGTH as i64,
                     autofocus: true,
                 }
                 if let Some(message) = error_message() {
@@ -121,6 +123,7 @@ pub fn EditCardModal(
                     class: "app-input",
                     value: "{input_title}",
                     oninput: move |e| input_title.set(e.value()),
+                    maxlength: MAX_TITLE_LENGTH as i64,
                     autofocus: true,
                 }
 
