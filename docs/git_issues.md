@@ -100,4 +100,9 @@
 **Status:** CLOSED
 **Resolution:** Implemented external `logging.toml` configuration for dynamic log levels. Added a custom `tracing` layer to automatically capture all session logs into an expanded in-memory buffer. Added a "Download Logs" utility to export captured diagnostics as a text file directly from the UI.
 
+## Issue #80: Card Description Feature
+**Status:** CLOSED
+**Resolution:** Implemented optional 80-character descriptions for all cards. Updated domain model, command execution, and persistence to support the new field. Enhanced UI modals with description inputs and updated card previews to display descriptions with italic styling.
+
+
 
