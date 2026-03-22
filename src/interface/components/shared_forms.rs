@@ -118,32 +118,6 @@ pub fn user_message_for_command_error(error: &DomainError) -> String {
     error.to_string()
 }
 
-/// Displays a browser confirmation dialog for destructive actions.
-///
-/// Only functional in WASM targets; returns `true` automatically elsewhere.
-///
-/// # Examples
-///
-/// ```ignore
-/// if confirm_destructive_action("Are you sure?") {
-///     // delete something
-/// }
-/// ```
-pub fn confirm_destructive_action(message: &str) -> bool {
-    #[cfg(target_arch = "wasm32")]
-    {
-        web_sys::window()
-            .and_then(|window| window.confirm_with_message(message).ok())
-            .unwrap_or(false)
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        let _ = message;
-        true
-    }
-}
-
 /// Toggles an ID's presence in a vector signal.
 ///
 /// # Examples

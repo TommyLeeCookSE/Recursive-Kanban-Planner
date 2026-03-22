@@ -6,7 +6,7 @@
 //! For an overview of how components are structured, see
 //! `docs/rust-for-python-devs.md`.
 
-use crate::interface::components::shared_forms::confirm_destructive_action;
+use crate::interface::actions::interop::confirm_destructive_action;
 use crate::interface::components::visuals::{render_edit_icon, render_trash_icon};
 use dioxus::prelude::*;
 
@@ -50,8 +50,7 @@ pub fn CardItem(
     #[props(default)]
     on_delete: Option<EventHandler<()>>,
 ) -> Element {
-    let card_title_for_open = title.clone();
-    let card_title_for_delete = title.clone();
+    let delete_title = title.clone();
 
     rsx! {
         article {
@@ -74,7 +73,7 @@ pub fn CardItem(
                         handler.call(event);
                     }
                 },
-                title: "Open {card_title_for_open}",
+                title: "Open {title}",
                 onclick: move |_| on_open.call(()),
                 div { class: "app-card-title-stack",
                     h3 { class: "app-card-title",
@@ -116,7 +115,7 @@ pub fn CardItem(
                                 draggable: false,
                                 onclick: move |_| {
                                     if confirm_destructive_action(&format!(
-                                        "Delete the card '{card_title_for_delete}' and all of its descendants?"
+                                        "Delete the card '{delete_title}' and all of its descendants?"
                                     )) {
                                         delete_handler.call(());
                                     }

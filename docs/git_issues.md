@@ -80,4 +80,12 @@
 **Status:** CLOSED
 **Resolution:** Added "Current Card: " to the top bar title. Re-introduced button labels to the bottom bar and web utilities, implementing a CSS flex-wrap trick (`max-height` with `overflow: hidden`) to dynamically hide labels when width scaling restricts available space, ensuring smooth regression to icon-only mode.
 
+## Issue #75: UI Codebase DRY Refactoring and Modernization
+**Status:** CLOSED
+**Resolution:** Simplified `drop_zone_classes` logic, implemented `define_icon!` macro to reduce SVG boilerplate, and optimized `CardItem` to reduce redundant string allocations.
+
+## Issue #76: Architectural Alignment for Platform Interop
+**Status:** CLOSED
+**Resolution:** Moved `confirm_destructive_action` from generic `shared_forms.rs` to `actions/interop.rs` and updated design guidelines to enforce this boundary.
+
 

@@ -333,7 +333,7 @@ Layer responsibilities:
 - Domain: invariants and core state transitions
 - Application: command dispatch and UI-friendly projections
 - Infrastructure: persistence, logging, platform adapters
-- Interface: Dioxus components, routing, user-facing flows
+- Interface: Dioxus components, routing, user-facing flows. Platform-specific UI interop (like browser dialogs) must reside in `actions/interop.rs`.
 
 ### Styling Workflow
 

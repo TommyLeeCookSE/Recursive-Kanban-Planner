@@ -28,36 +28,19 @@ pub fn drop_zone_classes(
     is_active: bool,
     dragged_item_kind: DraggedItemKind,
 ) -> &'static str {
-    let dragged_class = match dragged_item_kind {
-        DraggedItemKind::None => {
-            return match kind {
-                DropZoneKind::Board => "app-drop-zone app-drop-zone--board app-drop-zone--hidden",
-                DropZoneKind::Card => "app-drop-zone app-drop-zone--card app-drop-zone--hidden",
-            };
-        }
-        DraggedItemKind::Card => match kind {
-            DropZoneKind::Card => "app-drop-zone app-drop-zone--card",
-            DropZoneKind::Board => "app-drop-zone app-drop-zone--board",
+    match kind {
+        DropZoneKind::Board => match (dragged_item_kind, is_active) {
+            (DraggedItemKind::None, _) => {
+                "app-drop-zone app-drop-zone--board app-drop-zone--hidden"
+            }
+            (_, true) => "app-drop-zone app-drop-zone--board app-drop-zone--active",
+            _ => "app-drop-zone app-drop-zone--board app-drop-zone--dragging",
         },
-    };
-
-    match (kind, is_active) {
-        (DropZoneKind::Card, true) => "app-drop-zone app-drop-zone--card app-drop-zone--active",
-        (DropZoneKind::Card, false) => {
-            if dragged_item_kind == DraggedItemKind::Card {
-                "app-drop-zone app-drop-zone--card app-drop-zone--dragging"
-            } else {
-                dragged_class
-            }
-        }
-        (DropZoneKind::Board, true) => "app-drop-zone app-drop-zone--board app-drop-zone--active",
-        (DropZoneKind::Board, false) => {
-            if dragged_item_kind == DraggedItemKind::Card {
-                "app-drop-zone app-drop-zone--board app-drop-zone--dragging"
-            } else {
-                dragged_class
-            }
-        }
+        DropZoneKind::Card => match (dragged_item_kind, is_active) {
+            (DraggedItemKind::None, _) => "app-drop-zone app-drop-zone--card app-drop-zone--hidden",
+            (_, true) => "app-drop-zone app-drop-zone--card app-drop-zone--active",
+            _ => "app-drop-zone app-drop-zone--card app-drop-zone--dragging",
+        },
     }
 }
 

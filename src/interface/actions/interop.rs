@@ -184,3 +184,29 @@ fn parse_card_id(raw_id: &str, log_target: &'static str, payload: &str) -> Optio
         None
     })
 }
+
+/// Displays a browser confirmation dialog for destructive actions.
+///
+/// Only functional in WASM targets; returns `true` automatically elsewhere.
+///
+/// # Examples
+///
+/// ```ignore
+/// if confirm_destructive_action("Are you sure?") {
+///     // delete something
+/// }
+/// ```
+pub fn confirm_destructive_action(message: &str) -> bool {
+    #[cfg(target_arch = "wasm32")]
+    {
+        web_sys::window()
+            .and_then(|window| window.confirm_with_message(message).ok())
+            .unwrap_or(false)
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let _ = message;
+        true
+    }
+}
