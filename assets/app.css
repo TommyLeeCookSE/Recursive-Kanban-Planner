@@ -2743,6 +2743,10 @@ button,
   height: 100%;
 }
 
+.h-\[12vh\] {
+  height: 12vh;
+}
+
 .max-h-\[60vh\] {
   max-height: 60vh;
 }
@@ -2753,6 +2757,10 @@ button,
 
 .min-h-\[3\.25rem\] {
   min-height: 3.25rem;
+}
+
+.min-h-\[80px\] {
+  min-height: 80px;
 }
 
 .w-0 {
