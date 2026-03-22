@@ -2649,12 +2649,24 @@ button,
   top: 0px;
 }
 
+.left-4 {
+  left: 1rem;
+}
+
+.top-4 {
+  top: 1rem;
+}
+
 .z-40 {
   z-index: 40;
 }
 
 .z-50 {
   z-index: 50;
+}
+
+.z-10 {
+  z-index: 10;
 }
 
 .mx-auto {
@@ -2782,6 +2794,12 @@ button,
 
 .cursor-pointer {
   cursor: pointer;
+}
+
+.select-none {
+  -webkit-user-select: none;
+     -moz-user-select: none;
+          user-select: none;
 }
 
 .grid-flow-col {
@@ -2919,6 +2937,14 @@ button,
 
 .bg-transparent {
   background-color: transparent;
+}
+
+.bg-\[var\(--app-surface\)\] {
+  background-color: var(--app-surface);
+}
+
+.bg-\[var\(--app-surface-strong\)\] {
+  background-color: var(--app-surface-strong);
 }
 
 .px-3 {
@@ -3071,6 +3097,12 @@ button,
   box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
 }
 
+.shadow-md {
+  --tw-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --tw-shadow-colored: 0 4px 6px -1px var(--tw-shadow-color), 0 2px 4px -2px var(--tw-shadow-color);
+  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
+}
+
 .shadow-sunfire\/30 {
   --tw-shadow-color: rgb(255 140 0 / 0.3);
   --tw-shadow: var(--tw-shadow-colored);
@@ -3174,6 +3206,14 @@ button,
   border-color: rgb(255 140 0 / 0.3);
 }
 
+.hover\:stroke-\[\#f59e0b\]:hover {
+  stroke: #f59e0b;
+}
+
+.hover\:stroke-2:hover {
+  stroke-width: 2;
+}
+
 .focus\:outline-none:focus {
   outline: 2px solid transparent;
   outline-offset: 2px;
@@ -3187,6 +3227,10 @@ button,
 
 .focus\:ring-sunfire\/40:focus {
   --tw-ring-color: rgb(255 140 0 / 0.4);
+}
+
+.active\:cursor-grabbing:active {
+  cursor: grabbing;
 }
 
 .disabled\:opacity-50:disabled {

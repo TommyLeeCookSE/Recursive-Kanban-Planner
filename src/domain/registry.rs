@@ -227,7 +227,7 @@ impl CardRegistry {
     ///
     /// let mut registry = CardRegistry::new();
     /// let workspace_id = registry.workspace_card_id().unwrap();
-    /// let id = registry.create_child_card("Project".to_string(), workspace_id).unwrap();
+    /// let id = registry.create_child_card("Project".to_string(), None, workspace_id).unwrap();
     /// ```
     pub fn create_child_card(
         &mut self,
@@ -448,7 +448,7 @@ impl CardRegistry {
     ///
     /// let mut registry = CardRegistry::new();
     /// let workspace_id = registry.workspace_card_id().unwrap();
-    /// let c1 = registry.create_child_card("C1".to_string(), workspace_id).unwrap();
+    /// let c1 = registry.create_child_card("C1".to_string(), None, workspace_id).unwrap();
     /// registry.delete_card(c1, DeleteStrategy::CascadeDelete).unwrap();
     /// ```
     pub fn delete_card(

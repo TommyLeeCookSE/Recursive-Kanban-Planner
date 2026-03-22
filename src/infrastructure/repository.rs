@@ -491,10 +491,10 @@ mod tests {
         let mut original = CardRegistry::new();
         let workspace_id = original.workspace_card_id().unwrap();
         let project_id = original
-            .create_child_card("My Project".into(), workspace_id)
+            .create_child_card("My Project".into(), None, workspace_id)
             .unwrap();
         original
-            .create_child_card("My Task".into(), project_id)
+            .create_child_card("My Task".into(), None, project_id)
             .unwrap();
 
         let json = JsonRepository::serialize_registry(&original).expect("Serialization failed");
@@ -509,7 +509,7 @@ mod tests {
         let mut original = CardRegistry::new();
         let workspace_id = original.workspace_card_id().unwrap();
         original
-            .create_child_card("My Project".into(), workspace_id)
+            .create_child_card("My Project".into(), None, workspace_id)
             .unwrap();
 
         let json = JsonRepository::serialize_registry(&original).expect("Serialization failed");

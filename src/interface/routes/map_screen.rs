@@ -45,6 +45,7 @@ pub fn MapScreen(focus_card_id: CardId) -> Element {
                 }
             }
         }
+        let _ = &px; // Keep mut for the cfg block to modify
         px
     });
     let mut pan_y = use_signal(|| {
@@ -59,6 +60,7 @@ pub fn MapScreen(focus_card_id: CardId) -> Element {
                 }
             }
         }
+        let _ = &py; // Keep mut for the cfg block to modify
         py
     });
     let mut scale = use_signal(|| 1.0f64);
@@ -110,8 +112,7 @@ pub fn MapScreen(focus_card_id: CardId) -> Element {
                     last_mouse_pos.set(Some((current_x, current_y)));
                 }
             },
-            onwheel: move |e| {
-                let _delta_y = 0.0;
+            onwheel: move |_e| {
                 let zoom_factor = 1.1; // Placeholder until types are resolved
                 let current_scale = *scale.read();
                 

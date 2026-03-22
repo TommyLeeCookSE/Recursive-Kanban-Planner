@@ -81,3 +81,50 @@ pub fn build_card_preview_view(
 ) -> Result<CardView<'_>, DomainError> {
     build_card_view(card_id, registry)
 }
+
+/// A lightweight representation of a card in the topology graph.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct TopologyNode {
+    pub id: CardId,
+    pub parent_id: Option<CardId>,
+    pub title: String,
+}
+
+/// A projection representing the structural relationships in the registry.
+#[derive(Clone, Debug)]
+pub struct GraphTopologyView {
+    pub nodes: Vec<TopologyNode>,
+    /// All directed edges (parent -> child)
+    pub edges: Vec<(CardId, CardId)>,
+    pub center_id: CardId,
+}
+
+/// Constructs a full `GraphTopologyView` centered on a specific card.
+pub fn build_graph_topology(
+    center_id: CardId,
+    registry: &CardRegistry,
+) -> Result<GraphTopologyView, DomainError> {
+    // Validate center exists
+    registry.get_card(center_id)?;
+
+    let mut nodes = Vec::new();
+    let mut edges = Vec::new();
+
+    for card in registry.all_cards() {
+        nodes.push(TopologyNode {
+            id: card.id(),
+            parent_id: card.parent_id(),
+            title: card.title().to_string(),
+        });
+
+        for child_id in card.children_ids() {
+            edges.push((card.id(), *child_id));
+        }
+    }
+
+    Ok(GraphTopologyView {
+        nodes,
+        edges,
+        center_id,
+    })
+}

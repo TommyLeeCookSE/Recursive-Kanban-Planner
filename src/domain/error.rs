@@ -34,6 +34,10 @@ pub enum DomainError {
     #[error("Card title is too long (max {0} characters)")]
     TitleTooLong(usize),
 
+    /// A card description exceeded the maximum allowed length.
+    #[error("Card description is too long (max {0} characters)")]
+    DescriptionTooLong(usize),
+
     /// An attempt was made to delete a card without specifying how to handle its children.
     #[error("Cannot delete a card that still has children; choose a DeleteStrategy")]
     CardHasChildren,

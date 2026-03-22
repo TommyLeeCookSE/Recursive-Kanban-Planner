@@ -41,7 +41,9 @@ pub(super) fn activate_drop_zone(
     index: usize,
 ) {
     prime_drop_target(event);
-    card_drop_index.set(Some(index));
+    if card_drop_index() != Some(index) {
+        card_drop_index.set(Some(index));
+    }
 }
 
 pub(super) fn clear_drop_zone(mut card_drop_index: Signal<Option<usize>>, index: usize) {

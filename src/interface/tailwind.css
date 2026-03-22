@@ -656,6 +656,13 @@
     margin-bottom: var(--app-card-subtitle-gap);
   }
 
+  .app-card-description {
+    @apply app-text-soft text-center italic;
+    font-size: 0.8rem;
+    margin-bottom: 0.5rem;
+    line-clamp: 2;
+  }
+
   .app-card-due {
     @apply text-left font-semibold;
     font-size: var(--app-card-due-size);

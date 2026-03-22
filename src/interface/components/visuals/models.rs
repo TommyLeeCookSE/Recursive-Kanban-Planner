@@ -32,6 +32,8 @@ pub struct CardDisplayData {
     pub id: CardId,
     /// The card's title.
     pub title: String,
+    /// Optional short description of the card.
+    pub description: Option<String>,
     /// Optional formatted due date string.
     pub due_date: Option<String>,
     /// Whether the card's due date has passed.
@@ -61,6 +63,7 @@ pub fn build_card_display(card: &Card, preview_view: Option<&CardView>) -> CardD
     CardDisplayData {
         id: card.id(),
         title: card.title().to_string(),
+        description: card.description().map(|d| d.to_string()),
         due_date: card.due_date().map(|due| due.to_string()),
         is_overdue: card.due_date().map(|due| due.is_overdue()).unwrap_or(false),
         preview_items,

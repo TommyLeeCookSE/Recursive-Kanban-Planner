@@ -12,7 +12,10 @@ mod projections;
 
 pub use command::Command;
 pub use execute::execute;
-pub use projections::{CardView, build_board_view, build_card_preview_view, build_card_view};
+pub use projections::{
+    CardView, GraphTopologyView, build_board_view, build_card_preview_view, build_card_view,
+    build_graph_topology,
+};
 
 #[cfg(test)]
 mod tests {
@@ -27,6 +30,7 @@ mod tests {
         execute(
             Command::CreateWorkspaceChildCard {
                 title: "Top Level Board".into(),
+                description: None,
             },
             &mut registry,
         )
@@ -40,10 +44,10 @@ mod tests {
         let mut registry = CardRegistry::new();
         let workspace_id = registry.workspace_card_id().unwrap();
         let first_id = registry
-            .create_child_card("First".into(), workspace_id)
+            .create_child_card("First".into(), None, workspace_id)
             .unwrap();
         let second_id = registry
-            .create_child_card("Second".into(), workspace_id)
+            .create_child_card("Second".into(), None, workspace_id)
             .unwrap();
 
         let view = build_board_view(workspace_id, &registry).unwrap();
@@ -56,10 +60,10 @@ mod tests {
         let mut registry = CardRegistry::new();
         let workspace_id = registry.workspace_card_id().unwrap();
         let project_id = registry
-            .create_child_card("Project".into(), workspace_id)
+            .create_child_card("Project".into(), None, workspace_id)
             .unwrap();
         let task_id = registry
-            .create_child_card("Task".into(), project_id)
+            .create_child_card("Task".into(), None, project_id)
             .unwrap();
 
         let preview = build_card_preview_view(project_id, &registry).unwrap();
@@ -73,13 +77,13 @@ mod tests {
         let mut registry = CardRegistry::new();
         let workspace_id = registry.workspace_card_id().unwrap();
         let first = registry
-            .create_child_card("First".into(), workspace_id)
+            .create_child_card("First".into(), None, workspace_id)
             .unwrap();
         let second = registry
-            .create_child_card("Second".into(), workspace_id)
+            .create_child_card("Second".into(), None, workspace_id)
             .unwrap();
         let third = registry
-            .create_child_card("Third".into(), workspace_id)
+            .create_child_card("Third".into(), None, workspace_id)
             .unwrap();
 
         execute(
@@ -117,18 +121,18 @@ mod tests {
         let workspace_id = registry.workspace_card_id().unwrap();
 
         let board_a = registry
-            .create_child_card("Board A".into(), workspace_id)
+            .create_child_card("Board A".into(), None, workspace_id)
             .unwrap();
         let board_b = registry
-            .create_child_card("Board B".into(), workspace_id)
+            .create_child_card("Board B".into(), None, workspace_id)
             .unwrap();
 
         let card_to_move = registry
-            .create_child_card("Card 1".into(), board_a)
+            .create_child_card("Card 1".into(), None, board_a)
             .unwrap();
 
-        let b_card_1 = registry.create_child_card("B1".into(), board_b).unwrap();
-        let b_card_2 = registry.create_child_card("B2".into(), board_b).unwrap();
+        let b_card_1 = registry.create_child_card("B1".into(), None, board_b).unwrap();
+        let b_card_2 = registry.create_child_card("B2".into(), None, board_b).unwrap();
 
         assert_eq!(registry.get_children(board_a).unwrap().len(), 1);
         assert_eq!(registry.get_children(board_b).unwrap().len(), 2);

@@ -34,6 +34,9 @@ use dioxus::prelude::*;
 pub fn CardItem(
     /// Main display text.
     title: String,
+    /// Optional short description of the card.
+    #[props(default)]
+    description: Option<String>,
     /// Optional second line of text for metadata.
     #[props(default)]
     subtitle: Option<String>,
@@ -85,6 +88,11 @@ pub fn CardItem(
                     }
                     h3 { class: "app-card-title",
                         "{title}"
+                    }
+                    if let Some(description) = description {
+                        p { class: "app-card-description",
+                            "{description}"
+                        }
                     }
                     if let Some(subtitle) = subtitle {
                         p { class: "app-card-subtitle",

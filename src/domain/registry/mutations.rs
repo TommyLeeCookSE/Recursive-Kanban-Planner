@@ -43,7 +43,7 @@ pub(super) fn create_workspace_child_card(
 ///
 /// let mut registry = CardRegistry::new();
 /// let workspace_id = registry.workspace_card_id().unwrap();
-/// let id = create_child_card(&mut registry, "Project".into(), workspace_id).unwrap();
+/// let id = create_child_card(&mut registry, "Project".into(), None, workspace_id).unwrap();
 /// ```
 pub(super) fn create_child_card(
     registry: &mut CardRegistry,

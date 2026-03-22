@@ -16,6 +16,7 @@ mod slots;
 use crate::interface::Route;
 use crate::interface::components::board_view::grid::render_board_grid;
 use crate::interface::components::layout::BottomBar;
+use crate::interface::components::map::Minimap;
 use crate::interface::components::modal::ModalType;
 use crate::interface::components::visuals::{
     CardDisplayData, render_note_icon, render_plus_icon, render_settings_icon,
@@ -56,6 +57,7 @@ pub(crate) fn render_board_screen(
             div { class: "app-board-screen-content",
                 {render_board_grid(child_models, render_context)}
             }
+            Minimap { current_card_id: board_id }
             BottomBar { back_route: back_route.clone(), back_label: back_label_for_button,
                 button {
                     class: "app-bar-button app-bar-button--accent",
