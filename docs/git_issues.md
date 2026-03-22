@@ -76,4 +76,8 @@
 **Status:** CLOSED
 **Resolution:** Fixed `use_memo` prop capture bug in the `Board` component by tracking the `card_id` prop with a local `use_signal`.
 
+## Issue #74: Dynamic Button Labels and Top Bar Title Refinement
+**Status:** CLOSED
+**Resolution:** Added "Current Card: " to the top bar title. Re-introduced button labels to the bottom bar and web utilities, implementing a CSS flex-wrap trick (`max-height` with `overflow: hidden`) to dynamically hide labels when width scaling restricts available space, ensuring smooth regression to icon-only mode.
+
 

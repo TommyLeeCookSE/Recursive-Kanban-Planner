@@ -42,14 +42,14 @@ pub fn NavbarLayout() -> Element {
             .read()
             .get_card(card_id)
             .ok()
-            .map(|c| c.title().to_string()),
+            .map(|c| format!("Current Card: {}", c.title())),
         _ => registry
             .read()
             .workspace_card()
             .ok()
-            .map(|c| c.title().to_string()),
+            .map(|c| format!("Current Card: {}", c.title())),
     }
-    .unwrap_or_else(|| "My Workspace".to_string());
+    .unwrap_or_else(|| "Current Card: My Workspace".to_string());
 
     let theme_title = if is_dark().0 {
         "Switch to Sunrise mode"
@@ -129,6 +129,7 @@ pub fn BottomBar(back_route: Option<Route>, back_label: String, children: Elemen
                 },
                 title: "Back to {back_label}",
                 span { class: "app-bar-button-icon", {render_back_icon()} }
+                span { class: "app-bar-button-label", "Back" }
             }
         }
     } else {
@@ -138,6 +139,7 @@ pub fn BottomBar(back_route: Option<Route>, back_label: String, children: Elemen
                 disabled: true,
                 title: "Back to {back_label}",
                 span { class: "app-bar-button-icon", {render_back_icon()} }
+                span { class: "app-bar-button-label", "Back" }
             }
         }
     };

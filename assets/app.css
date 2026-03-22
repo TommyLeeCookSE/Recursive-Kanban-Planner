@@ -989,7 +989,6 @@ button,
   display: inline-flex;
   min-width: 0px;
   flex-shrink: 1;
-  align-items: center;
   justify-content: center;
   gap: 0.5rem;
   border-radius: var(--app-bar-radius);
@@ -1008,6 +1007,7 @@ button,
 
 .app-bar-button {
   min-height: calc(var(--app-bar-height) * 0.7);
+  max-height: calc(var(--app-bar-height) * 0.7);
   width: max(var(--app-bar-button-min-width), -moz-max-content);
   width: max(var(--app-bar-button-min-width), max-content);
   max-width: 100%;
@@ -1015,6 +1015,9 @@ button,
   border-color: var(--app-border-strong);
   background-color: var(--app-surface-soft);
   color: var(--app-text);
+  flex-wrap: wrap;
+  align-content: flex-start;
+  overflow: hidden;
 }
 
 .app-bar-button--sm {
@@ -1042,7 +1045,7 @@ button,
   align-items: center;
   justify-content: center;
   width: var(--app-bar-icon-size);
-  height: var(--app-bar-icon-size);
+  height: calc(calc(var(--app-bar-height) * 0.7) - 1rem);
   max-width: 100%;
   max-height: 100%;
 }
@@ -1052,6 +1055,14 @@ button,
   height: 100%;
   max-width: var(--app-bar-icon-size);
   max-height: var(--app-bar-icon-size);
+}
+
+.app-bar-button-label {
+  white-space: nowrap;
+  font-size: var(--app-bar-label-size);
+  line-height: calc(calc(var(--app-bar-height) * 0.7) - 1rem);
+  display: flex;
+  align-items: center;
 }
 
 .app-bar-button--accent {
