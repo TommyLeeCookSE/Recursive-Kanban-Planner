@@ -1,4 +1,4 @@
-use crate::application::{build_board_view, build_card_preview_view};
+use crate::application::build_card_view;
 use crate::domain::error::DomainError;
 use crate::domain::id::CardId;
 use crate::domain::registry::CardRegistry;
@@ -40,7 +40,7 @@ fn build_screen_data(
     registry: &CardRegistry,
     back_navigation: Option<BackNavigation>,
 ) -> Result<BoardScreenData, DomainError> {
-    let view = build_board_view(board_id, registry)?;
+    let view = build_card_view(board_id, registry)?;
     let board_display = build_card_display(view.card, None);
     let board_due_date = board_display
         .due_date
@@ -51,7 +51,7 @@ fn build_screen_data(
         .children
         .iter()
         .map(|card| {
-            let preview_view = build_card_preview_view(card.id(), registry)?;
+            let preview_view = build_card_view(card.id(), registry)?;
             Ok(build_card_display(card, Some(&preview_view)))
         })
         .collect::<Result<Vec<_>, DomainError>>()?;

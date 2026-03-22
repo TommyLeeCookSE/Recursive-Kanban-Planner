@@ -6,7 +6,7 @@
 //! For more on how Rust's data structures compare to Python's classes,
 //! see `docs/rust-for-python-devs.md`.
 
-use crate::application::CardPreviewView;
+use crate::application::CardView;
 use crate::domain::card::Card;
 use crate::domain::id::CardId;
 
@@ -47,7 +47,7 @@ pub struct CardDisplayData {
 /// ```ignore
 /// let display_data = build_card_display(&card, Some(&preview_view));
 /// ```
-pub fn build_card_display(card: &Card, preview_view: Option<&CardPreviewView>) -> CardDisplayData {
+pub fn build_card_display(card: &Card, preview_view: Option<&CardView>) -> CardDisplayData {
     let preview_items = preview_view
         .map(|view| {
             view.children

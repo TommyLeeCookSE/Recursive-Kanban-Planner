@@ -107,19 +107,24 @@ pub fn App() -> Element {
         use_context_provider(move || Signal::new(initialize_registry_signal(persistence_warning)));
 
     // Theme state: default to dark mode.
-    let is_dark = use_context_provider(|| Signal::new(IsDark(true)));
+    let _is_dark = use_context_provider(|| Signal::new(IsDark(true)));
     // Global modal state.
     let active_modal = use_context_provider(|| Signal::new(None::<ModalType>));
     let _is_dragging = use_context_provider(|| Signal::new(IsDragging(false)));
     let _dragged_item_kind = use_context_provider(|| Signal::new(DraggedItemKind::None));
+
+    let is_dark: Signal<IsDark> = use_context();
 
     let shell_class = if is_dark().0 {
         "app-shell theme-dark dark"
     } else {
         "app-shell theme-light"
     };
-    use_effect(move || {
+
+    // Debounced persistence: wait 1000ms after the last registry change before saving.
+    use_resource(move || async move {
         let registry_snapshot = registry.read().clone();
+        gloo_timers::future::TimeoutFuture::new(1000).await;
         persist_registry_snapshot(&registry_snapshot, persistence_warning);
     });
 

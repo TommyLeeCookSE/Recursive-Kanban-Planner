@@ -11,6 +11,43 @@ use crate::domain::error::DomainError;
 use crate::domain::id::CardId;
 use dioxus::prelude::*;
 
+/// A macro for generating a standard form row with a label, input, and optional error.
+///
+/// # Examples
+///
+/// ```ignore
+/// rsx! {
+///     form_row! {
+///         label: "Title",
+///         id: "card-title",
+///         input: rsx! {
+///             input {
+///                 id: "card-title",
+///                 value: "{title}",
+///                 oninput: move |e| title.set(e.value())
+///             }
+///         },
+///         error: title_error()
+///     }
+/// }
+/// ```
+#[macro_export]
+macro_rules! form_row {
+    (label: $label:expr, id: $id:expr, input: $input:expr $(, error: $error:expr )? ) => {
+        rsx! {
+            div { class: "app-form-row",
+                label { r#for: $id, class: "app-form-label", $label }
+                $input
+                $(
+                    if let Some(msg) = $error {
+                        p { class: "app-inline-error app-inline-error--danger", "{msg}" }
+                    }
+                )?
+            }
+        }
+    };
+}
+
 /// Renders a small, inline error message, typically within a form or modal.
 ///
 /// # Examples

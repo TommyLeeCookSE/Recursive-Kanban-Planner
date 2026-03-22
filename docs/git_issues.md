@@ -88,4 +88,8 @@
 **Status:** CLOSED
 **Resolution:** Moved `confirm_destructive_action` from generic `shared_forms.rs` to `actions/interop.rs` and updated design guidelines to enforce this boundary.
 
+## Issue #77: Codebase Refactoring and Performance Optimization
+**Status:** CLOSED
+**Resolution:** Unified `BoardView` and `CardPreviewView` into `CardView` projection. Hardened command execution with automatic registry validation. Implemented debounced persistence in the root `App` component to reduce I/O overhead. Introduced `use_execute_command` hook and `form_row!` macro to reduce UI boilerplate.
+
 

@@ -34,7 +34,22 @@ pub fn execute(command: Command, registry: &mut CardRegistry) -> Result<(), Doma
     let result = command.apply(registry);
 
     match &result {
-        Ok(()) => info!(command = command_label, "Application command completed"),
+        Ok(()) => {
+            if let Err(validation_error) = registry.validate() {
+                error!(
+                    command = command_label,
+                    error = %validation_error,
+                    "Application command resulted in an invalid registry state"
+                );
+                record_diagnostic(
+                    Level::ERROR,
+                    "application",
+                    format!("Application command '{command_label}' resulted in invalid state: {validation_error}"),
+                );
+                return Err(validation_error);
+            }
+            info!(command = command_label, "Application command completed");
+        }
         Err(error_value) => {
             error!(
                 command = command_label,

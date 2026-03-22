@@ -12,7 +12,7 @@ mod projections;
 
 pub use command::Command;
 pub use execute::execute;
-pub use projections::{BoardView, CardPreviewView, build_board_view, build_card_preview_view};
+pub use projections::{CardView, build_board_view, build_card_preview_view, build_card_view};
 
 #[cfg(test)]
 mod tests {

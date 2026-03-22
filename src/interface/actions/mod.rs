@@ -6,9 +6,11 @@
 //! For more on how UI actions are structured, see `docs/rust-for-python-devs.md`.
 
 pub mod feedback;
+pub mod hooks;
 pub mod interop;
 pub mod logic;
 
 pub use feedback::*;
+pub use hooks::*;
 pub use interop::*;
 pub use logic::*;
