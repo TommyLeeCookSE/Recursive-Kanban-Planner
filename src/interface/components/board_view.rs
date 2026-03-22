@@ -52,12 +52,12 @@ pub(crate) fn render_board_screen(
     let back_label_for_button = back_label.clone();
     rsx! {
         div {
-            class: "app-board-screen",
+            class: "app-board-screen flex flex-col h-full",
             style: format!("view-transition-name: card-{};", board_id),
-            div { class: "app-board-screen-content",
+            Minimap { current_card_id: board_id }
+            div { class: "app-board-screen-content flex-1 overflow-y-auto",
                 {render_board_grid(child_models, render_context)}
             }
-            Minimap { current_card_id: board_id }
             BottomBar { back_route: back_route.clone(), back_label: back_label_for_button,
                 button {
                     class: "app-bar-button app-bar-button--accent",
