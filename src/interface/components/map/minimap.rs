@@ -55,7 +55,7 @@ pub fn Minimap(current_card_id: CardId) -> Element {
                 defs {
                     filter { id: "glow", x: "-20%", y: "-20%", width: "140%", height: "140%",
                         feGaussianBlur { std_deviation: "3", result: "blur" }
-                        feComposite { in: "SourceGraphic", in2: "blur", operator: "over" }
+                        feComposite { _in: "SourceGraphic", in2: "blur", operator: "over" }
                     }
                 }
 

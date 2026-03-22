@@ -15,6 +15,7 @@ use crate::interface::components::modal::ModalType;
 use crate::interface::components::visuals::{
     render_export_icon, render_import_icon, render_trash_icon,
 };
+#[cfg(target_arch = "wasm32")]
 use crate::infrastructure::logging::{diagnostics_snapshot, record_diagnostic};
 use dioxus::prelude::*;
 use dioxus_router::Navigator;
@@ -26,6 +27,7 @@ use wasm_bindgen::JsCast;
 use wasm_bindgen::closure::Closure;
 #[cfg(target_arch = "wasm32")]
 use web_sys::{Blob, HtmlAnchorElement, HtmlInputElement, Url};
+#[cfg(target_arch = "wasm32")]
 use tracing::Level;
 
 /// Renders a button that downloads the in-memory log buffer as a text file.

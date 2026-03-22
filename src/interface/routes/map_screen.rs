@@ -102,8 +102,8 @@ pub fn MapScreen(focus_card_id: CardId) -> Element {
                 let (mouse_x, mouse_y) = (e.client_coordinates().x, e.client_coordinates().y);
                 
                 let delta_y = match e.data().delta() {
-                    dioxus::prelude::WheelDelta::Pixels(_x, y, _z) => y,
-                    dioxus::prelude::WheelDelta::Lines(_x, y, _z) => y * 20.0,
+                    dioxus::prelude::dioxus_elements::geometry::WheelDelta::Pixels(v) => v.y,
+                    dioxus::prelude::dioxus_elements::geometry::WheelDelta::Lines(v) => v.y * 20.0,
                     _ => 0.0,
                 };
                 

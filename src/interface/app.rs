@@ -114,12 +114,9 @@ pub fn App() -> Element {
     let _dragged_item_kind = use_context_provider(|| Signal::new(DraggedItemKind::None));
 
     let is_dark: Signal<IsDark> = use_context();
-    let mut active_modal: Signal<Option<ModalType>> = use_context();
 
     // Global keyboard shortcuts
     use_effect(move || {
-        let active_modal = active_modal;
-        
         #[cfg(target_arch = "wasm32")]
         {
             use wasm_bindgen::closure::Closure;

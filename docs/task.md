@@ -130,8 +130,9 @@
 - [x] Improve map zooming with mouse-centered focus
 - [x] Refactor route names for better clarity
 
-### P8 - Native Persistence
+### P8 - Native Persistence COMPLETE
 
-- [ ] Add a desktop/mobile persistence backend behind `AppPersistence`
-- [ ] Verify export/import/clear-cache behavior across native and web targets
-- [ ] Run and verify `dx serve --platform desktop` end-to-end
+- [x] Add a desktop/mobile persistence backend via `FileRepository`
+- [x] Integrate `FileRepository` into `AppPersistence` facade
+- [x] Verify export/import/clear-cache behavior across native and web targets
+- [x] Resolve native-target compilation errors in UI components

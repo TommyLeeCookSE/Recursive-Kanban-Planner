@@ -310,6 +310,94 @@ impl LocalStorageRepository {
     }
 }
 
+/// A repository for storing the registry in a local file.
+///
+/// This is used on native platforms (Desktop, Mobile) where `localStorage` is not available.
+#[cfg(not(target_arch = "wasm32"))]
+pub struct FileRepository;
+
+#[cfg(not(target_arch = "wasm32"))]
+impl FileRepository {
+    const APP_DIR: &'static str = ".kanban-planner";
+    const FILE_NAME: &'static str = "registry.json";
+
+    fn get_storage_path() -> Result<std::path::PathBuf, DomainError> {
+        let home = std::env::var("HOME")
+            .or_else(|_| std::env::var("USERPROFILE"))
+            .map_err(|_| {
+                DomainError::InvalidOperation("Could not determine user home directory".into())
+            })?;
+
+        let mut path = std::path::PathBuf::from(home);
+        path.push(Self::APP_DIR);
+
+        if !path.exists() {
+            std::fs::create_dir_all(&path).map_err(|e| {
+                DomainError::InvalidOperation(format!("Failed to create storage directory: {e}"))
+            })?;
+        }
+
+        path.push(Self::FILE_NAME);
+        Ok(path)
+    }
+
+    /// Saves the registry to a local file.
+    pub fn save_to_file(registry: &CardRegistry) -> Result<(), DomainError> {
+        let path = Self::get_storage_path()?;
+        info!(
+            path = %path.display(),
+            workspace_child_count = registry.workspace_child_count(),
+            "Saving registry to file"
+        );
+
+        let json = JsonRepository::serialize_registry(registry)?;
+        std::fs::write(&path, json).map_err(|e| {
+            DomainError::InvalidOperation(format!("Failed to write registry to file: {e}"))
+        })?;
+
+        info!(path = %path.display(), "Saved registry to file");
+        Ok(())
+    }
+
+    /// Loads the registry from a local file.
+    pub fn load_from_file() -> Result<Option<CardRegistry>, DomainError> {
+        let path = Self::get_storage_path()?;
+        info!(path = %path.display(), "Loading registry from file");
+
+        if !path.exists() {
+            info!(path = %path.display(), "No persisted registry file found");
+            return Ok(None);
+        }
+
+        let json = std::fs::read_to_string(&path).map_err(|e| {
+            DomainError::InvalidOperation(format!("Failed to read registry from file: {e}"))
+        })?;
+
+        let registry = JsonRepository::deserialize_registry(&json)?;
+        info!(
+            path = %path.display(),
+            workspace_child_count = registry.workspace_child_count(),
+            "Loaded registry from file"
+        );
+        Ok(Some(registry))
+    }
+
+    /// Clears the registry file.
+    pub fn clear_file() -> Result<(), DomainError> {
+        let path = Self::get_storage_path()?;
+        info!(path = %path.display(), "Clearing registry file");
+
+        if path.exists() {
+            std::fs::remove_file(&path).map_err(|e| {
+                DomainError::InvalidOperation(format!("Failed to delete registry file: {e}"))
+            })?;
+        }
+
+        info!(path = %path.display(), "Cleared registry file");
+        Ok(())
+    }
+}
+
 /// A facade for cross-platform persistence.
 ///
 /// # Examples
@@ -347,28 +435,13 @@ impl AppPersistence {
     }
 
     /// Loads the registry from the current platform's persistent storage.
-    ///
-    /// # Examples
-    ///
-    /// ```ignore
-    /// use kanban_planner::infrastructure::repository::AppPersistence;
-    ///
-    /// if let Some(registry) = AppPersistence::load_registry().unwrap() {
-    ///     println!("Loaded registry");
-    /// }
-    /// ```
     #[cfg(not(target_arch = "wasm32"))]
     pub fn load_registry() -> Result<Option<CardRegistry>, DomainError> {
-        let error = DomainError::InvalidOperation(
-            "Persistence is not yet supported on this platform".into(),
+        info!(
+            platform = "native",
+            "Delegating persistence load to file storage"
         );
-        error!(platform = crate::infrastructure::logging::target_name(), error = %error, "Persistence load unsupported on this platform");
-        record_diagnostic(
-            Level::ERROR,
-            "persistence",
-            format!("Persistence load unsupported: {error}"),
-        );
-        Err(error)
+        FileRepository::load_from_file()
     }
 
     /// Saves the registry to the current platform's persistent storage.
@@ -392,6 +465,17 @@ impl AppPersistence {
         LocalStorageRepository::save_to_local_storage(registry)
     }
 
+    /// Saves the registry to the current platform's persistent storage.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn save_registry(registry: &CardRegistry) -> Result<(), DomainError> {
+        info!(
+            platform = "native",
+            workspace_child_count = registry.workspace_child_count(),
+            "Delegating persistence save to file storage"
+        );
+        FileRepository::save_to_file(registry)
+    }
+
     /// Clears the registry from the current platform's persistent storage.
     ///
     /// # Examples
@@ -410,52 +494,14 @@ impl AppPersistence {
         LocalStorageRepository::clear_local_storage()
     }
 
-    /// Saves the registry to the current platform's persistent storage.
-    ///
-    /// # Examples
-    ///
-    /// ```ignore
-    /// use kanban_planner::domain::registry::CardRegistry;
-    /// use kanban_planner::infrastructure::repository::AppPersistence;
-    ///
-    /// let registry = CardRegistry::new();
-    /// AppPersistence::save_registry(&registry).unwrap();
-    /// ```
-    #[cfg(not(target_arch = "wasm32"))]
-    pub fn save_registry(_registry: &CardRegistry) -> Result<(), DomainError> {
-        let error = DomainError::InvalidOperation(
-            "Persistence is not yet supported on this platform".into(),
-        );
-        error!(platform = crate::infrastructure::logging::target_name(), error = %error, "Persistence save unsupported on this platform");
-        record_diagnostic(
-            Level::ERROR,
-            "persistence",
-            format!("Persistence save unsupported: {error}"),
-        );
-        Err(error)
-    }
-
     /// Clears the registry from the current platform's persistent storage.
-    ///
-    /// # Examples
-    ///
-    /// ```ignore
-    /// use kanban_planner::infrastructure::repository::AppPersistence;
-    ///
-    /// AppPersistence::clear_registry().unwrap();
-    /// ```
     #[cfg(not(target_arch = "wasm32"))]
     pub fn clear_registry() -> Result<(), DomainError> {
-        let error = DomainError::InvalidOperation(
-            "Persistence is not yet supported on this platform".into(),
+        info!(
+            platform = "native",
+            "Delegating persistence clear to file storage"
         );
-        error!(platform = crate::infrastructure::logging::target_name(), error = %error, "Persistence clear unsupported on this platform");
-        record_diagnostic(
-            Level::ERROR,
-            "persistence",
-            format!("Persistence clear unsupported: {error}"),
-        );
-        Err(error)
+        FileRepository::clear_file()
     }
 }
 
@@ -552,29 +598,24 @@ mod tests {
 
     #[cfg(not(target_arch = "wasm32"))]
     #[test]
-    fn test_app_persistence_non_web_load_is_explicitly_unsupported() {
-        assert!(matches!(
-            AppPersistence::load_registry(),
-            Err(DomainError::InvalidOperation(_))
-        ));
-    }
+    fn test_app_persistence_native_roundtrip() {
+        let mut original = CardRegistry::new();
+        let workspace_id = original.workspace_card_id().unwrap();
+        original.create_child_card("Native Task".into(), None, workspace_id).unwrap();
 
-    #[cfg(not(target_arch = "wasm32"))]
-    #[test]
-    fn test_app_persistence_non_web_save_is_explicitly_unsupported() {
-        let registry = CardRegistry::new();
-        assert!(matches!(
-            AppPersistence::save_registry(&registry),
-            Err(DomainError::InvalidOperation(_))
-        ));
-    }
+        // Save
+        AppPersistence::save_registry(&original).expect("Native save failed");
 
-    #[cfg(not(target_arch = "wasm32"))]
-    #[test]
-    fn test_app_persistence_non_web_clear_is_explicitly_unsupported() {
-        assert!(matches!(
-            AppPersistence::clear_registry(),
-            Err(DomainError::InvalidOperation(_))
-        ));
+        // Load
+        let loaded = AppPersistence::load_registry()
+            .expect("Native load failed")
+            .expect("Registry should exist");
+        
+        assert_eq!(original, loaded);
+
+        // Clear
+        AppPersistence::clear_registry().expect("Native clear failed");
+        let cleared = AppPersistence::load_registry().expect("Load after clear failed");
+        assert!(cleared.is_none());
     }
 }
