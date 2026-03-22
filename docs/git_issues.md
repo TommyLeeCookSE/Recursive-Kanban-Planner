@@ -84,25 +84,26 @@
 **Status:** CLOSED
 **Resolution:** Simplified `drop_zone_classes` logic, implemented `define_icon!` macro to reduce SVG boilerplate, and optimized `CardItem` to reduce redundant string allocations.
 
-## Issue #76: Architectural Alignment for Platform Interop
+## Issue #76: Optimize drag-and-drop performance and fix Map screen regressions
 **Status:** CLOSED
-**Resolution:** Moved `confirm_destructive_action` from generic `shared_forms.rs` to `actions/interop.rs` and updated design guidelines to enforce this boundary.
-
-## Issue #77: Codebase Refactoring and Performance Optimization
-**Status:** CLOSED
-**Resolution:** Unified `BoardView` and `CardPreviewView` into `CardView` projection. Hardened command execution with automatic registry validation. Implemented debounced persistence in the root `App` component to reduce I/O overhead. Introduced `use_execute_command` hook and `form_row!` macro to reduce UI boilerplate.
-
-## Issue #78: P6 UI Polish
-**Status:** CLOSED
-**Resolution:** Tightened drag-and-drop affordances by adding a visual drag handle icon and hover states. Rebalanced card density by reducing border radii and adjusting padding and font sizes. Improved modal ergonomics by allowing the note textarea to flex and fill available space.
+**Resolution:** Optimized state updates for high-frequency drag events. Resolved coordinate mapping and panning bugs in the Map screen.
 
 ## Issue #77: Comprehensive Web Logging and Session Export
 **Status:** CLOSED
 **Resolution:** Implemented external `logging.toml` configuration for dynamic log levels. Added a custom `tracing` layer to automatically capture all session logs into an expanded in-memory buffer. Added a "Download Logs" utility to export captured diagnostics as a text file directly from the UI.
 
-## Issue #80: Card Description Feature
+## Issue #78: Card Description Feature
 **Status:** CLOSED
 **Resolution:** Implemented optional 80-character descriptions for all cards. Updated domain model, command execution, and persistence to support the new field. Enhanced UI modals with description inputs and updated card previews to display descriptions with italic styling.
 
+## Issue #79: Architectural Alignment for Platform Interop
+**Status:** CLOSED
+**Resolution:** Moved `confirm_destructive_action` from generic `shared_forms.rs` to `actions/interop.rs` and updated design guidelines to enforce this boundary.
 
+## Issue #80: Codebase Refactoring and Performance Optimization
+**Status:** CLOSED
+**Resolution:** Unified `BoardView` and `CardPreviewView` into `CardView` projection. Hardened command execution with automatic registry validation. Implemented debounced persistence in the root `App` component. Introduced `use_execute_command` hook and `form_row!` macro.
 
+## Issue #81: P6 UI Polish
+**Status:** CLOSED
+**Resolution:** Tightened drag-and-drop affordances by adding a visual drag handle icon and hover states. Rebalanced card density by reducing border radii and adjusting padding and font sizes. Improved modal ergonomics.
