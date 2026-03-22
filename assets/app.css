@@ -659,21 +659,21 @@ button,
   --app-topbar-back-icon-size: 1.125rem;
   --app-card-body-padding-x: 1rem;
   --app-card-body-padding-y: 1rem;
-  --app-card-radius: 1.75rem;
+  --app-card-radius: 1.25rem;
   --app-card-hover-lift: 1rem;
   --app-card-title-stack-padding-top: 0.5rem;
-  --app-card-title-size: 1.125rem;
+  --app-card-title-size: 1rem;
   --app-card-title-height: 1rem;
   --app-card-title-gap: 0.1rem;
-  --app-card-title-line-height: 1.15;
+  --app-card-title-line-height: 1.25;
   --app-card-subtitle-gap: 0.5rem;
-  --app-card-subtitle-size: 0.625rem;
+  --app-card-subtitle-size: 0.7rem;
   --app-card-subtitle-tracking: 0.2em;
   --app-card-due-gap: 1rem;
   --app-card-due-size: 0.875rem;
   --app-card-preview-gap-top: 1rem;
-  --app-card-preview-pad-x: 1.5rem;
-  --app-card-preview-pad-y: 1.5rem;
+  --app-card-preview-pad-x: 1rem;
+  --app-card-preview-pad-y: 1rem;
   --app-card-preview-border-width: 1px;
   --app-card-preview-chip-gap: 1rem;
   --app-card-preview-chip-pad-x: 1.5rem;
@@ -681,7 +681,7 @@ button,
   --app-card-preview-chip-size: 0.875rem;
   --app-card-actions-gap: 0.5rem;
   --app-card-actions-padding-x: 1.25rem;
-  --app-card-actions-padding-y: 1rem;
+  --app-card-actions-padding-y: 0.75rem;
   --app-card-actions-bg-mix: 74%;
   --app-page-shell-max-width: 48rem;
   --app-page-shell-padding-x: 1.5rem;
@@ -1440,6 +1440,37 @@ button,
   cursor: grabbing;
 }
 
+.app-card-body--draggable {
+  transition: background-color 200ms ease;
+}
+
+.app-card-body--draggable:hover {
+  background-color: color-mix(in srgb, var(--app-surface-soft) 30%, transparent);
+}
+
+.app-card-drag-handle {
+  position: absolute;
+  top: 0px;
+  right: 0px;
+  display: flex;
+  height: 1.5rem;
+  width: 1.5rem;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition-property: opacity;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 200ms;
+}
+
+.group:hover .app-card-drag-handle {
+  opacity: 1;
+}
+
+.app-card-drag-handle {
+  color: var(--app-text-soft);
+}
+
 .app-card-title-stack {
   display: flex;
   width: 100%;
@@ -1994,6 +2025,8 @@ button,
 }
 
 .app-notes-textarea {
+  flex: 1 1 0%;
+  resize: none;
   min-height: var(--app-notes-editor-textarea-min-height);
 }
 
@@ -2608,6 +2641,14 @@ button,
   inset: 0px;
 }
 
+.right-0 {
+  right: 0px;
+}
+
+.top-0 {
+  top: 0px;
+}
+
 .z-40 {
   z-index: 40;
 }
@@ -2657,6 +2698,10 @@ button,
   height: 1.25rem;
 }
 
+.h-6 {
+  height: 1.5rem;
+}
+
 .h-7 {
   height: 1.75rem;
 }
@@ -2679,6 +2724,10 @@ button,
 
 .w-5 {
   width: 1.25rem;
+}
+
+.w-6 {
+  width: 1.5rem;
 }
 
 .w-7 {
@@ -3087,6 +3136,10 @@ button,
   transition-property: transform;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 150ms;
+}
+
+.duration-200 {
+  transition-duration: 200ms;
 }
 
 .duration-300 {

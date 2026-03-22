@@ -92,4 +92,8 @@
 **Status:** CLOSED
 **Resolution:** Unified `BoardView` and `CardPreviewView` into `CardView` projection. Hardened command execution with automatic registry validation. Implemented debounced persistence in the root `App` component to reduce I/O overhead. Introduced `use_execute_command` hook and `form_row!` macro to reduce UI boilerplate.
 
+## Issue #78: P6 UI Polish
+**Status:** CLOSED
+**Resolution:** Tightened drag-and-drop affordances by adding a visual drag handle icon and hover states. Rebalanced card density by reducing border radii and adjusting padding and font sizes. Improved modal ergonomics by allowing the note textarea to flex and fill available space.
+
 

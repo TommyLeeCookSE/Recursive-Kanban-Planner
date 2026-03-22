@@ -117,11 +117,11 @@
 
 ## Proposed Next Stages
 
-### P6 - UI Polish
+### P6 - UI Polish COMPLETE
 
-- [ ] Tighten drag-and-drop affordances now that cards carry more metadata
-- [ ] Rebalance card density, spacing, and readability
-- [ ] Improve modal ergonomics for note editing and board controls
+- [x] Tighten drag-and-drop affordances now that cards carry more metadata
+- [x] Rebalance card density, spacing, and readability
+- [x] Improve modal ergonomics for note editing and board controls
 
 ### P7 - Search and Navigation
 

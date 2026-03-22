@@ -81,21 +81,21 @@
 
     --app-card-body-padding-x: 1rem;
     --app-card-body-padding-y: 1rem;
-    --app-card-radius: 1.75rem;
+    --app-card-radius: 1.25rem;
     --app-card-hover-lift: 1rem;
     --app-card-title-stack-padding-top: 0.5rem;
-    --app-card-title-size: 1.125rem;
+    --app-card-title-size: 1rem;
     --app-card-title-height: 1rem;
     --app-card-title-gap: 0.1rem;
-    --app-card-title-line-height: 1.15;
+    --app-card-title-line-height: 1.25;
     --app-card-subtitle-gap: 0.5rem;
-    --app-card-subtitle-size: 0.625rem;
+    --app-card-subtitle-size: 0.7rem;
     --app-card-subtitle-tracking: 0.2em;
     --app-card-due-gap: 1rem;
     --app-card-due-size: 0.875rem;
     --app-card-preview-gap-top: 1rem;
-    --app-card-preview-pad-x: 1.5rem;
-    --app-card-preview-pad-y: 1.5rem;
+    --app-card-preview-pad-x: 1rem;
+    --app-card-preview-pad-y: 1rem;
     --app-card-preview-border-width: 1px;
     --app-card-preview-chip-gap: 1rem;
     --app-card-preview-chip-pad-x: 1.5rem;
@@ -103,7 +103,7 @@
     --app-card-preview-chip-size: 0.875rem;
     --app-card-actions-gap: 0.5rem;
     --app-card-actions-padding-x: 1.25rem;
-    --app-card-actions-padding-y: 1rem;
+    --app-card-actions-padding-y: 0.75rem;
     --app-card-actions-bg-mix: 74%;
     --app-page-shell-max-width: 48rem;
     --app-page-shell-padding-x: 1.5rem;
@@ -624,6 +624,16 @@
 
   .app-card-body--draggable {
     @apply cursor-grab active:cursor-grabbing;
+    transition: background-color 200ms ease;
+  }
+  
+  .app-card-body--draggable:hover {
+    background-color: color-mix(in srgb, var(--app-surface-soft) 30%, transparent);
+  }
+
+  .app-card-drag-handle {
+    @apply absolute top-0 right-0 w-6 h-6 flex items-center justify-center opacity-0 transition-opacity duration-200 group-hover:opacity-100;
+    color: var(--app-text-soft);
   }
 
   .app-card-title-stack {
@@ -916,6 +926,7 @@
   }
 
   .app-notes-textarea {
+    @apply flex-1 resize-none;
     min-height: var(--app-notes-editor-textarea-min-height);
   }
 

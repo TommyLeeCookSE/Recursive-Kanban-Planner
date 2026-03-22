@@ -7,7 +7,9 @@
 //! `docs/rust-for-python-devs.md`.
 
 use crate::interface::actions::interop::confirm_destructive_action;
-use crate::interface::components::visuals::{render_edit_icon, render_trash_icon};
+use crate::interface::components::visuals::{
+    render_drag_handle_icon, render_edit_icon, render_trash_icon,
+};
 use dioxus::prelude::*;
 
 /// A premium, reusable card component for both Workspace and Board views.
@@ -75,7 +77,12 @@ pub fn CardItem(
                 },
                 title: "Open {title}",
                 onclick: move |_| on_open.call(()),
-                div { class: "app-card-title-stack",
+                div { class: "app-card-title-stack relative w-full",
+                    if draggable {
+                        div { class: "app-card-drag-handle",
+                            {render_drag_handle_icon()}
+                        }
+                    }
                     h3 { class: "app-card-title",
                         "{title}"
                     }

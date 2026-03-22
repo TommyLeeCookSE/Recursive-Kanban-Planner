@@ -231,3 +231,15 @@ define_icon! {
     render_edit_icon, "0 0 24 24", "1.8",
     path { d: "M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" }
 }
+
+define_icon! {
+    /// Renders a drag handle (grip vertical) icon.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// rsx! { render_drag_handle_icon() }
+    /// ```
+    render_drag_handle_icon, "0 0 24 24", "2",
+    path { d: "M9 5h.01 M9 12h.01 M9 19h.01 M15 5h.01 M15 12h.01 M15 19h.01" }
+}

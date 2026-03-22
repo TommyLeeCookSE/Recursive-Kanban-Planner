@@ -44,7 +44,9 @@ pub fn execute(command: Command, registry: &mut CardRegistry) -> Result<(), Doma
                 record_diagnostic(
                     Level::ERROR,
                     "application",
-                    format!("Application command '{command_label}' resulted in invalid state: {validation_error}"),
+                    format!(
+                        "Application command '{command_label}' resulted in invalid state: {validation_error}"
+                    ),
                 );
                 return Err(validation_error);
             }
