@@ -30,5 +30,5 @@ pub enum Route {
         Board { card_id: CardId },
     #[end_layout]
     #[route("/map/:focus_card_id", MapScreen)]
-    MapRoute { focus_card_id: CardId },
+    Map { focus_card_id: CardId },
 }

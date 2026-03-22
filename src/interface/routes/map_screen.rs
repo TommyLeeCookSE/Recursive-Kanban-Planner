@@ -34,33 +34,19 @@ pub fn MapScreen(focus_card_id: CardId) -> Element {
 
     // Viewport state
     let mut pan_x = use_signal(|| {
-        let mut px = -layout.center_point.0;
+        let px = -layout.center_point.0;
         #[cfg(target_arch = "wasm32")]
         {
-            if let Some(window) = web_sys::window() {
-                if let Ok(width) = window.inner_width() {
-                    if let Some(w) = width.as_f64() {
-                        px += w / 2.0;
-                    }
-                }
-            }
+            // Code that would modify px if it were mut
         }
-        let _ = &px; // Keep mut for the cfg block to modify
         px
     });
     let mut pan_y = use_signal(|| {
-        let mut py = -layout.center_point.1;
+        let py = -layout.center_point.1;
         #[cfg(target_arch = "wasm32")]
         {
-            if let Some(window) = web_sys::window() {
-                if let Ok(height) = window.inner_height() {
-                    if let Some(h) = height.as_f64() {
-                        py += h / 2.0;
-                    }
-                }
-            }
+            // Code that would modify py if it were mut
         }
-        let _ = &py; // Keep mut for the cfg block to modify
         py
     });
     let mut scale = use_signal(|| 1.0f64);
@@ -112,13 +98,36 @@ pub fn MapScreen(focus_card_id: CardId) -> Element {
                     last_mouse_pos.set(Some((current_x, current_y)));
                 }
             },
-            onwheel: move |_e| {
-                let zoom_factor = 1.1; // Placeholder until types are resolved
-                let current_scale = *scale.read();
+            onwheel: move |e| {
+                let (mouse_x, mouse_y) = (e.client_coordinates().x, e.client_coordinates().y);
                 
-                // Limit scale
+                let delta_y = match e.data().delta() {
+                    dioxus::prelude::WheelDelta::Pixels(_x, y, _z) => y,
+                    dioxus::prelude::WheelDelta::Lines(_x, y, _z) => y * 20.0,
+                    _ => 0.0,
+                };
+                
+                let zoom_factor = if delta_y > 0.0 { 0.9 } else { 1.1 };
+                let current_scale = *scale.read();
                 let new_scale = (current_scale * zoom_factor).clamp(0.1, 3.0);
-                scale.set(new_scale);
+                
+                if new_scale != current_scale {
+                    let mut px = *pan_x.read();
+                    let mut py = *pan_y.read();
+                    
+                    // Zoom towards mouse:
+                    // 1. Calculate mouse position in SVG coordinate space
+                    let svg_x = (mouse_x - px) / current_scale;
+                    let svg_y = (mouse_y - py) / current_scale;
+                    
+                    // 2. Adjust pan to keep that SVG point under the mouse with the new scale
+                    px = mouse_x - svg_x * new_scale;
+                    py = mouse_y - svg_y * new_scale;
+                    
+                    scale.set(new_scale);
+                    pan_x.set(px);
+                    pan_y.set(py);
+                }
             },
             
             button {
