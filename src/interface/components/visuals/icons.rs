@@ -243,3 +243,16 @@ define_icon! {
     render_drag_handle_icon, "0 0 24 24", "2",
     path { d: "M9 5h.01 M9 12h.01 M9 19h.01 M15 5h.01 M15 12h.01 M15 19h.01" }
 }
+
+define_icon! {
+    /// Renders a search icon.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// rsx! { render_search_icon() }
+    /// ```
+    render_search_icon, "0 0 24 24", "1.8",
+    circle { cx: "11", cy: "11", r: "8" }
+    path { d: "m21 21-4.35-4.35" }
+}

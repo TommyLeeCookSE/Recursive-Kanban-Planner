@@ -10,9 +10,11 @@ use dioxus::prelude::*;
 
 mod card;
 mod notes;
+mod search;
 
 pub use card::{CardModal, EditCardModal};
 pub use notes::NotesModal;
+pub use search::SearchModal;
 
 /// Represents the different types of modals available in the application.
 ///
@@ -32,6 +34,8 @@ pub enum ModalType {
     EditCard { id: CardId },
     /// Modal for viewing and editing notes associated with a card.
     CardNotes { card_id: CardId },
+    /// Modal for workspace-wide search.
+    Search,
 }
 
 /// A generic modal shell component.

@@ -10,7 +10,7 @@ use crate::interface::Route;
 use crate::interface::app::IsDark;
 use crate::interface::components::modal::ModalType;
 use crate::interface::components::visuals::{
-    render_back_icon, render_evening_icon, render_sunrise_icon,
+    render_back_icon, render_evening_icon, render_search_icon, render_sunrise_icon,
 };
 use crate::interface::components::web_utilities::{
     render_clear_cache_button, render_download_logs_button, render_export_button,
@@ -32,7 +32,7 @@ use dioxus::prelude::*;
 #[component]
 pub fn NavbarLayout() -> Element {
     let mut is_dark = use_context::<Signal<IsDark>>();
-    let active_modal = use_context::<Signal<Option<ModalType>>>();
+    let mut active_modal = use_context::<Signal<Option<ModalType>>>();
     let registry = use_context::<Signal<crate::domain::registry::CardRegistry>>();
     let persistence_warning = use_context::<Signal<Option<String>>>();
     let route = use_route::<Route>();
@@ -79,6 +79,12 @@ pub fn NavbarLayout() -> Element {
                 }
 
                 div { class: "app-bar-right",
+                    button {
+                        class: "app-bar-button h-10 w-10 flex items-center justify-center rounded-full hover:bg-[var(--app-surface-soft)] transition-colors",
+                        onclick: move |_| active_modal.set(Some(ModalType::Search)),
+                        title: "Search Workspace (Ctrl+K)",
+                        span { class: "app-bar-button-icon", {render_search_icon()} }
+                    }
                     {render_download_logs_button(persistence_warning)}
                     {render_export_button(registry, persistence_warning)}
                     {render_import_button(registry, active_modal, persistence_warning, nav)}

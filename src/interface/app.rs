@@ -114,6 +114,35 @@ pub fn App() -> Element {
     let _dragged_item_kind = use_context_provider(|| Signal::new(DraggedItemKind::None));
 
     let is_dark: Signal<IsDark> = use_context();
+    let mut active_modal: Signal<Option<ModalType>> = use_context();
+
+    // Global keyboard shortcuts
+    use_effect(move || {
+        let active_modal = active_modal;
+        
+        #[cfg(target_arch = "wasm32")]
+        {
+            use wasm_bindgen::closure::Closure;
+            use wasm_bindgen::JsCast;
+            
+            let window = web_sys::window().unwrap();
+            let document = window.document().unwrap();
+            
+            let callback = Closure::wrap(Box::new(move |event: web_sys::KeyboardEvent| {
+                if event.ctrl_key() && event.key() == "k" {
+                    event.prevent_default();
+                    active_modal.set(Some(ModalType::Search));
+                }
+            }) as Box<dyn FnMut(web_sys::KeyboardEvent)>);
+            
+            document.add_event_listener_with_callback(
+                "keydown",
+                callback.as_ref().unchecked_ref(),
+            ).unwrap();
+            
+            callback.forget(); // Leak for now, simplified for the demo
+        }
+    });
 
     let shell_class = if is_dark().0 {
         "app-shell theme-dark dark"

@@ -1,5 +1,7 @@
 use crate::domain::registry::CardRegistry;
-use crate::interface::components::modal::{CardModal, EditCardModal, ModalType, NotesModal};
+use crate::interface::components::modal::{
+    CardModal, EditCardModal, ModalType, NotesModal, SearchModal,
+};
 use dioxus::prelude::*;
 
 pub(super) fn render_modal_overlay(
@@ -26,6 +28,12 @@ pub(super) fn render_modal_overlay(
             NotesModal {
                 on_close: move |_| active_modal.set(None),
                 card_id,
+                registry,
+            }
+        },
+        ModalType::Search => rsx! {
+            SearchModal {
+                on_close: move |_| active_modal.set(None),
                 registry,
             }
         },
