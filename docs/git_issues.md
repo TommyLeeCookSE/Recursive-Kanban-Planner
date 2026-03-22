@@ -19,3 +19,8 @@
 **Status:** OPEN
 **Description:** `Card::reorder_children` uses `Vec::contains` inside a loop, leading to suboptimal performance as board sizes grow.
 **Recommendation:** Optimize the validation loop in `src/domain/card.rs` using a temporary `HashSet` to achieve O(N) complexity.
+
+## Issue #82: Dragging a card copies all text from all cards
+**Status:** OPEN
+**Description:** When a card is dragged, it appears that all text from all cards in the view is being copied or included in the drag ghost/data. This causes performance issues and visual clutter during drag operations.
+
