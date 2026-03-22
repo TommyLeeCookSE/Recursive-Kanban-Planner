@@ -123,10 +123,12 @@
 - [x] Rebalance card density, spacing, and readability
 - [x] Improve modal ergonomics for note editing and board controls
 
-### P7 - Search and Navigation
+### P7 - Search and Navigation COMPLETE
 
-- [ ] Add search and filtering for larger workspaces
-- [ ] Consider quick-open or command-palette behavior for deep trees
+- [x] Add workspace-wide fuzzy search with Ctrl+K shortcut
+- [x] Implement horizontal minimap navigation strip for localized context
+- [x] Improve map zooming with mouse-centered focus
+- [x] Refactor route names for better clarity
 
 ### P8 - Native Persistence
 
