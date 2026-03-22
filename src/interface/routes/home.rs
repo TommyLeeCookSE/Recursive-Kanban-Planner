@@ -34,8 +34,9 @@ pub fn Home() -> Element {
         load_workspace_screen_data(&reg)
     });
 
-    let screen_data = match screen_data_result() {
-        Ok(data) => data,
+    let screen_data_result = screen_data_result.read();
+    let screen_data = match &*screen_data_result {
+        Ok(data) => data.clone(),
         Err(error_value) => {
             error!(error = %error_value, "Workspace route failed to load workspace card");
             record_diagnostic(

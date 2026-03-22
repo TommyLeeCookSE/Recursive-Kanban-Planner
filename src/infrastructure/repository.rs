@@ -513,7 +513,7 @@ mod tests {
             .unwrap();
 
         let json = JsonRepository::serialize_registry(&original).expect("Serialization failed");
-        let tampered = json.replacen("\"title\": \"My Project\"", "\"title\": \"   \"", 1);
+        let tampered = json.replacen("\"title\":\"My Project\"", "\"title\":\"   \"", 1);
 
         assert!(matches!(
             JsonRepository::deserialize_registry(&tampered),

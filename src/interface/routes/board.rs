@@ -38,8 +38,9 @@ pub fn Board(card_id: CardId) -> Element {
         load_board_screen_data(card_id, &reg)
     });
 
-    let screen_data = match screen_data_result() {
-        Ok(data) => data,
+    let screen_data_result = screen_data_result.read();
+    let screen_data = match &*screen_data_result {
+        Ok(data) => data.clone(),
         Err(error_value) => {
             error!(%card_id, error = %error_value, "Board route failed to load board state");
             record_diagnostic(
