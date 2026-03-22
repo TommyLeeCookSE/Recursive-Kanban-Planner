@@ -31,11 +31,19 @@ pub fn Board(card_id: CardId) -> Element {
     let signals = use_board_signals();
     let card_drop_index = use_signal(|| None::<usize>);
 
+    // Back the non-reactive `card_id` prop with a signal so `use_memo` can track changes
+    // when the router reuses this component instance for a new route.
+    let mut tracked_card_id = use_signal(|| card_id);
+    if *tracked_card_id.peek() != card_id {
+        tracked_card_id.set(card_id);
+    }
+
     // Memoize the board data so we don't re-calculate it (and all card previews)
     // during drag-and-drop operations or other transient state changes.
     let screen_data_result = use_memo(move || {
+        let current_id = tracked_card_id();
         let reg = signals.registry.read();
-        load_board_screen_data(card_id, &reg)
+        load_board_screen_data(current_id, &reg)
     });
 
     let screen_data_result = screen_data_result.read();

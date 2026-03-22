@@ -72,4 +72,8 @@
 **Status:** CLOSED
 **Resolution:** Implemented memoization for board views, capped preview items, optimized serialization by removing redundant clones, and added stable keys to the grid.
 
+## Issue #73: Board Navigation Does Not Update View
+**Status:** CLOSED
+**Resolution:** Fixed `use_memo` prop capture bug in the `Board` component by tracking the `card_id` prop with a local `use_signal`.
+
 
