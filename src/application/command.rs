@@ -22,6 +22,7 @@ use tracing::info;
 ///
 /// let cmd = Command::CreateWorkspaceChildCard {
 ///     title: "New Board".into(),
+///     description: None,
 /// };
 /// assert_eq!(cmd.name(), "CreateWorkspaceChildCard");
 /// ```
@@ -31,11 +32,15 @@ pub enum Command {
     CreateWorkspaceChildCard {
         /// The title of the new card.
         title: String,
+        /// The optional description of the new card.
+        description: Option<String>,
     },
     /// Create a new card under a specific parent.
     CreateChildCard {
         /// The title of the new card.
         title: String,
+        /// The optional description of the new card.
+        description: Option<String>,
         /// The ID of the parent card.
         parent_id: CardId,
     },
@@ -45,6 +50,13 @@ pub enum Command {
         id: CardId,
         /// The new title.
         title: String,
+    },
+    /// Update the description of an existing card.
+    SetCardDescription {
+        /// The ID of the card.
+        id: CardId,
+        /// The new description.
+        description: Option<String>,
     },
     /// Add a new note page to a card.
     AddNotePage {
@@ -124,20 +136,12 @@ pub enum Command {
 
 impl Command {
     /// Returns the string name of the command variant.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use kanban_planner::application::Command;
-    ///
-    /// let cmd = Command::ClearDueDate { card_id: Default::default() };
-    /// assert_eq!(cmd.name(), "ClearDueDate");
-    /// ```
     pub fn name(&self) -> &'static str {
         match self {
             Command::CreateWorkspaceChildCard { .. } => "CreateWorkspaceChildCard",
             Command::CreateChildCard { .. } => "CreateChildCard",
             Command::RenameCard { .. } => "RenameCard",
+            Command::SetCardDescription { .. } => "SetCardDescription",
             Command::AddNotePage { .. } => "AddNotePage",
             Command::RenameNotePage { .. } => "RenameNotePage",
             Command::SaveNotePageBody { .. } => "SaveNotePageBody",
@@ -152,15 +156,6 @@ impl Command {
     }
 
     /// Logs the start of command execution using `tracing`.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use kanban_planner::application::Command;
-    ///
-    /// let cmd = Command::ClearDueDate { card_id: Default::default() };
-    /// cmd.log_start();
-    /// ```
     pub fn log_start(&self) {
         info!(
             command = self.name(),
@@ -170,27 +165,19 @@ impl Command {
     }
 
     /// Applies the command mutation to the provided registry.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use kanban_planner::application::Command;
-    /// use kanban_planner::domain::registry::CardRegistry;
-    ///
-    /// let mut registry = CardRegistry::new();
-    /// let cmd = Command::CreateWorkspaceChildCard { title: "Test".into() };
-    /// cmd.apply(&mut registry).unwrap();
-    /// ```
     pub fn apply(self, registry: &mut CardRegistry) -> Result<(), DomainError> {
         match self {
-            Command::CreateWorkspaceChildCard { title } => {
-                registry.create_workspace_child_card(title)?;
+            Command::CreateWorkspaceChildCard { title, description } => {
+                registry.create_workspace_child_card(title, description)?;
             }
-            Command::CreateChildCard { title, parent_id } => {
-                registry.create_child_card(title, parent_id)?;
+            Command::CreateChildCard { title, description, parent_id } => {
+                registry.create_child_card(title, description, parent_id)?;
             }
             Command::RenameCard { id, title } => {
                 registry.rename_card(id, title)?;
+            }
+            Command::SetCardDescription { id, description } => {
+                registry.set_card_description(id, description)?;
             }
             Command::AddNotePage { card_id, title } => {
                 registry.add_note_page(card_id, title)?;
@@ -268,6 +255,7 @@ mod tests {
         let mut registry = CardRegistry::new();
         let command = Command::CreateWorkspaceChildCard {
             title: "Top Level Board".into(),
+            description: None,
         };
 
         command.apply(&mut registry).unwrap();

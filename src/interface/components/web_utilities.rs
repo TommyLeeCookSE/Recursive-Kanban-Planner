@@ -15,6 +15,7 @@ use crate::interface::components::modal::ModalType;
 use crate::interface::components::visuals::{
     render_export_icon, render_import_icon, render_trash_icon,
 };
+use crate::infrastructure::logging::{diagnostics_snapshot, record_diagnostic};
 use dioxus::prelude::*;
 use dioxus_router::Navigator;
 #[cfg(target_arch = "wasm32")]
@@ -25,6 +26,52 @@ use wasm_bindgen::JsCast;
 use wasm_bindgen::closure::Closure;
 #[cfg(target_arch = "wasm32")]
 use web_sys::{Blob, HtmlAnchorElement, HtmlInputElement, Url};
+use tracing::Level;
+
+/// Renders a button that downloads the in-memory log buffer as a text file.
+pub fn render_download_logs_button(
+    persistence_warning: Signal<Option<String>>,
+) -> Element {
+    #[cfg(target_arch = "wasm32")]
+    {
+        let mut persistence_warning = persistence_warning;
+        return rsx! {
+            button {
+                class: "app-bar-button",
+                title: "Download current session logs as a text file",
+                "aria-label": "Download Logs",
+                onclick: move |_| {
+                    match download_logs() {
+                        Ok(()) => persistence_warning.set(None),
+                        Err(error) => persistence_warning.set(Some(error.to_string())),
+                    }
+                },
+                span { class: "app-bar-button-icon",
+                    svg {
+                        fill: "none",
+                        view_box: "0 0 24 24",
+                        stroke: "currentColor",
+                        width: "24",
+                        height: "24",
+                        stroke_width: "1.5",
+                        path {
+                            stroke_linecap: "round",
+                            stroke_linejoin: "round",
+                            d: "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                        }
+                    }
+                }
+                span { class: "app-bar-button-label", "Logs" }
+            }
+        };
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let _ = persistence_warning;
+        disabled_utility_button("Logs", "Logs are available on web builds only")
+    }
+}
 
 /// Renders a button that triggers a JSON export of the current registry.
 ///
@@ -339,6 +386,59 @@ fn begin_import_flow(
     input.set_onchange(Some(onchange.as_ref().unchecked_ref()));
     onchange.forget();
     input.click();
+}
+
+#[cfg(target_arch = "wasm32")]
+fn download_logs() -> Result<(), crate::domain::error::DomainError> {
+    let snapshot = diagnostics_snapshot();
+    let mut log_text = String::new();
+    for entry in snapshot {
+        log_text.push_str(&format!(
+            "[{}] {:<5} {:<30} {}\n",
+            entry.timestamp_unix_secs,
+            entry.level,
+            entry.target,
+            entry.message
+        ));
+    }
+
+    let document = web_sys::window()
+        .and_then(|window| window.document())
+        .ok_or_else(|| {
+            crate::domain::error::DomainError::InvalidOperation(
+                "Failed to access browser document for log export".into(),
+            )
+        })?;
+
+    let data = Array::new();
+    data.push(&wasm_bindgen::JsValue::from_str(&log_text));
+    let blob = Blob::new_with_str_sequence(&data).map_err(|_| {
+        crate::domain::error::DomainError::InvalidOperation("Failed to prepare log blob".into())
+    })?;
+    let url = Url::create_object_url_with_blob(&blob).map_err(|_| {
+        crate::domain::error::DomainError::InvalidOperation("Failed to create log URL".into())
+    })?;
+
+    let anchor: HtmlAnchorElement = document
+        .create_element("a")
+        .map_err(|_| {
+            crate::domain::error::DomainError::InvalidOperation(
+                "Failed to create log anchor".into(),
+            )
+        })?
+        .dyn_into()
+        .map_err(|_| {
+            crate::domain::error::DomainError::InvalidOperation(
+                "Failed to cast log anchor".into(),
+            )
+        })?;
+    anchor.set_href(&url);
+    anchor.set_download("kanban-planner-logs.txt");
+    anchor.click();
+    let _ = Url::revoke_object_url(&url);
+
+    record_diagnostic(Level::INFO, "export", "Session logs exported successfully");
+    Ok(())
 }
 
 #[cfg(target_arch = "wasm32")]

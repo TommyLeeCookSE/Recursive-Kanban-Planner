@@ -13,7 +13,8 @@ use crate::interface::components::visuals::{
     render_back_icon, render_evening_icon, render_sunrise_icon,
 };
 use crate::interface::components::web_utilities::{
-    render_clear_cache_button, render_export_button, render_import_button,
+    render_clear_cache_button, render_download_logs_button, render_export_button,
+    render_import_button,
 };
 use dioxus::prelude::*;
 // use_route is imported through the router module or prelude depending on features
@@ -78,6 +79,7 @@ pub fn NavbarLayout() -> Element {
                 }
 
                 div { class: "app-bar-right",
+                    {render_download_logs_button(persistence_warning)}
                     {render_export_button(registry, persistence_warning)}
                     {render_import_button(registry, active_modal, persistence_warning, nav)}
                     {render_clear_cache_button(registry, active_modal, persistence_warning, nav)}

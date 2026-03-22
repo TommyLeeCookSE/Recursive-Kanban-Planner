@@ -7,11 +7,13 @@ edition = "2024"
 dioxus = { version = "0.7.3", features = ["router"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+toml = "0.8"
 ulid = { version = "1.2.1", features = ["serde"] }
 thiserror = "2"
 wasm-bindgen = "0.2.114"
+wasm-bindgen-futures = "0.4.50"
 js-sys = "0.3.91"
-web-sys = { version = "0.3.91", features = ["Blob", "Document", "Event", "File", "FileList", "FileReader", "HtmlAnchorElement", "HtmlInputElement", "ProgressEvent", "Storage", "Url", "Window"] }
+web-sys = { version = "0.3.91", features = ["Blob", "Document", "Event", "File", "FileList", "FileReader", "HtmlAnchorElement", "HtmlInputElement", "ProgressEvent", "Request", "RequestInit", "RequestMode", "Response", "Storage", "Url", "Window"] }
 getrandom_02 = { package = "getrandom", version = "0.2", features = ["js"] }
 getrandom_03 = { package = "getrandom", version = "0.3", features = ["wasm_js"] }
 tracing = "0.1"

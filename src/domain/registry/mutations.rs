@@ -27,9 +27,10 @@ use crate::domain::id::{CardId, NotePageId};
 pub(super) fn create_workspace_child_card(
     registry: &mut CardRegistry,
     title: String,
+    description: Option<String>,
 ) -> Result<CardId, DomainError> {
     let workspace_id = workspace::workspace_card_id(registry)?;
-    create_child_card(registry, title, workspace_id)
+    create_child_card(registry, title, description, workspace_id)
 }
 
 /// Creates a new card as a child of the specified parent.
@@ -47,11 +48,12 @@ pub(super) fn create_workspace_child_card(
 pub(super) fn create_child_card(
     registry: &mut CardRegistry,
     title: String,
+    description: Option<String>,
     parent_id: CardId,
 ) -> Result<CardId, DomainError> {
     registry.get_card(parent_id)?;
 
-    let child = Card::new_child(title, parent_id)?;
+    let child = Card::new_child(title, description, parent_id)?;
     let child_id = child.id();
 
     registry.get_card_mut(parent_id)?.add_child(child_id);
@@ -77,6 +79,15 @@ pub(super) fn rename_card(
     title: String,
 ) -> Result<(), DomainError> {
     registry.get_card_mut(id)?.rename(title)
+}
+
+/// Updates the description of an existing card in the registry.
+pub(super) fn set_card_description(
+    registry: &mut CardRegistry,
+    id: CardId,
+    description: Option<String>,
+) -> Result<(), DomainError> {
+    registry.get_card_mut(id)?.set_description(description)
 }
 
 /// Adds a new note page to a card.

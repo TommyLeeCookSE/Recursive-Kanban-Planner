@@ -5,14 +5,34 @@ use kanban_planner::infrastructure::logging::{
 use tracing::{Level, info};
 
 fn main() {
-    let _logging_guard = match init_logging() {
-        Ok(guard) => Some(guard),
-        Err(error) => {
-            eprintln!("Failed to initialize logging: {error}");
-            None
-        }
-    };
+    #[cfg(target_arch = "wasm32")]
+    {
+        wasm_bindgen_futures::spawn_local(async {
+            let _logging_guard = match init_logging().await {
+                Ok(guard) => Some(guard),
+                Err(error) => {
+                    eprintln!("Failed to initialize logging: {error}");
+                    None
+                }
+            };
+            launch_app();
+        });
+    }
 
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let _logging_guard = match init_logging() {
+            Ok(guard) => Some(guard),
+            Err(error) => {
+                eprintln!("Failed to initialize logging: {error}");
+                None
+            }
+        };
+        launch_app();
+    }
+}
+
+fn launch_app() {
     #[cfg(not(target_arch = "wasm32"))]
     let current_dir = std::env::current_dir()
         .map(|dir| dir.display().to_string())
@@ -28,7 +48,7 @@ fn main() {
     #[cfg(not(target_arch = "wasm32"))]
     let log_level = std::env::var("KANBAN_LOG_LEVEL").unwrap_or_else(|_| "info".to_string());
     #[cfg(target_arch = "wasm32")]
-    let log_level = "info".to_string(); // In WASM we typically rely on defaults or hardcoded levels if EnvFilter fails
+    let log_level = "info (dynamic)".to_string();
 
     info!(
         version = env!("CARGO_PKG_VERSION"),

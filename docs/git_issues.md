@@ -96,4 +96,8 @@
 **Status:** CLOSED
 **Resolution:** Tightened drag-and-drop affordances by adding a visual drag handle icon and hover states. Rebalanced card density by reducing border radii and adjusting padding and font sizes. Improved modal ergonomics by allowing the note textarea to flex and fill available space.
 
+## Issue #79: Comprehensive Web Logging and Session Export
+**Status:** CLOSED
+**Resolution:** Implemented external `logging.toml` configuration for dynamic log levels. Added a custom `tracing` layer to automatically capture all session logs into an expanded in-memory buffer. Added a "Download Logs" utility to export captured diagnostics as a text file directly from the UI.
+
 

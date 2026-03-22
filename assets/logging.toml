@@ -1,0 +1,16 @@
+# Kanban Planner Logging Configuration
+# This file is fetched at startup to dynamically configure log levels and capture rules.
+
+# Global log level. Valid values: "trace", "debug", "info", "warn", "error"
+global_level = "info"
+
+# Module-specific log level overrides.
+# Map of module path to log level.
+# Example: "kanban_planner::domain::registry = \"debug\""
+[overrides]
+"kanban_planner::infrastructure::logging" = "info"
+"kanban_planner::interface::app" = "debug"
+
+# Maximum number of log entries to keep in memory for download.
+# Default is 1000 if not specified.
+max_buffer_capacity = 5000

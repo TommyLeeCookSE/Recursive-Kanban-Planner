@@ -184,15 +184,23 @@ where
 /// ```
 /// use kanban_planner::interface::components::shared_forms::build_create_card_command;
 ///
-/// let cmd = build_create_card_command("My Title".to_string(), None).unwrap();
+/// let cmd = build_create_card_command("My Title".to_string(), None, None).unwrap();
 /// ```
 pub fn build_create_card_command(
     title: String,
+    description: Option<String>,
     parent_id: Option<CardId>,
 ) -> Result<Command, DomainError> {
     match parent_id {
-        Some(parent_id) => Ok(Command::CreateChildCard { title, parent_id }),
-        None => Ok(Command::CreateWorkspaceChildCard { title }),
+        Some(parent_id) => Ok(Command::CreateChildCard {
+            title,
+            description,
+            parent_id,
+        }),
+        None => Ok(Command::CreateWorkspaceChildCard {
+            title,
+            description,
+        }),
     }
 }
 

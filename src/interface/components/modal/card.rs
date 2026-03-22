@@ -18,6 +18,7 @@ pub fn CardModal(
     registry: Signal<CardRegistry>,
 ) -> Element {
     let mut input_title = use_signal(String::new);
+    let mut input_description = use_signal(String::new);
     let mut error_message = use_signal(|| None::<String>);
 
     rsx! {
@@ -32,6 +33,13 @@ pub fn CardModal(
                     oninput: move |e| input_title.set(e.value()),
                     maxlength: MAX_TITLE_LENGTH as i64,
                     autofocus: true,
+                }
+                input {
+                    class: "app-input",
+                    placeholder: "Enter short description (optional)...",
+                    value: "{input_description}",
+                    oninput: move |e| input_description.set(e.value()),
+                    maxlength: 80,
                 }
                 if let Some(message) = error_message() {
                     {inline_error(message)}
@@ -49,7 +57,11 @@ pub fn CardModal(
                         disabled: input_title().trim().is_empty(),
                         onclick: move |_| {
                             let trimmed_title = input_title().trim().to_string();
-                            let command = match build_create_card_command(trimmed_title, parent_id) {
+                            let desc_raw = input_description();
+                            let trimmed_desc = desc_raw.trim();
+                            let description = if trimmed_desc.is_empty() { None } else { Some(trimmed_desc.to_string()) };
+
+                            let command = match build_create_card_command(trimmed_title, description, parent_id) {
                                 Ok(command) => command,
                                 Err(error_value) => {
                                     let user_message = user_message_for_command_error(&error_value);
@@ -105,11 +117,13 @@ pub fn EditCardModal(
 
     let card = card_snapshot;
     let initial_title = card.title().to_string();
+    let initial_description = card.description().unwrap_or_default().to_string();
     let initial_due_date = card
         .due_date()
         .map(|due| due.to_string())
         .unwrap_or_default();
     let mut input_title = use_signal(move || initial_title.clone());
+    let mut input_description = use_signal(move || initial_description.clone());
     let mut due_date_input = use_signal(move || initial_due_date.clone());
     let mut error_message = use_signal(|| None::<String>);
 
@@ -125,6 +139,15 @@ pub fn EditCardModal(
                     oninput: move |e| input_title.set(e.value()),
                     maxlength: MAX_TITLE_LENGTH as i64,
                     autofocus: true,
+                }
+
+                label { class: "app-kicker", "Description" }
+                input {
+                    class: "app-input",
+                    value: "{input_description}",
+                    oninput: move |e| input_description.set(e.value()),
+                    maxlength: 80,
+                    placeholder: "Enter short description...",
                 }
 
                 label { class: "app-kicker", "Due Date" }
@@ -169,6 +192,13 @@ pub fn EditCardModal(
                                 },
                                 &mut reg,
                             );
+                            let desc_raw = input_description();
+                            let desc_trimmed = desc_raw.trim();
+                            let description = if desc_trimmed.is_empty() { None } else { Some(desc_trimmed.to_string()) };
+                            let desc_result = execute(
+                                Command::SetCardDescription { id, description },
+                                &mut reg,
+                            );
                             let due_result = match due_date_value {
                                 Some(due_date) => {
                                     execute(Command::SetDueDate { card_id: id, due_date }, &mut reg)
@@ -176,7 +206,7 @@ pub fn EditCardModal(
                                 None => execute(Command::ClearDueDate { card_id: id }, &mut reg),
                             };
 
-                            if let Some(error_value) = rename_result.err().or_else(|| due_result.err()) {
+                            if let Some(error_value) = rename_result.err().or_else(|| desc_result.err()).or_else(|| due_result.err()) {
                                 error_message.set(Some(user_message_for_command_error(&error_value)));
                             } else {
                                 error_message.set(None);

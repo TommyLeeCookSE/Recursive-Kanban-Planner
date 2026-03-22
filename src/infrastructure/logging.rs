@@ -6,7 +6,8 @@
 //! For a comparison of Rust logging vs Python logging, see
 //! `docs/rust-for-python-devs.md`.
 
-use std::collections::VecDeque;
+use serde::Deserialize;
+use std::collections::{HashMap, VecDeque};
 use std::sync::{LazyLock, Mutex};
 use thiserror::Error;
 use tracing::Level;
@@ -15,26 +16,15 @@ use tracing_subscriber::Layer;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 
-const DIAGNOSTIC_CAPACITY: usize = 1000;
+const DEFAULT_DIAGNOSTIC_CAPACITY: usize = 1000;
 
 static DIAGNOSTICS: LazyLock<Mutex<VecDeque<DiagnosticEntry>>> =
-    LazyLock::new(|| Mutex::new(VecDeque::with_capacity(DIAGNOSTIC_CAPACITY)));
+    LazyLock::new(|| Mutex::new(VecDeque::with_capacity(DEFAULT_DIAGNOSTIC_CAPACITY)));
+
+static DIAGNOSTIC_CAPACITY: LazyLock<Mutex<usize>> =
+    LazyLock::new(|| Mutex::new(DEFAULT_DIAGNOSTIC_CAPACITY));
 
 /// A single in-memory diagnostic entry captured for later inspection.
-///
-/// # Examples
-///
-/// ```rust
-/// use kanban_planner::infrastructure::logging::DiagnosticEntry;
-///
-/// let entry = DiagnosticEntry {
-///     timestamp_unix_secs: 0,
-///     level: "INFO".to_string(),
-///     target: "startup".to_string(),
-///     message: "Logging initialized".to_string(),
-/// };
-/// assert_eq!(entry.target, "startup");
-/// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct DiagnosticEntry {
     /// Unix timestamp in seconds when the entry was recorded.
@@ -47,28 +37,37 @@ pub struct DiagnosticEntry {
     pub message: String,
 }
 
+/// Dynamic logging configuration fetched at startup.
+#[derive(Clone, Debug, Deserialize, Default)]
+pub struct LoggingConfig {
+    /// Global log level (e.g., "info", "debug").
+    pub global_level: Option<String>,
+    /// Module-specific level overrides.
+    pub overrides: Option<HashMap<String, String>>,
+    /// Max entries in the in-memory log buffer.
+    pub max_buffer_capacity: Option<usize>,
+}
+
+impl LoggingConfig {
+    /// Returns a tracing-compatible EnvFilter string based on this config.
+    pub fn to_filter_string(&self) -> String {
+        let mut filter = self.global_level.clone().unwrap_or_else(|| "info".to_string());
+        if let Some(overrides) = &self.overrides {
+            for (module, level) in overrides {
+                filter.push_str(&format!(",{module}={level}"));
+            }
+        }
+        filter
+    }
+}
+
 /// Keeps native logging resources alive for the life of the application.
-///
-/// # Examples
-///
-/// ```ignore
-/// let _guard = kanban_planner::infrastructure::logging::init_logging()?;
-/// ```
 pub struct LoggingGuard {
     #[cfg(not(target_arch = "wasm32"))]
     _worker_guard: tracing_appender::non_blocking::WorkerGuard,
 }
 
 /// Errors that can occur while initializing the logging subsystem.
-///
-/// # Examples
-///
-/// ```ignore
-/// match kanban_planner::infrastructure::logging::init_logging() {
-///     Ok(_guard) => {}
-///     Err(error) => eprintln!("{error}"),
-/// }
-/// ```
 #[derive(Debug, Error)]
 pub enum LoggingInitError {
     /// Failed to create the directory for runtime logs on disk.
@@ -81,125 +80,189 @@ pub enum LoggingInitError {
     #[error("Failed to resolve the current working directory: {0}")]
     ResolveCurrentDir(#[source] std::io::Error),
 
+    /// Failed to fetch or parse the external configuration.
+    #[error("Failed to load external logging configuration: {0}")]
+    Config(String),
+
     /// Failed to install the tracing subscriber globally.
     #[error("Failed to initialize tracing subscriber: {0}")]
     Subscriber(#[from] tracing_subscriber::util::TryInitError),
 }
 
-/// Initializes runtime logging for the current target platform.
-///
-/// On native targets this sets up rolling file logging and stderr output. On
-/// `wasm32` it installs console logging and a panic hook.
-///
-/// # Examples
-///
-/// ```ignore
-/// let _guard = kanban_planner::infrastructure::logging::init_logging()?;
-/// ```
-pub fn init_logging() -> Result<LoggingGuard, LoggingInitError> {
-    #[cfg(target_arch = "wasm32")]
-    {
-        console_error_panic_hook::set_once();
+/// Fetches the logging configuration from the server (Web only).
+#[cfg(target_arch = "wasm32")]
+pub async fn fetch_config() -> Result<LoggingConfig, LoggingInitError> {
+    use wasm_bindgen::JsCast;
+    use wasm_bindgen_futures::JsFuture;
+    use web_sys::{Request, RequestInit, RequestMode, Response};
 
-        let subscriber = tracing_wasm::WASMLayer::new(tracing_wasm::WASMLayerConfig::default());
-        let log_level = resolved_log_level();
-        let filter = tracing_subscriber::EnvFilter::try_new(&log_level)
-            .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("kanban_planner=info,warn"));
-        tracing_subscriber::registry()
-            .with(filter)
-            .with(subscriber)
-            .try_init()?;
+    let opts = RequestInit::new();
+    opts.set_method("GET");
+    opts.set_mode(RequestMode::Cors);
 
-        tracing::info!(
-            version = env!("CARGO_PKG_VERSION"),
-            target = target_name(),
-            feature = feature_name(),
-            log_level = %log_level,
-            "Logging initialized for web runtime"
-        );
-        record_diagnostic(Level::INFO, "startup", "Web logging initialized");
+    let url = "/assets/logging.toml";
+    let request = Request::new_with_str_and_init(url, &opts)
+        .map_err(|e| LoggingInitError::Config(format!("Failed to create request: {e:?}")))?;
 
-        Ok(LoggingGuard {})
+    let window = web_sys::window().ok_or_else(|| LoggingInitError::Config("No window found".into()))?;
+    let resp_value = JsFuture::from(window.fetch_with_request(&request))
+        .await
+        .map_err(|e| LoggingInitError::Config(format!("Fetch error: {e:?}")))?;
+
+    let resp: Response = resp_value.dyn_into().unwrap();
+    if !resp.ok() {
+        return Err(LoggingInitError::Config(format!("HTTP error: {}", resp.status())));
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        use std::backtrace::Backtrace;
-        use std::env;
-        use std::fs;
-        use tracing_subscriber::EnvFilter;
+    let text_value = JsFuture::from(resp.text().map_err(|e| LoggingInitError::Config(format!("Text conversion error: {e:?}")))?)
+        .await
+        .map_err(|e| LoggingInitError::Config(format!("Failed to read response body: {e:?}")))?;
 
-        let current_dir = env::current_dir().map_err(LoggingInitError::ResolveCurrentDir)?;
-        let runtime_log_dir = current_dir.join("logs").join("runtime");
-        fs::create_dir_all(&runtime_log_dir).map_err(LoggingInitError::CreateLogDir)?;
+    let toml_text = text_value.as_string().ok_or_else(|| LoggingInitError::Config("Response body is not a string".into()))?;
+    toml::from_str(&toml_text).map_err(|e| LoggingInitError::Config(format!("TOML parse error: {e}")))
+}
 
-        let file_appender = tracing_appender::rolling::daily(runtime_log_dir, "kanban-planner.log");
-        let (file_writer, worker_guard) = tracing_appender::non_blocking(file_appender);
+/// A custom tracing layer that captures all events into the in-memory diagnostics buffer.
+struct DiagnosticLayer;
 
-        let log_level = resolved_log_level();
-        let file_filter = EnvFilter::try_new(&log_level).unwrap_or_else(|_| EnvFilter::new("info"));
-        let stderr_filter =
-            EnvFilter::try_new(&log_level).unwrap_or_else(|_| EnvFilter::new("info"));
+impl<S> tracing_subscriber::Layer<S> for DiagnosticLayer
+where
+    S: tracing::Subscriber + for<'a> tracing_subscriber::registry::LookupSpan<'a>,
+{
+    fn on_event(
+        &self,
+        event: &tracing::Event<'_>,
+        _ctx: tracing_subscriber::layer::Context<'_, S>,
+    ) {
+        let metadata = event.metadata();
+        let level = *metadata.level();
+        let target = metadata.target();
 
-        let file_layer = tracing_subscriber::fmt::layer()
-            .with_ansi(false)
-            .with_writer(file_writer)
-            .with_target(true)
-            .with_filter(file_filter);
+        // Extract the message from the event fields
+        let mut visitor = MessageVisitor::default();
+        event.record(&mut visitor);
+        let message = visitor.0;
 
-        let stderr_layer = tracing_subscriber::fmt::layer()
-            .with_writer(std::io::stderr)
-            .with_target(true)
-            .with_filter(stderr_filter);
-
-        tracing_subscriber::registry()
-            .with(file_layer)
-            .with(stderr_layer)
-            .try_init()?;
-
-        let previous_hook = std::panic::take_hook();
-        std::panic::set_hook(Box::new(move |panic_info| {
-            let backtrace = Backtrace::force_capture();
-            tracing::error!(
-                panic = %panic_info,
-                backtrace = %backtrace,
-                "Unhandled panic captured"
-            );
-            record_diagnostic(
-                Level::ERROR,
-                "panic",
-                format!("Unhandled panic: {panic_info}"),
-            );
-            previous_hook(panic_info);
-        }));
-
-        tracing::info!(
-            version = env!("CARGO_PKG_VERSION"),
-            target = target_name(),
-            feature = feature_name(),
-            cwd = %current_dir.display(),
-            log_level = %log_level,
-            "Logging initialized for native runtime"
-        );
-        record_diagnostic(
-            Level::INFO,
-            "startup",
-            format!("Native logging initialized in {}", current_dir.display()),
-        );
-
-        Ok(LoggingGuard {
-            _worker_guard: worker_guard,
-        })
+        record_diagnostic(level, target, message);
     }
 }
 
+#[derive(Default)]
+struct MessageVisitor(String);
+
+impl tracing::field::Visit for MessageVisitor {
+    fn record_debug(&mut self, field: &tracing::field::Field, value: &dyn std::fmt::Debug) {
+        if field.name() == "message" {
+            self.0 = format!("{:?}", value);
+        }
+    }
+
+    fn record_str(&mut self, field: &tracing::field::Field, value: &str) {
+        if field.name() == "message" {
+            self.0 = value.to_string();
+        }
+    }
+}
+
+/// Initializes runtime logging for the web target.
+#[cfg(target_arch = "wasm32")]
+pub async fn init_logging() -> Result<LoggingGuard, LoggingInitError> {
+    console_error_panic_hook::set_once();
+
+    let config = fetch_config().await.unwrap_or_default();
+    if let Some(capacity) = config.max_buffer_capacity {
+        let mut cap = DIAGNOSTIC_CAPACITY.lock().unwrap();
+        *cap = capacity;
+        let mut diagnostics = DIAGNOSTICS.lock().unwrap();
+        let current_len = diagnostics.len();
+        diagnostics.reserve_exact(capacity.saturating_sub(current_len));
+    }
+
+    let subscriber = tracing_wasm::WASMLayer::new(tracing_wasm::WASMLayerConfig::default());
+    let filter_str = config.to_filter_string();
+    let filter = tracing_subscriber::EnvFilter::try_new(&filter_str)
+        .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("kanban_planner=info,warn"));
+    
+    let _ = tracing_subscriber::registry()
+        .with(filter)
+        .with(subscriber)
+        .with(DiagnosticLayer)
+        .try_init();
+
+    tracing::info!(
+        version = env!("CARGO_PKG_VERSION"),
+        target = target_name(),
+        feature = feature_name(),
+        log_level = %filter_str,
+        "Logging initialized for web runtime"
+    );
+
+    Ok(LoggingGuard {})
+}
+
+/// Initializes runtime logging for native targets.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn init_logging() -> Result<LoggingGuard, LoggingInitError> {
+    use std::backtrace::Backtrace;
+    use std::env;
+    use std::fs;
+    use tracing_subscriber::EnvFilter;
+
+    let current_dir = env::current_dir().map_err(LoggingInitError::ResolveCurrentDir)?;
+    let runtime_log_dir = current_dir.join("logs").join("runtime");
+    fs::create_dir_all(&runtime_log_dir).map_err(LoggingInitError::CreateLogDir)?;
+
+    let file_appender = tracing_appender::rolling::daily(runtime_log_dir, "kanban-planner.log");
+    let (file_writer, worker_guard) = tracing_appender::non_blocking(file_appender);
+
+    let log_level = resolved_log_level();
+    let file_filter = EnvFilter::try_new(&log_level).unwrap_or_else(|_| EnvFilter::new("info"));
+    let stderr_filter =
+        EnvFilter::try_new(&log_level).unwrap_or_else(|_| EnvFilter::new("info"));
+
+    let file_layer = tracing_subscriber::fmt::layer()
+        .with_ansi(false)
+        .with_writer(file_writer)
+        .with_target(true)
+        .with_filter(file_filter);
+
+    let stderr_layer = tracing_subscriber::fmt::layer()
+        .with_writer(std::io::stderr)
+        .with_target(true)
+        .with_filter(stderr_filter);
+
+    let _ = tracing_subscriber::registry()
+        .with(file_layer)
+        .with(stderr_layer)
+        .with(DiagnosticLayer)
+        .try_init();
+
+    let previous_hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |panic_info| {
+        let backtrace = Backtrace::force_capture();
+        tracing::error!(
+            panic = %panic_info,
+            backtrace = %backtrace,
+            "Unhandled panic captured"
+        );
+        previous_hook(panic_info);
+    }));
+
+    tracing::info!(
+        version = env!("CARGO_PKG_VERSION"),
+        target = target_name(),
+        feature = feature_name(),
+        cwd = %current_dir.display(),
+        log_level = %log_level,
+        "Logging initialized for native runtime"
+    );
+
+    Ok(LoggingGuard {
+        _worker_guard: worker_guard,
+    })
+}
+
 /// Returns a snapshot of the in-memory diagnostics ring buffer.
-///
-/// # Examples
-///
-/// ```rust
-/// let _snapshot = kanban_planner::infrastructure::logging::diagnostics_snapshot();
-/// ```
 pub fn diagnostics_snapshot() -> Vec<DiagnosticEntry> {
     DIAGNOSTICS
         .lock()
@@ -210,21 +273,6 @@ pub fn diagnostics_snapshot() -> Vec<DiagnosticEntry> {
 }
 
 /// Records a diagnostic entry in the in-memory ring buffer.
-///
-/// This does not replace structured tracing logs; it complements them with a
-/// lightweight snapshot for UI diagnostics and export flows.
-///
-/// # Examples
-///
-/// ```rust
-/// use tracing::Level;
-///
-/// kanban_planner::infrastructure::logging::record_diagnostic(
-///     Level::INFO,
-///     "tests",
-///     "diagnostic recorded",
-/// );
-/// ```
 pub fn record_diagnostic(level: Level, target: &str, message: impl Into<String>) {
     let entry = DiagnosticEntry {
         timestamp_unix_secs: unix_timestamp_secs(),
@@ -233,21 +281,15 @@ pub fn record_diagnostic(level: Level, target: &str, message: impl Into<String>)
         message: message.into(),
     };
 
+    let capacity = *DIAGNOSTIC_CAPACITY.lock().expect("capacity lock poisoned");
     let mut diagnostics = DIAGNOSTICS.lock().expect("diagnostics lock poisoned");
-    if diagnostics.len() >= DIAGNOSTIC_CAPACITY {
+    if diagnostics.len() >= capacity {
         diagnostics.pop_front();
     }
     diagnostics.push_back(entry);
 }
 
 /// Returns the enabled app feature name for the current build.
-///
-/// # Examples
-///
-/// ```rust
-/// let feature_name = kanban_planner::infrastructure::logging::feature_name();
-/// assert!(!feature_name.is_empty());
-/// ```
 pub fn feature_name() -> &'static str {
     #[cfg(feature = "desktop")]
     {
@@ -272,13 +314,6 @@ pub fn feature_name() -> &'static str {
 }
 
 /// Returns a simplified runtime target label for diagnostics and startup logs.
-///
-/// # Examples
-///
-/// ```rust
-/// let target_name = kanban_planner::infrastructure::logging::target_name();
-/// assert!(!target_name.is_empty());
-/// ```
 pub fn target_name() -> &'static str {
     #[cfg(target_arch = "wasm32")]
     {
@@ -307,6 +342,7 @@ pub fn target_name() -> &'static str {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn resolved_log_level() -> String {
     std::env::var("KANBAN_LOG_LEVEL").unwrap_or_else(|_| "info".to_string())
 }
@@ -337,8 +373,9 @@ mod tests {
             .expect("diagnostics lock poisoned")
             .clear();
         let target = "logging-test";
+        let capacity = *DIAGNOSTIC_CAPACITY.lock().expect("capacity lock poisoned");
 
-        for index in 0..(DIAGNOSTIC_CAPACITY + 5) {
+        for index in 0..(capacity + 5) {
             record_diagnostic(Level::INFO, target, format!("entry-{index}"));
         }
 
@@ -346,7 +383,7 @@ mod tests {
             .into_iter()
             .filter(|entry| entry.target == target)
             .collect();
-        assert!(snapshot.len() <= DIAGNOSTIC_CAPACITY);
+        assert!(snapshot.len() <= capacity);
         assert!(
             !snapshot.iter().any(|entry| entry.message == "entry-0"),
             "oldest entries should be rotated out"
@@ -357,9 +394,10 @@ mod tests {
                 .map(|entry| entry.message.starts_with("entry-")),
             Some(true)
         );
+        let expected_last = format!("entry-{}", capacity + 4);
         assert_eq!(
             snapshot.last().map(|entry| entry.message.as_str()),
-            Some("entry-1004")
+            Some(expected_last.as_str())
         );
     }
 }

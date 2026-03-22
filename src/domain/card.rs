@@ -25,13 +25,15 @@ use serde::{Deserialize, Serialize};
 /// ```
 /// use kanban_planner::domain::card::Card;
 ///
-/// let card = Card::new_root("My Project".to_string()).unwrap();
+/// let card = Card::new_root("My Project".to_string(), None).unwrap();
 /// assert_eq!(card.title(), "My Project");
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Card {
     id: CardId,
     title: String,
+    #[serde(default)]
+    description: Option<String>,
     parent_id: Option<CardId>,
     children_ids: Vec<CardId>,
     #[serde(default)]
@@ -48,20 +50,23 @@ impl Card {
     /// ```
     /// use kanban_planner::domain::card::Card;
     ///
-    /// let card = Card::new_root("Workspace".to_string()).unwrap();
+    /// let card = Card::new_root("Workspace".to_string(), None).unwrap();
     /// assert!(card.parent_id().is_none());
     /// ```
-    pub fn new_root(title: String) -> Result<Self, DomainError> {
+    pub fn new_root(title: String, description: Option<String>) -> Result<Self, DomainError> {
         let title = normalize_non_empty_title(title)?;
 
-        Ok(Self {
+        let mut card = Self {
             id: CardId::new(),
             title,
+            description: None,
             parent_id: None,
             children_ids: Vec::new(),
             notes: Vec::new(),
             due_date: None,
-        })
+        };
+        card.set_description(description)?;
+        Ok(card)
     }
 
     /// Creates a new child card with a specified parent.
@@ -73,20 +78,27 @@ impl Card {
     /// use kanban_planner::domain::id::CardId;
     ///
     /// let parent_id = CardId::new();
-    /// let card = Card::new_child("Task".to_string(), parent_id).unwrap();
+    /// let card = Card::new_child("Task".to_string(), None, parent_id).unwrap();
     /// assert_eq!(card.parent_id(), Some(parent_id));
     /// ```
-    pub fn new_child(title: String, parent_id: CardId) -> Result<Self, DomainError> {
+    pub fn new_child(
+        title: String,
+        description: Option<String>,
+        parent_id: CardId,
+    ) -> Result<Self, DomainError> {
         let title = normalize_non_empty_title(title)?;
 
-        Ok(Self {
+        let mut card = Self {
             id: CardId::new(),
             title,
+            description: None,
             parent_id: Some(parent_id),
             children_ids: Vec::new(),
             notes: Vec::new(),
             due_date: None,
-        })
+        };
+        card.set_description(description)?;
+        Ok(card)
     }
 
     /// Returns the unique identifier of the card.
@@ -119,6 +131,17 @@ impl Card {
         self.due_date.as_ref()
     }
 
+    /// Returns the optional description of the card.
+    pub fn description(&self) -> Option<&str> {
+        self.description.as_deref()
+    }
+
+    /// Sets the description of the card.
+    pub fn set_description(&mut self, description: Option<String>) -> Result<(), DomainError> {
+        self.description = description;
+        Ok(())
+    }
+
     /// Renames the card.
     ///
     /// # Examples
@@ -126,7 +149,7 @@ impl Card {
     /// ```
     /// use kanban_planner::domain::card::Card;
     ///
-    /// let mut card = Card::new_root("Old Title".to_string()).unwrap();
+    /// let mut card = Card::new_root("Old Title".to_string(), None).unwrap();
     /// card.rename("New Title".to_string()).unwrap();
     /// assert_eq!(card.title(), "New Title");
     /// ```
@@ -143,7 +166,7 @@ impl Card {
     /// use kanban_planner::domain::card::Card;
     /// use kanban_planner::domain::id::CardId;
     ///
-    /// let mut card = Card::new_root("Parent".to_string()).unwrap();
+    /// let mut card = Card::new_root("Parent".to_string(), None).unwrap();
     /// // In practice, you'd add real children here.
     /// ```
     pub fn reorder_children(&mut self, ordered_ids: Vec<CardId>) -> Result<(), DomainError> {
@@ -179,7 +202,7 @@ impl Card {
     /// ```
     /// use kanban_planner::domain::card::Card;
     ///
-    /// let mut card = Card::new_root("Task".to_string()).unwrap();
+    /// let mut card = Card::new_root("Task".to_string(), None).unwrap();
     /// let note_id = card.add_note_page("Project Notes".to_string()).unwrap();
     /// ```
     pub fn add_note_page(&mut self, title: String) -> Result<NotePageId, DomainError> {
@@ -229,7 +252,7 @@ impl Card {
     /// use kanban_planner::domain::card::Card;
     /// use kanban_planner::domain::due_date::DueDate;
     ///
-    /// let mut card = Card::new_root("Task".to_string()).unwrap();
+    /// let mut card = Card::new_root("Task".to_string(), None).unwrap();
     /// let due = DueDate::parse("2023-12-31").unwrap();
     /// card.set_due_date(Some(due));
     /// ```
@@ -256,22 +279,22 @@ mod tests {
 
     #[test]
     fn test_new_root_has_no_parent() {
-        let card = Card::new_root("Workspace".to_string()).unwrap();
+        let card = Card::new_root("Workspace".to_string(), None).unwrap();
         assert!(card.parent_id().is_none());
         assert!(card.children_ids().is_empty());
     }
 
     #[test]
     fn test_new_child_has_parent() {
-        let parent = Card::new_root("Parent".to_string()).unwrap();
-        let child = Card::new_child("Child".to_string(), parent.id()).unwrap();
+        let parent = Card::new_root("Parent".to_string(), None).unwrap();
+        let child = Card::new_child("Child".to_string(), None, parent.id()).unwrap();
 
         assert_eq!(child.parent_id(), Some(parent.id()));
     }
 
     #[test]
     fn test_rename_rejects_blank_title() {
-        let mut card = Card::new_root("Title".to_string()).unwrap();
+        let mut card = Card::new_root("Title".to_string(), None).unwrap();
         assert!(matches!(
             card.rename("  ".to_string()),
             Err(DomainError::EmptyTitle)
@@ -281,7 +304,7 @@ mod tests {
 
     #[test]
     fn test_reorder_children_rejects_duplicates() {
-        let mut card = Card::new_root("Parent".to_string()).unwrap();
+        let mut card = Card::new_root("Parent".to_string(), None).unwrap();
         let first = CardId::new();
         let second = CardId::new();
         card.add_child(first);
@@ -295,7 +318,7 @@ mod tests {
 
     #[test]
     fn test_note_page_lifecycle() {
-        let mut card = Card::new_root("Workspace".to_string()).unwrap();
+        let mut card = Card::new_root("Workspace".to_string(), None).unwrap();
         let note_id = card.add_note_page("Ideas".to_string()).unwrap();
         card.save_note_page_body(note_id, "hello".to_string())
             .unwrap();
