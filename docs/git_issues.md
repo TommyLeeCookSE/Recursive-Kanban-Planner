@@ -25,7 +25,7 @@
 **Description:** When a card is dragged, it appears that all text from all cards in the view is being copied or included in the drag ghost/data. This causes performance issues and visual clutter during drag operations.
 
 ## Issue #83: GitHub Deployment Pipeline is Broken
-**Status:** OPEN
-**Description:** The GitHub Actions deployment workflow is failing to successfully deploy the application. This needs to be investigated and fixed to ensure continuous delivery.
+**Status:** CLOSED
+**Resolution:** Updated GitHub Actions workflow to use `dx build` with explicit output directories and resolved WASM-specific compilation errors in `src/interface/app.rs`. Verified build path consistency between local and CI environments.
 
 
