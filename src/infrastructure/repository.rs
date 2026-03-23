@@ -601,7 +601,9 @@ mod tests {
     fn test_app_persistence_native_roundtrip() {
         let mut original = CardRegistry::new();
         let workspace_id = original.workspace_card_id().unwrap();
-        original.create_child_card("Native Task".into(), None, workspace_id).unwrap();
+        original
+            .create_child_card("Native Task".into(), None, workspace_id)
+            .unwrap();
 
         // Save
         AppPersistence::save_registry(&original).expect("Native save failed");
@@ -610,7 +612,7 @@ mod tests {
         let loaded = AppPersistence::load_registry()
             .expect("Native load failed")
             .expect("Registry should exist");
-        
+
         assert_eq!(original, loaded);
 
         // Clear

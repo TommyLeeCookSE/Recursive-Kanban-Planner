@@ -62,9 +62,7 @@ pub fn NavbarLayout() -> Element {
         div { class: "app-root-shell",
             nav { class: "app-bar app-bar--top",
                 div { class: "app-bar-left",
-                    Link {
-                        to: Route::Home {},
-                        class: "app-navbar-brand group",
+                    Link { to: Route::Home {}, class: "app-navbar-brand group",
                         div { class: "app-navbar-brand-mark",
                             span { class: "app-navbar-brand-initial", "K" }
                         }
@@ -96,8 +94,12 @@ pub fn NavbarLayout() -> Element {
                         "aria-label": "{theme_title}",
                         "aria-pressed": is_dark().0,
                         div { class: "app-theme-toggle-track",
-                            span { class: "app-theme-toggle-icon app-theme-toggle-icon--sunrise", {render_sunrise_icon()} }
-                            span { class: "app-theme-toggle-icon app-theme-toggle-icon--evening", {render_evening_icon()} }
+                            span { class: "app-theme-toggle-icon app-theme-toggle-icon--sunrise",
+                                {render_sunrise_icon()}
+                            }
+                            span { class: "app-theme-toggle-icon app-theme-toggle-icon--evening",
+                                {render_evening_icon()}
+                            }
                         }
                     }
                 }
@@ -154,13 +156,9 @@ pub fn BottomBar(back_route: Option<Route>, back_label: String, children: Elemen
 
     rsx! {
         footer { class: "app-bar app-bar--bottom app-bar--distributed",
-            div { class: "app-bar-left contents",
-                {back_button}
-            }
+            div { class: "app-bar-left contents", {back_button} }
 
-            div { class: "app-bar-right contents",
-                {children}
-            }
+            div { class: "app-bar-right contents", {children} }
         }
     }
 }

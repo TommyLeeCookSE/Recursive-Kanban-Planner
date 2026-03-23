@@ -131,8 +131,12 @@ mod tests {
             .create_child_card("Card 1".into(), None, board_a)
             .unwrap();
 
-        let b_card_1 = registry.create_child_card("B1".into(), None, board_b).unwrap();
-        let b_card_2 = registry.create_child_card("B2".into(), None, board_b).unwrap();
+        let b_card_1 = registry
+            .create_child_card("B1".into(), None, board_b)
+            .unwrap();
+        let b_card_2 = registry
+            .create_child_card("B2".into(), None, board_b)
+            .unwrap();
 
         assert_eq!(registry.get_children(board_a).unwrap().len(), 1);
         assert_eq!(registry.get_children(board_b).unwrap().len(), 2);

@@ -17,9 +17,7 @@ pub(super) fn render_card_item(card: CardDisplayData, context: BoardRenderContex
     let mut is_dragging = context.is_dragging;
 
     rsx! {
-        div {
-            key: "{card_id}",
-            class: "app-board-card-wrapper",
+        div { key: "{card_id}", class: "app-board-card-wrapper",
             CardItem {
                 title: card.title,
                 subtitle: None,
@@ -36,7 +34,9 @@ pub(super) fn render_card_item(card: CardDisplayData, context: BoardRenderContex
                         dragged_item_kind,
                         is_dragging,
                     );
-                    info!(card_id = %card_id, board_id = %context.board_id, "Started dragging card");
+                    info!(
+                        card_id = % card_id, board_id = % context.board_id, "Started dragging card"
+                    );
                     record_diagnostic(
                         Level::INFO,
                         "board-route",

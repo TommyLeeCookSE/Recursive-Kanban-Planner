@@ -73,7 +73,9 @@ fn render_workspace_load_error() -> Element {
         div { class: "app-page-shell",
             div { class: "app-empty-state app-empty-state-panel",
                 h2 { class: "app-error-title", "Workspace could not be loaded" }
-                p { class: "app-error-message", "The workspace data is unavailable or inconsistent. Check the logs for the full error." }
+                p { class: "app-error-message",
+                    "The workspace data is unavailable or inconsistent. Check the logs for the full error."
+                }
             }
         }
     }

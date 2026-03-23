@@ -59,9 +59,7 @@ macro_rules! form_row {
 /// ```
 pub fn inline_error(message: String) -> Element {
     rsx! {
-        p { class: "app-inline-error app-inline-error--danger",
-            "{message}"
-        }
+        p { class: "app-inline-error app-inline-error--danger", "{message}" }
     }
 }
 
@@ -132,10 +130,12 @@ pub fn CheckboxOptionRow(
         label { class: "app-checkbox-row",
             input {
                 r#type: "checkbox",
-                checked: checked,
+                checked,
                 onclick: move |_| on_toggle.call(()),
             }
-            span { class: "app-checkbox-label-text app-checkbox-label app-checkbox-label-strong", "{label_text}" }
+            span { class: "app-checkbox-label-text app-checkbox-label app-checkbox-label-strong",
+                "{label_text}"
+            }
         }
     }
 }
@@ -197,10 +197,7 @@ pub fn build_create_card_command(
             description,
             parent_id,
         }),
-        None => Ok(Command::CreateWorkspaceChildCard {
-            title,
-            description,
-        }),
+        None => Ok(Command::CreateWorkspaceChildCard { title, description }),
     }
 }
 

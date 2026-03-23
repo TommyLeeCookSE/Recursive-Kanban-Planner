@@ -58,16 +58,11 @@ pub fn CardItem(
     let delete_title = title.clone();
 
     rsx! {
-        article {
-            class: "app-card-surface app-card-shell group",
+        article { class: "app-card-surface app-card-shell group",
 
             button {
-                class: if draggable {
-                    "app-card-body app-card-body--draggable"
-                } else {
-                    "app-card-body"
-                },
-                draggable: draggable,
+                class: if draggable { "app-card-body app-card-body--draggable" } else { "app-card-body" },
+                draggable,
                 ondragstart: move |event| {
                     if let Some(handler) = &on_drag_start {
                         handler.call(event);
@@ -82,26 +77,17 @@ pub fn CardItem(
                 onclick: move |_| on_open.call(()),
                 div { class: "app-card-title-stack relative w-full",
                     if draggable {
-                        div { class: "app-card-drag-handle",
-                            {render_drag_handle_icon()}
-                        }
+                        div { class: "app-card-drag-handle", {render_drag_handle_icon()} }
                     }
-                    h3 { class: "app-card-title",
-                        "{title}"
-                    }
+                    h3 { class: "app-card-title", "{title}" }
                     if let Some(description) = description {
-                        p { class: "app-card-description",
-                            "{description}"
-                        }
+                        p { class: "app-card-description", "{description}" }
                     }
                     if let Some(subtitle) = subtitle {
-                        p { class: "app-card-subtitle",
-                            "{subtitle}"
-                        }
+                        p { class: "app-card-subtitle", "{subtitle}" }
                     }
                     if let Some(due_date) = due_date {
-                        p {
-                            class: if is_overdue { "app-card-due app-card-due--overdue" } else { "app-card-due app-card-due-normal" },
+                        p { class: if is_overdue { "app-card-due app-card-due--overdue" } else { "app-card-due app-card-due-normal" },
                             "Due {due_date}"
                         }
                     }
@@ -109,10 +95,7 @@ pub fn CardItem(
                         div { class: "app-card-preview-shell",
                             div { class: "app-card-preview-items",
                                 for item in preview_items {
-                                    span {
-                                        class: "app-card-preview-chip",
-                                        "{item}"
-                                    }
+                                    span { class: "app-card-preview-chip", "{item}" }
                                 }
                             }
                         }
@@ -129,9 +112,9 @@ pub fn CardItem(
                                 title: "Delete this card",
                                 draggable: false,
                                 onclick: move |_| {
-                                    if confirm_destructive_action(&format!(
-                                        "Delete the card '{delete_title}' and all of its descendants?"
-                                    )) {
+                                    if confirm_destructive_action(
+                                        &format!("Delete the card '{delete_title}' and all of its descendants?"),
+                                    ) {
                                         delete_handler.call(());
                                     }
                                 },

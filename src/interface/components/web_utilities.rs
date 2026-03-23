@@ -7,6 +7,8 @@
 
 use crate::domain::registry::CardRegistry;
 #[cfg(target_arch = "wasm32")]
+use crate::infrastructure::logging::{diagnostics_snapshot, record_diagnostic};
+#[cfg(target_arch = "wasm32")]
 use crate::infrastructure::repository::{AppPersistence, JsonRepository};
 #[cfg(target_arch = "wasm32")]
 use crate::interface::Route;
@@ -15,25 +17,21 @@ use crate::interface::components::modal::ModalType;
 use crate::interface::components::visuals::{
     render_export_icon, render_import_icon, render_trash_icon,
 };
-#[cfg(target_arch = "wasm32")]
-use crate::infrastructure::logging::{diagnostics_snapshot, record_diagnostic};
 use dioxus::prelude::*;
 use dioxus_router::Navigator;
 #[cfg(target_arch = "wasm32")]
 use js_sys::Array;
+#[cfg(target_arch = "wasm32")]
+use tracing::Level;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::JsCast;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::closure::Closure;
 #[cfg(target_arch = "wasm32")]
 use web_sys::{Blob, HtmlAnchorElement, HtmlInputElement, Url};
-#[cfg(target_arch = "wasm32")]
-use tracing::Level;
 
 /// Renders a button that downloads the in-memory log buffer as a text file.
-pub fn render_download_logs_button(
-    persistence_warning: Signal<Option<String>>,
-) -> Element {
+pub fn render_download_logs_button(persistence_warning: Signal<Option<String>>) -> Element {
     #[cfg(target_arch = "wasm32")]
     {
         let mut persistence_warning = persistence_warning;
@@ -59,7 +57,7 @@ pub fn render_download_logs_button(
                         path {
                             stroke_linecap: "round",
                             stroke_linejoin: "round",
-                            d: "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                            d: "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z",
                         }
                     }
                 }
@@ -144,12 +142,7 @@ pub fn render_import_button(
                 title: "Replace your workspace with a validated JSON import",
                 "aria-label": "Import",
                 onclick: move |_| {
-                    begin_import_flow(
-                        registry,
-                        active_modal,
-                        persistence_warning,
-                        nav.clone(),
-                    );
+                    begin_import_flow(registry, active_modal, persistence_warning, nav.clone());
                 },
                 span { class: "app-bar-button-icon", {render_import_icon()} }
                 span { class: "app-bar-button-label", "Import" }
@@ -232,9 +225,7 @@ fn disabled_utility_button(label: &str, title: &str) -> Element {
             "aria-label": "{label}",
             span { class: "app-bar-button-label", "{label}" }
         }
-        span { class: "app-kicker",
-            "Soon"
-        }
+        span { class: "app-kicker", "Soon" }
     }
 }
 
@@ -397,10 +388,7 @@ fn download_logs() -> Result<(), crate::domain::error::DomainError> {
     for entry in snapshot {
         log_text.push_str(&format!(
             "[{}] {:<5} {:<30} {}\n",
-            entry.timestamp_unix_secs,
-            entry.level,
-            entry.target,
-            entry.message
+            entry.timestamp_unix_secs, entry.level, entry.target, entry.message
         ));
     }
 
@@ -430,9 +418,7 @@ fn download_logs() -> Result<(), crate::domain::error::DomainError> {
         })?
         .dyn_into()
         .map_err(|_| {
-            crate::domain::error::DomainError::InvalidOperation(
-                "Failed to cast log anchor".into(),
-            )
+            crate::domain::error::DomainError::InvalidOperation("Failed to cast log anchor".into())
         })?;
     anchor.set_href(&url);
     anchor.set_download("kanban-planner-logs.txt");

@@ -58,10 +58,19 @@ pub(crate) fn render_board_screen(
             div { class: "app-board-screen-content flex-1 overflow-y-auto",
                 {render_board_grid(child_models, render_context)}
             }
-            BottomBar { back_route: back_route.clone(), back_label: back_label_for_button,
+            BottomBar {
+                back_route: back_route.clone(),
+                back_label: back_label_for_button,
                 button {
                     class: "app-bar-button app-bar-button--accent",
-                    onclick: move |_| active_modal.set(Some(ModalType::CreateCard { parent_id: Some(board_id) })),
+                    onclick: move |_| {
+                        active_modal
+                            .set(
+                                Some(ModalType::CreateCard {
+                                    parent_id: Some(board_id),
+                                }),
+                            )
+                    },
                     title: "Create Card",
                     "aria-label": "Create Card",
                     span { class: "app-bar-button-icon", {render_plus_icon()} }
@@ -70,7 +79,12 @@ pub(crate) fn render_board_screen(
                 button {
                     class: "app-bar-button",
                     onclick: move |_| {
-                        active_modal.set(Some(ModalType::CardNotes { card_id: board_id }));
+                        active_modal
+                            .set(
+                                Some(ModalType::CardNotes {
+                                    card_id: board_id,
+                                }),
+                            );
                     },
                     title: "Open notes",
                     "aria-label": "Notes",
@@ -80,7 +94,12 @@ pub(crate) fn render_board_screen(
                 button {
                     class: "app-bar-button",
                     onclick: move |_| {
-                        active_modal.set(Some(ModalType::EditCard { id: board_id }));
+                        active_modal
+                            .set(
+                                Some(ModalType::EditCard {
+                                    id: board_id,
+                                }),
+                            );
                     },
                     title: "Open settings",
                     "aria-label": "Settings",

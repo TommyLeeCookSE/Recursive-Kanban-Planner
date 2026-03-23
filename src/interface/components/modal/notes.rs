@@ -49,9 +49,7 @@ pub fn NotesModal(
         .find(|note| Some(note.id()) == selected_note_id());
 
     rsx! {
-        Modal {
-            on_close: move |_| on_close.call(()),
-            title: "Notebook",
+        Modal { on_close: move |_| on_close.call(()), title: "Notebook",
             div { class: "app-notes-layout",
                 div { class: "app-notes-sidebar",
                     input {
@@ -67,9 +65,18 @@ pub fn NotesModal(
                         onclick: move |_| {
                             let title = new_page_title().trim().to_string();
                             let mut reg = registry.write();
-                            match execute(Command::AddNotePage { card_id, title }, &mut reg) {
+                            match execute(
+                                Command::AddNotePage {
+                                    card_id,
+                                    title,
+                                },
+                                &mut reg,
+                            ) {
                                 Ok(()) => {
-                                    let latest_note = reg.get_card(card_id).ok().and_then(|card| card.notes().last().cloned());
+                                    let latest_note = reg
+                                        .get_card(card_id)
+                                        .ok()
+                                        .and_then(|card| card.notes().last().cloned());
                                     if let Some(note) = latest_note {
                                         selected_note_id.set(Some(note.id()));
                                         title_input.set(note.title().to_string());
@@ -78,25 +85,27 @@ pub fn NotesModal(
                                     new_page_title.set("New Page".to_string());
                                     error_message.set(None);
                                 }
-                                Err(error_value) => error_message.set(Some(user_message_for_command_error(&error_value))),
+                                Err(error_value) => {
+                                    error_message.set(Some(user_message_for_command_error(&error_value)))
+                                }
                             }
                         },
                         "Add Page"
                     }
                     div { class: "app-notes-list",
                         div { class: "app-notes-list-stack",
-                        for note in current_notes.iter().cloned() {
-                            button {
-                                class: if Some(note.id()) == selected_note_id() { "app-note-list-button--active" } else { "app-note-list-button" },
-                                title: "Open note page {note.title()}",
-                                onclick: move |_| {
-                                    selected_note_id.set(Some(note.id()));
-                                    title_input.set(note.title().to_string());
-                                    body_input.set(note.body().to_string());
-                                },
-                                "{note.title()}"
+                            for note in current_notes.iter().cloned() {
+                                button {
+                                    class: if Some(note.id()) == selected_note_id() { "app-note-list-button--active" } else { "app-note-list-button" },
+                                    title: "Open note page {note.title()}",
+                                    onclick: move |_| {
+                                        selected_note_id.set(Some(note.id()));
+                                        title_input.set(note.title().to_string());
+                                        body_input.set(note.body().to_string());
+                                    },
+                                    "{note.title()}"
+                                }
                             }
-                        }
                         }
                     }
                 }
@@ -121,14 +130,24 @@ pub fn NotesModal(
                                 class: "app-button-secondary-compact",
                                 title: "Save this note page",
                                 onclick: move |_| {
-                                    let Some(note_id) = selected_note_id() else { return; };
+                                    let Some(note_id) = selected_note_id() else {
+                                        return;
+                                    };
                                     let mut reg = registry.write();
                                     let rename_result = execute(
-                                        Command::RenameNotePage { card_id, note_page_id: note_id, title: title_input().trim().to_string() },
+                                        Command::RenameNotePage {
+                                            card_id,
+                                            note_page_id: note_id,
+                                            title: title_input().trim().to_string(),
+                                        },
                                         &mut reg,
                                     );
                                     let save_result = execute(
-                                        Command::SaveNotePageBody { card_id, note_page_id: note_id, body: body_input() },
+                                        Command::SaveNotePageBody {
+                                            card_id,
+                                            note_page_id: note_id,
+                                            body: body_input(),
+                                        },
                                         &mut reg,
                                     );
                                     if let Some(error_value) = rename_result.err().or_else(|| save_result.err()) {
@@ -143,17 +162,42 @@ pub fn NotesModal(
                                 class: "app-danger-button app-button-compact",
                                 title: "Delete this note page",
                                 onclick: move |_| {
-                                    let Some(note_id) = selected_note_id() else { return; };
+                                    let Some(note_id) = selected_note_id() else {
+                                        return;
+                                    };
                                     let mut reg = registry.write();
-                                    match execute(Command::DeleteNotePage { card_id, note_page_id: note_id }, &mut reg) {
+                                    match execute(
+                                        Command::DeleteNotePage {
+                                            card_id,
+                                            note_page_id: note_id,
+                                        },
+                                        &mut reg,
+                                    ) {
                                         Ok(()) => {
-                                            let fallback = reg.get_card(card_id).ok().and_then(|card| card.notes().first().cloned());
+                                            let fallback = reg
+                                                .get_card(card_id)
+                                                .ok()
+                                                .and_then(|card| card.notes().first().cloned());
                                             selected_note_id.set(fallback.as_ref().map(|note| note.id()));
-                                            title_input.set(fallback.as_ref().map(|note| note.title().to_string()).unwrap_or_default());
-                                            body_input.set(fallback.as_ref().map(|note| note.body().to_string()).unwrap_or_default());
+                                            title_input
+                                                .set(
+                                                    fallback
+                                                        .as_ref()
+                                                        .map(|note| note.title().to_string())
+                                                        .unwrap_or_default(),
+                                                );
+                                            body_input
+                                                .set(
+                                                    fallback
+                                                        .as_ref()
+                                                        .map(|note| note.body().to_string())
+                                                        .unwrap_or_default(),
+                                                );
                                             error_message.set(None);
                                         }
-                                        Err(error_value) => error_message.set(Some(user_message_for_command_error(&error_value))),
+                                        Err(error_value) => {
+                                            error_message.set(Some(user_message_for_command_error(&error_value)))
+                                        }
                                     }
                                 },
                                 "Delete Page"
@@ -161,11 +205,15 @@ pub fn NotesModal(
                         }
                     } else {
                         div { class: "app-notes-empty",
-                            p { class: "app-empty-message", "No note pages yet. Add one to start writing." }
+                            p { class: "app-empty-message",
+                                "No note pages yet. Add one to start writing."
+                            }
                         }
                     }
                 }
-                if let Some(message) = error_message() { {inline_error(message)} }
+                if let Some(message) = error_message() {
+                    {inline_error(message)}
+                }
             }
         }
     }

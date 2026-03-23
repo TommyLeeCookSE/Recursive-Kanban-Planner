@@ -38,7 +38,9 @@ pub(super) fn render_empty_drop_zone(context: BoardRenderContext) -> Element {
                 }
             } else {
                 div { class: "app-drop-empty-zone-content",
-                    p { class: "app-empty-message", "No child cards yet. Create one to start this board." }
+                    p { class: "app-empty-message",
+                        "No child cards yet. Create one to start this board."
+                    }
                 }
             }
         }

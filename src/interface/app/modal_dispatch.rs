@@ -32,10 +32,7 @@ pub(super) fn render_modal_overlay(
             }
         },
         ModalType::Search => rsx! {
-            SearchModal {
-                on_close: move |_| active_modal.set(None),
-                registry,
-            }
+            SearchModal { on_close: move |_| active_modal.set(None), registry }
         },
     }
 }

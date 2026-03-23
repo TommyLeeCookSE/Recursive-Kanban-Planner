@@ -81,7 +81,14 @@ pub fn calculate_layout(topology: &GraphTopologyView) -> GraphLayout {
     // Step 2: Assign coordinates
     let mut positions = HashMap::new();
     if let Some(root) = root_id {
-        assign_positions(root, &children_map, &subtree_widths, &mut positions, 0.0, 0.0);
+        assign_positions(
+            root,
+            &children_map,
+            &subtree_widths,
+            &mut positions,
+            0.0,
+            0.0,
+        );
     }
 
     // Step 3: Build final output
@@ -94,10 +101,18 @@ pub fn calculate_layout(topology: &GraphTopologyView) -> GraphLayout {
 
     for node in &topology.nodes {
         let (x, y) = positions.get(&node.id).copied().unwrap_or((0.0, 0.0));
-        if x < min_x { min_x = x; }
-        if x > max_x { max_x = x; }
-        if y < min_y { min_y = y; }
-        if y > max_y { max_y = y; }
+        if x < min_x {
+            min_x = x;
+        }
+        if x > max_x {
+            max_x = x;
+        }
+        if y < min_y {
+            min_y = y;
+        }
+        if y > max_y {
+            max_y = y;
+        }
 
         if node.id == topology.center_id {
             center_point = (x, y);
@@ -118,7 +133,7 @@ pub fn calculate_layout(topology: &GraphTopologyView) -> GraphLayout {
     for (source_id, target_id) in &topology.edges {
         let source_pos = positions.get(source_id).copied().unwrap_or((0.0, 0.0));
         let target_pos = positions.get(target_id).copied().unwrap_or((0.0, 0.0));
-        
+
         // Connect bottom of source to top of target
         layout_edges.push(LayoutEdge {
             source_id: *source_id,
@@ -178,14 +193,25 @@ fn assign_positions(
         return;
     }
 
-    let total_children_width: f64 = children.iter().map(|id| widths.get(id).copied().unwrap_or(NODE_WIDTH)).sum::<f64>() + ((children.len() - 1) as f64 * X_SPACING);
-    
+    let total_children_width: f64 = children
+        .iter()
+        .map(|id| widths.get(id).copied().unwrap_or(NODE_WIDTH))
+        .sum::<f64>()
+        + ((children.len() - 1) as f64 * X_SPACING);
+
     let mut current_x = x - (total_children_width / 2.0);
 
     for child_id in children {
         let child_width = widths.get(&child_id).copied().unwrap_or(NODE_WIDTH);
         let child_center_x = current_x + (child_width / 2.0);
-        assign_positions(child_id, children_map, widths, positions, child_center_x, y + Y_SPACING + NODE_HEIGHT);
+        assign_positions(
+            child_id,
+            children_map,
+            widths,
+            positions,
+            child_center_x,
+            y + Y_SPACING + NODE_HEIGHT,
+        );
         current_x += child_width + X_SPACING;
     }
 }

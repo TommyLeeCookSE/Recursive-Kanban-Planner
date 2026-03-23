@@ -59,8 +59,16 @@ pub fn MapScreen(focus_card_id: CardId) -> Element {
         #[cfg(target_arch = "wasm32")]
         {
             if let Some(w) = web_sys::window() {
-                let width = w.inner_width().ok().and_then(|val| val.as_f64()).unwrap_or(800.0);
-                let height = w.inner_height().ok().and_then(|val| val.as_f64()).unwrap_or(600.0);
+                let width = w
+                    .inner_width()
+                    .ok()
+                    .and_then(|val| val.as_f64())
+                    .unwrap_or(800.0);
+                let height = w
+                    .inner_height()
+                    .ok()
+                    .and_then(|val| val.as_f64())
+                    .unwrap_or(600.0);
                 pan_x.set(-layout.center_point.0 + (width / 2.0));
                 pan_y.set(-layout.center_point.1 + (height / 2.0));
             }
@@ -86,7 +94,7 @@ pub fn MapScreen(focus_card_id: CardId) -> Element {
                 if *is_dragging.read() {
                     let current_x = e.client_coordinates().x;
                     let current_y = e.client_coordinates().y;
-                    
+
                     if let Some((last_x, last_y)) = *last_mouse_pos.read() {
                         let dx = current_x - last_x;
                         let dy = current_y - last_y;
@@ -100,36 +108,36 @@ pub fn MapScreen(focus_card_id: CardId) -> Element {
             },
             onwheel: move |e| {
                 let (mouse_x, mouse_y) = (e.client_coordinates().x, e.client_coordinates().y);
-                
+
                 let delta_y = match e.data().delta() {
                     dioxus::prelude::dioxus_elements::geometry::WheelDelta::Pixels(v) => v.y,
-                    dioxus::prelude::dioxus_elements::geometry::WheelDelta::Lines(v) => v.y * 20.0,
+
+                    // Zoom towards mouse:
+                    // 1. Calculate mouse position in SVG coordinate space
+
+                    // 2. Adjust pan to keep that SVG point under the mouse with the new scale
+
+                    dioxus::prelude::dioxus_elements::geometry::WheelDelta::Lines(v) => {
+                        v.y * 20.0
+                    }
                     _ => 0.0,
                 };
-                
                 let zoom_factor = if delta_y > 0.0 { 0.9 } else { 1.1 };
                 let current_scale = *scale.read();
                 let new_scale = (current_scale * zoom_factor).clamp(0.1, 3.0);
-                
                 if new_scale != current_scale {
                     let mut px = *pan_x.read();
                     let mut py = *pan_y.read();
-                    
-                    // Zoom towards mouse:
-                    // 1. Calculate mouse position in SVG coordinate space
                     let svg_x = (mouse_x - px) / current_scale;
                     let svg_y = (mouse_y - py) / current_scale;
-                    
-                    // 2. Adjust pan to keep that SVG point under the mouse with the new scale
                     px = mouse_x - svg_x * new_scale;
                     py = mouse_y - svg_y * new_scale;
-                    
                     scale.set(new_scale);
                     pan_x.set(px);
                     pan_y.set(py);
                 }
             },
-            
+
             button {
                 class: "app-button-ghost-compact absolute top-4 left-4 z-10 bg-[var(--app-surface-strong)] shadow-md",
                 onclick: move |_| {
@@ -138,12 +146,10 @@ pub fn MapScreen(focus_card_id: CardId) -> Element {
                 "Close Map"
             }
 
-            svg {
-                class: "w-full h-full cursor-grab active:cursor-grabbing",
-                
-                g {
-                    transform: "translate({pan_x}, {pan_y}) scale({scale})",
-                    
+            svg { class: "w-full h-full cursor-grab active:cursor-grabbing",
+
+                g { transform: "translate({pan_x}, {pan_y}) scale({scale})",
+
                     // Edges
                     for edge in &layout.edges {
                         path {
@@ -151,7 +157,7 @@ pub fn MapScreen(focus_card_id: CardId) -> Element {
                             d: "M {edge.source_point.0} {edge.source_point.1} L {edge.target_point.0} {edge.target_point.1}",
                             stroke: "var(--app-border-strong)",
                             stroke_width: "2",
-                            fill: "none"
+                            fill: "none",
                         }
                     }
 
@@ -174,7 +180,9 @@ pub fn MapScreen(focus_card_id: CardId) -> Element {
                                         e.stop_propagation();
                                         navigator().push(Route::Board { card_id: node_id });
                                     },
-                                    
+
+
+
                                     rect {
                                         width: "{node_width}",
                                         height: "{node_height}",
@@ -182,9 +190,9 @@ pub fn MapScreen(focus_card_id: CardId) -> Element {
                                         fill: if is_center { "var(--app-surface-soft)" } else { "var(--app-card)" },
                                         stroke: if is_center { "#f59e0b" } else { "var(--app-border)" },
                                         stroke_width: if is_center { "3" } else { "1" },
-                                        class: "hover:stroke-[#f59e0b] hover:stroke-2 cursor-pointer transition-all duration-200 shadow-sm"
+                                        class: "hover:stroke-[#f59e0b] hover:stroke-2 cursor-pointer transition-all duration-200 shadow-sm",
                                     }
-                                    
+
                                     text {
                                         x: "{node_width / 2.0}",
                                         y: "{node_height / 2.0 + 5.0}",

@@ -14,8 +14,7 @@ pub(super) fn render_card_slot(
 ) -> Element {
     let card_id = card.id;
     rsx! {
-        div {
-            class: "app-board-slot",
+        div { class: "app-board-slot",
             {render_card_drop_zone(index, DropZoneMode::CardLane, context.clone())}
             div {
                 class: "app-board-slot-card",
@@ -57,10 +56,7 @@ pub(super) fn render_card_drop_zone(
                     event,
                     index,
                     context.clone(),
-                    format!(
-                        "drop card at index {index} on board {}",
-                        context.board_id
-                    ),
+                    format!("drop card at index {index} on board {}", context.board_id),
                 );
             },
             if show_drop_label && is_dragging().0 {

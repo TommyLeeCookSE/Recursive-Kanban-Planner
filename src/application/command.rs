@@ -170,7 +170,11 @@ impl Command {
             Command::CreateWorkspaceChildCard { title, description } => {
                 registry.create_workspace_child_card(title, description)?;
             }
-            Command::CreateChildCard { title, description, parent_id } => {
+            Command::CreateChildCard {
+                title,
+                description,
+                parent_id,
+            } => {
                 registry.create_child_card(title, description, parent_id)?;
             }
             Command::RenameCard { id, title } => {
