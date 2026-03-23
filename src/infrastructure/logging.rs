@@ -51,7 +51,10 @@ pub struct LoggingConfig {
 impl LoggingConfig {
     /// Returns a tracing-compatible EnvFilter string based on this config.
     pub fn to_filter_string(&self) -> String {
-        let mut filter = self.global_level.clone().unwrap_or_else(|| "info".to_string());
+        let mut filter = self
+            .global_level
+            .clone()
+            .unwrap_or_else(|| "info".to_string());
         if let Some(overrides) = &self.overrides {
             for (module, level) in overrides {
                 filter.push_str(&format!(",{module}={level}"));
@@ -104,22 +107,32 @@ pub async fn fetch_config() -> Result<LoggingConfig, LoggingInitError> {
     let request = Request::new_with_str_and_init(url, &opts)
         .map_err(|e| LoggingInitError::Config(format!("Failed to create request: {e:?}")))?;
 
-    let window = web_sys::window().ok_or_else(|| LoggingInitError::Config("No window found".into()))?;
+    let window =
+        web_sys::window().ok_or_else(|| LoggingInitError::Config("No window found".into()))?;
     let resp_value = JsFuture::from(window.fetch_with_request(&request))
         .await
         .map_err(|e| LoggingInitError::Config(format!("Fetch error: {e:?}")))?;
 
     let resp: Response = resp_value.dyn_into().unwrap();
     if !resp.ok() {
-        return Err(LoggingInitError::Config(format!("HTTP error: {}", resp.status())));
+        return Err(LoggingInitError::Config(format!(
+            "HTTP error: {}",
+            resp.status()
+        )));
     }
 
-    let text_value = JsFuture::from(resp.text().map_err(|e| LoggingInitError::Config(format!("Text conversion error: {e:?}")))?)
-        .await
-        .map_err(|e| LoggingInitError::Config(format!("Failed to read response body: {e:?}")))?;
+    let text_value = JsFuture::from(
+        resp.text()
+            .map_err(|e| LoggingInitError::Config(format!("Text conversion error: {e:?}")))?,
+    )
+    .await
+    .map_err(|e| LoggingInitError::Config(format!("Failed to read response body: {e:?}")))?;
 
-    let toml_text = text_value.as_string().ok_or_else(|| LoggingInitError::Config("Response body is not a string".into()))?;
-    toml::from_str(&toml_text).map_err(|e| LoggingInitError::Config(format!("TOML parse error: {e}")))
+    let toml_text = text_value
+        .as_string()
+        .ok_or_else(|| LoggingInitError::Config("Response body is not a string".into()))?;
+    toml::from_str(&toml_text)
+        .map_err(|e| LoggingInitError::Config(format!("TOML parse error: {e}")))
 }
 
 /// A custom tracing layer that captures all events into the in-memory diagnostics buffer.
@@ -153,7 +166,7 @@ struct MessageVisitor(String);
 impl tracing::field::Visit for MessageVisitor {
     fn record_debug(&mut self, field: &tracing::field::Field, value: &dyn std::fmt::Debug) {
         if field.name() == "message" {
-            self.0 = format!("{:?}", value);
+            self.0 = format!("{value:?}");
         }
     }
 
@@ -182,7 +195,7 @@ pub async fn init_logging() -> Result<LoggingGuard, LoggingInitError> {
     let filter_str = config.to_filter_string();
     let filter = tracing_subscriber::EnvFilter::try_new(&filter_str)
         .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("kanban_planner=info,warn"));
-    
+
     let _ = tracing_subscriber::registry()
         .with(filter)
         .with(subscriber)
@@ -217,8 +230,7 @@ pub fn init_logging() -> Result<LoggingGuard, LoggingInitError> {
 
     let log_level = resolved_log_level();
     let file_filter = EnvFilter::try_new(&log_level).unwrap_or_else(|_| EnvFilter::new("info"));
-    let stderr_filter =
-        EnvFilter::try_new(&log_level).unwrap_or_else(|_| EnvFilter::new("info"));
+    let stderr_filter = EnvFilter::try_new(&log_level).unwrap_or_else(|_| EnvFilter::new("info"));
 
     let file_layer = tracing_subscriber::fmt::layer()
         .with_ansi(false)

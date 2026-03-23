@@ -2735,16 +2735,12 @@ button,
   height: 1.75rem;
 }
 
-.h-\[10vh\] {
-  height: 10vh;
+.h-\[12vh\] {
+  height: 12vh;
 }
 
 .h-full {
   height: 100%;
-}
-
-.h-\[12vh\] {
-  height: 12vh;
 }
 
 .max-h-\[60vh\] {
@@ -3020,10 +3016,6 @@ button,
   background-color: transparent;
 }
 
-.p-2 {
-  padding: 0.5rem;
-}
-
 .p-4 {
   padding: 1rem;
 }
@@ -3119,10 +3111,6 @@ button,
 
 .font-bold {
   font-weight: 700;
-}
-
-.font-medium {
-  font-weight: 500;
 }
 
 .uppercase {

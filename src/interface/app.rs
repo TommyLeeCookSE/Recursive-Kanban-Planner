@@ -109,7 +109,8 @@ pub fn App() -> Element {
     // Theme state: default to dark mode.
     let _is_dark = use_context_provider(|| Signal::new(IsDark(true)));
     // Global modal state.
-    let active_modal = use_context_provider(|| Signal::new(None::<ModalType>));
+    #[allow(unused_mut)]
+    let mut active_modal = use_context_provider(|| Signal::new(None::<ModalType>));
     let _is_dragging = use_context_provider(|| Signal::new(IsDragging(false)));
     let _dragged_item_kind = use_context_provider(|| Signal::new(DraggedItemKind::None));
 
@@ -119,24 +120,23 @@ pub fn App() -> Element {
     use_effect(move || {
         #[cfg(target_arch = "wasm32")]
         {
-            use wasm_bindgen::closure::Closure;
             use wasm_bindgen::JsCast;
-            
+            use wasm_bindgen::closure::Closure;
+
             let window = web_sys::window().unwrap();
             let document = window.document().unwrap();
-            
+
             let callback = Closure::wrap(Box::new(move |event: web_sys::KeyboardEvent| {
                 if event.ctrl_key() && event.key() == "k" {
                     event.prevent_default();
                     active_modal.set(Some(ModalType::Search));
                 }
             }) as Box<dyn FnMut(web_sys::KeyboardEvent)>);
-            
-            document.add_event_listener_with_callback(
-                "keydown",
-                callback.as_ref().unchecked_ref(),
-            ).unwrap();
-            
+
+            document
+                .add_event_listener_with_callback("keydown", callback.as_ref().unchecked_ref())
+                .unwrap();
+
             callback.forget(); // Leak for now, simplified for the demo
         }
     });
