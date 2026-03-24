@@ -116,7 +116,7 @@ pub fn MapScreen(focus_card_id: CardId) -> Element {
                         };
 
                         let margin = 100.0;
-                        
+
                         // New candidate positions
                         let next_px = px + dx;
                         let next_py = py + dy;
