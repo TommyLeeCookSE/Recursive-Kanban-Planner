@@ -5,7 +5,7 @@ use crate::domain::registry::CardRegistry;
 use crate::domain::title::MAX_TITLE_LENGTH;
 use crate::interface::components::modal::Modal;
 use crate::interface::components::shared_forms::{
-    build_create_card_command, inline_error, user_message_for_command_error,
+    form_row, inline_error, modal_dispatch_command,
 };
 use dioxus::prelude::*;
 
@@ -24,28 +24,34 @@ pub fn CardModal(
             on_close: move |_| on_close.call(()),
             title: if parent_id.is_some() { "New Card" } else { "New Board" },
             div { class: "app-form-stack",
-                div { class: "app-form-row",
-                    label { r#for: "card-title", class: "app-form-label", "Title" }
-                    input {
-                        id: "card-title",
-                        class: "app-input",
-                        placeholder: "Enter title...",
-                        value: "{input_title}",
-                        oninput: move |e| input_title.set(e.value()),
-                        maxlength: MAX_TITLE_LENGTH as i64,
-                        autofocus: true,
+                {form_row! {
+                    label: "Title",
+                    id: "card-title",
+                    input: rsx! {
+                        input {
+                            id: "card-title",
+                            class: "app-input",
+                            placeholder: "Enter title...",
+                            value: "{input_title}",
+                            oninput: move |e| input_title.set(e.value()),
+                            maxlength: MAX_TITLE_LENGTH as i64,
+                            autofocus: true,
+                        }
                     }
-                }
-                div { class: "app-form-row",
-                    label { r#for: "card-description", class: "app-form-label", "Description" }
-                    input {
-                        id: "card-description",
-                        class: "app-input",
-                        placeholder: "Enter description (optional)...",
-                        value: "{input_description}",
-                        oninput: move |e| input_description.set(e.value()),
+                }}
+                {form_row! {
+                    label: "Description",
+                    id: "card-description",
+                    input: rsx! {
+                        input {
+                            id: "card-description",
+                            class: "app-input",
+                            placeholder: "Enter description (optional)...",
+                            value: "{input_description}",
+                            oninput: move |e| input_description.set(e.value()),
+                        }
                     }
-                }
+                }}
                 if let Some(message) = error_message() {
                     {inline_error(message)}
                 }
@@ -67,20 +73,16 @@ pub fn CardModal(
                             } else {
                                 Some(input_description().trim().to_string())
                             };
-                            match build_create_card_command(title, description, parent_id) {
-                                Ok(command) => {
-                                    let mut reg = registry.write();
-                                    match command.apply(&mut reg) {
-                                        Ok(_) => on_close.call(()),
-                                        Err(e) => {
-                                            error_message.set(Some(user_message_for_command_error(&e)));
-                                        }
-                                    }
-                                }
-                                Err(e) => {
-                                    error_message.set(Some(user_message_for_command_error(&e)));
-                                }
-                            }
+                            modal_dispatch_command(
+                                Command::CreateCard {
+                                    title,
+                                    description,
+                                    parent_id,
+                                },
+                                registry,
+                                error_message,
+                                move || on_close.call(()),
+                            );
                         },
                         "Create"
                     }
@@ -116,40 +118,49 @@ pub fn EditCardModal(
     rsx! {
         Modal { on_close: move |_| on_close.call(()), title: "Edit Card",
             div { class: "app-form-stack",
-                div { class: "app-form-row",
-                    label { r#for: "edit-title", class: "app-form-label", "Title" }
-                    input {
-                        id: "edit-title",
-                        class: "app-input",
-                        value: "{input_title}",
-                        oninput: move |e| input_title.set(e.value()),
-                        maxlength: MAX_TITLE_LENGTH as i64,
-                        autofocus: true,
+                {form_row! {
+                    label: "Title",
+                    id: "edit-title",
+                    input: rsx! {
+                        input {
+                            id: "edit-title",
+                            class: "app-input",
+                            value: "{input_title}",
+                            oninput: move |e| input_title.set(e.value()),
+                            maxlength: MAX_TITLE_LENGTH as i64,
+                            autofocus: true,
+                        }
                     }
-                }
+                }}
 
-                div { class: "app-form-row",
-                    label { r#for: "edit-description", class: "app-form-label", "Description" }
-                    input {
-                        id: "edit-description",
-                        class: "app-input",
-                        value: "{input_description}",
-                        oninput: move |e| input_description.set(e.value()),
-                        maxlength: 80,
-                        placeholder: "Enter short description...",
+                {form_row! {
+                    label: "Description",
+                    id: "edit-description",
+                    input: rsx! {
+                        input {
+                            id: "edit-description",
+                            class: "app-input",
+                            value: "{input_description}",
+                            oninput: move |e| input_description.set(e.value()),
+                            maxlength: 80,
+                            placeholder: "Enter short description...",
+                        }
                     }
-                }
+                }}
 
-                div { class: "app-form-row",
-                    label { r#for: "edit-due-date", class: "app-form-label", "Due Date" }
-                    input {
-                        id: "edit-due-date",
-                        class: "app-input",
-                        r#type: "date",
-                        value: "{due_date_input}",
-                        oninput: move |e| due_date_input.set(e.value()),
+                {form_row! {
+                    label: "Due Date",
+                    id: "edit-due-date",
+                    input: rsx! {
+                        input {
+                            id: "edit-due-date",
+                            class: "app-input",
+                            r#type: "date",
+                            value: "{due_date_input}",
+                            oninput: move |e| due_date_input.set(e.value()),
+                        }
                     }
-                }
+                }}
 
                 if let Some(message) = error_message() {
                     {inline_error(message)}
@@ -177,9 +188,9 @@ pub fn EditCardModal(
                                 let description = if input_description() != initial_description {
                                     Some(if input_description().trim().is_empty() {
                                         None
-                                    } else {
+                                      } else {
                                         Some(input_description().trim().to_string())
-                                    })
+                                      })
                                 } else {
                                     None
                                 };
@@ -193,19 +204,17 @@ pub fn EditCardModal(
                                     None
                                 };
                                 if title.is_some() || description.is_some() || due_date.is_some() {
-                                    let command = Command::UpdateCardDetails {
-                                        id,
-                                        title,
-                                        description,
-                                        due_date,
-                                    };
-                                    let mut reg = registry.write();
-                                    match command.apply(&mut reg) {
-                                        Ok(_) => on_close.call(()),
-                                        Err(e) => {
-                                            error_message.set(Some(user_message_for_command_error(&e)));
-                                        }
-                                    }
+                                    modal_dispatch_command(
+                                        Command::UpdateCardDetails {
+                                            id,
+                                            title,
+                                            description,
+                                            due_date,
+                                        },
+                                        registry,
+                                        error_message,
+                                        move || on_close.call(()),
+                                    );
                                 } else {
                                     on_close.call(());
                                 }

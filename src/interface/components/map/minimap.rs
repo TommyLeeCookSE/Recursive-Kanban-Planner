@@ -131,7 +131,7 @@ pub fn Minimap(current_card_id: CardId) -> Element {
                                 x: "{node.x}",
                                 y: "{node.y + 28.0}",
                                 text_anchor: "middle",
-                                fill: if node.is_center { "var(--app-text)" } else { "var(--app-text-soft)" },
+                                fill: if node.is_center { "var(--app-text)" } else { "white" },
                                 font_size: "14px",
                                 font_weight: if node.is_center { "bold" } else { "normal" },
                                 class: "pointer-events-none select-none",

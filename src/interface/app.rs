@@ -111,7 +111,7 @@ pub fn App() -> Element {
     // Global modal state.
     #[allow(unused_mut)]
     let mut active_modal = use_context_provider(|| Signal::new(None::<ModalType>));
-    let _is_dragging = use_context_provider(|| Signal::new(IsDragging(false)));
+    let is_dragging = use_context_provider(|| Signal::new(IsDragging(false)));
     let _dragged_item_kind = use_context_provider(|| Signal::new(DraggedItemKind::None));
 
     let is_dark: Signal<IsDark> = use_context();
@@ -137,15 +137,19 @@ pub fn App() -> Element {
                 .add_event_listener_with_callback("keydown", callback.as_ref().unchecked_ref())
                 .unwrap();
 
-            callback.forget(); // Leak for now, simplified for the demo
+            callback.forget();
         }
     });
 
-    let shell_class = if is_dark().0 {
-        "app-shell theme-dark dark"
-    } else {
-        "app-shell theme-light"
-    };
+    let shell_class = format!(
+        "{} {}",
+        if is_dark().0 {
+            "app-shell theme-dark dark"
+        } else {
+            "app-shell theme-light"
+        },
+        if is_dragging().0 { "app-is-dragging" } else { "" }
+    );
 
     // Debounced persistence: wait 1000ms after the last registry change before saving.
     use_resource(move || async move {

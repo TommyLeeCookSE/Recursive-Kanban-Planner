@@ -177,39 +177,22 @@ where
     signal.set(values);
 }
 
-/// Utility for building a `Command` for card creation based on optional parent ID.
-///
-/// # Examples
-///
-/// ```
-/// use kanban_planner::interface::components::shared_forms::build_create_card_command;
-///
-/// let cmd = build_create_card_command("My Title".to_string(), None, None).unwrap();
-/// ```
-pub fn build_create_card_command(
-    title: String,
-    description: Option<String>,
-    parent_id: Option<CardId>,
-) -> Result<Command, DomainError> {
-    Ok(Command::CreateCard {
-        title,
-        description,
-        parent_id,
-    })
+pub fn modal_dispatch_command(
+    command: Command,
+    mut registry: Signal<crate::domain::registry::CardRegistry>,
+    mut error_message: Signal<Option<String>>,
+    on_success: impl FnOnce(),
+) {
+    let mut reg = registry.write();
+    match crate::application::execute(command, &mut reg) {
+        Ok(_) => on_success(),
+        Err(e) => {
+            error_message.set(Some(user_message_for_command_error(&e)));
+        }
+    }
 }
 
 /// Provides a formatted string for a `DueDate`, or an empty string if it's `None`.
-///
-/// # Examples
-///
-/// ```
-/// use kanban_planner::domain::due_date::DueDate;
-/// use kanban_planner::interface::components::shared_forms::due_date_string;
-///
-/// let due = DueDate::parse("2023-12-31").unwrap();
-/// assert_eq!(due_date_string(Some(&due)), "2023-12-31");
-/// assert_eq!(due_date_string(None), "");
-/// ```
 pub fn due_date_string(due_date: Option<&DueDate>) -> String {
     due_date.map(|due| due.to_string()).unwrap_or_default()
 }

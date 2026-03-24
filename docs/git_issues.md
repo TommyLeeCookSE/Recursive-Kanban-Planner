@@ -1,9 +1,8 @@
 # Workspace Git Issues Tracking (OPEN)
 
 ## Issue #52: Split modal layer further to reduce maintainability risk
-**Status:** OPEN
-**Description:** The modal layer is still concentrated in a broad feature hub.Notes, labels, rules, card, and bucket flows keep converging on the same implementation surface.
-**Scope:** Continue decomposing the modal system into smaller, feature-specific modules and shared helpers. Reduce the amount of code that changes when a single modal flow is updated.
+**Status:** CLOSED
+**Resolution:** Consolidated modal command dispatching into `modal_dispatch_command` helper and applied `form_row!` macro across `CardModal`, `EditCardModal`, and `NotesModal`. Removed redundant error handling and registry locking boilerplate.
 
 ## Issue #59: Repetitive Note Page Lookup (DRY)
 **Status:** CLOSED
@@ -18,8 +17,8 @@
 **Resolution:** Optimized reorder validation in `src/domain/card.rs` using a `HashSet` for O(N) complexity.
 
 ## Issue #82: Dragging a card copies all text from all cards
-**Status:** OPEN
-**Description:** When a card is dragged, it appears that all text from all cards in the view is being copied or included in the drag ghost/data. This causes performance issues and visual clutter during drag operations.
+**Status:** CLOSED
+**Resolution:** Implemented a global `.app-is-dragging` class on the root shell that applies `user-select: none !important` to all elements during drag operations. Added `select-none` to `CardItem` for local selection prevention.
 
 ## Issue #83: GitHub Deployment Pipeline is Broken
 **Status:** CLOSED
@@ -27,6 +26,4 @@
 
 ## Issue #84: Enhanced Map Navigation and Split-Header Layout
 **Status:** CLOSED
-**Resolution:** Implemented dynamic map zoom/panning constraints, fixed minimap night theme contrast, and introduced a 5vh `ContextBar` for card metadata (title, due date, description) and split action navigation.
-
-
+**Resolution:** Implemented dynamic map zoom/panning constraints (clamped to layout edges), fixed minimap night theme contrast (white text on dark backgrounds), and introduced a 5vh `ContextBar` for card metadata.

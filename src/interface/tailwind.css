@@ -3,6 +3,9 @@
 @tailwind utilities;
 
 @layer base {
+  .app-is-dragging * {
+    user-select: none !important;
+  }
 
   html,
   body {

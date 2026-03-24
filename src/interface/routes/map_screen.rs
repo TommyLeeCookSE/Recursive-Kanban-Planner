@@ -115,7 +115,7 @@ pub fn MapScreen(focus_card_id: CardId) -> Element {
                             #[cfg(not(target_arch = "wasm32"))] { (800.0, 600.0) }
                         };
 
-                        let margin = 100.0;
+                        let margin = 20.0;
 
                         // New candidate positions
                         let next_px = px + dx;
@@ -187,8 +187,8 @@ pub fn MapScreen(focus_card_id: CardId) -> Element {
                     .min(vh / (layout_h + 120.0))
                     .min(1.0);
 
-                // Max scale: Zoom in until a card takes about half the screen width, or 3.0x
-                let max_scale = (vw / 400.0).clamp(1.5, 4.0);
+                // Max scale: Zoom in until a card takes about full screen width
+                let max_scale = (vw / 220.0).clamp(1.5, 5.0);
 
                 let new_scale = (current_scale * zoom_factor).clamp(min_scale, max_scale);
 
@@ -200,7 +200,7 @@ pub fn MapScreen(focus_card_id: CardId) -> Element {
                     let next_px = mouse_x - svg_x * new_scale;
                     let next_py = mouse_y - svg_y * new_scale;
 
-                    let margin = 100.0;
+                    let margin = 20.0;
                     let min_pan_x = (vw - margin) - layout.max_x * new_scale;
                     let max_pan_x = margin - layout.min_x * new_scale;
                     let min_pan_y = (vh - margin) - layout.max_y * new_scale;

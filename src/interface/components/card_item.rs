@@ -58,7 +58,7 @@ pub fn CardItem(
     let delete_title = title.clone();
 
     rsx! {
-        article { class: "app-card-surface app-card-shell group",
+        article { class: "app-card-surface app-card-shell select-none group",
 
             button {
                 class: if draggable { "app-card-body app-card-body--draggable" } else { "app-card-body" },

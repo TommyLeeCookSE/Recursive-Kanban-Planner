@@ -3,7 +3,9 @@ use crate::domain::id::CardId;
 use crate::domain::registry::CardRegistry;
 use crate::domain::title::MAX_TITLE_LENGTH;
 use crate::interface::components::modal::Modal;
-use crate::interface::components::shared_forms::{inline_error, user_message_for_command_error};
+use crate::interface::components::shared_forms::{
+    inline_error, modal_dispatch_command,
+};
 use dioxus::prelude::*;
 
 #[component]
@@ -64,15 +66,15 @@ pub fn NotesModal(
                         title: "Add a new note page",
                         onclick: move |_| {
                             let title = new_page_title().trim().to_string();
-                            let mut reg = registry.write();
-                            match execute(
+                            modal_dispatch_command(
                                 Command::AddNotePage {
                                     card_id,
                                     title,
                                 },
-                                &mut reg,
-                            ) {
-                                Ok(()) => {
+                                registry,
+                                error_message,
+                                move || {
+                                    let reg = registry.read();
                                     let latest_note = reg
                                         .get_card(card_id)
                                         .ok()
@@ -83,12 +85,8 @@ pub fn NotesModal(
                                         body_input.set(note.body().to_string());
                                     }
                                     new_page_title.set("New Page".to_string());
-                                    error_message.set(None);
-                                }
-                                Err(error_value) => {
-                                    error_message.set(Some(user_message_for_command_error(&error_value)))
-                                }
-                            }
+                                },
+                            );
                         },
                         "Add Page"
                     }
@@ -133,28 +131,28 @@ pub fn NotesModal(
                                     let Some(note_id) = selected_note_id() else {
                                         return;
                                     };
-                                    let mut reg = registry.write();
-                                    let rename_result = execute(
+                                    // Sequence commands: rename then save body
+                                    modal_dispatch_command(
                                         Command::RenameNotePage {
                                             card_id,
                                             note_page_id: note_id,
                                             title: title_input().trim().to_string(),
                                         },
-                                        &mut reg,
-                                    );
-                                    let save_result = execute(
-                                        Command::SaveNotePageBody {
-                                            card_id,
-                                            note_page_id: note_id,
-                                            body: body_input(),
+                                        registry,
+                                        error_message,
+                                        move || {
+                                            modal_dispatch_command(
+                                                Command::SaveNotePageBody {
+                                                    card_id,
+                                                    note_page_id: note_id,
+                                                    body: body_input(),
+                                                },
+                                                registry,
+                                                error_message,
+                                                || {},
+                                            );
                                         },
-                                        &mut reg,
                                     );
-                                    if let Some(error_value) = rename_result.err().or_else(|| save_result.err()) {
-                                        error_message.set(Some(user_message_for_command_error(&error_value)));
-                                    } else {
-                                        error_message.set(None);
-                                    }
                                 },
                                 "Save Page"
                             }
@@ -165,15 +163,15 @@ pub fn NotesModal(
                                     let Some(note_id) = selected_note_id() else {
                                         return;
                                     };
-                                    let mut reg = registry.write();
-                                    match execute(
+                                    modal_dispatch_command(
                                         Command::DeleteNotePage {
                                             card_id,
                                             note_page_id: note_id,
                                         },
-                                        &mut reg,
-                                    ) {
-                                        Ok(()) => {
+                                        registry,
+                                        error_message,
+                                        move || {
+                                            let reg = registry.read();
                                             let fallback = reg
                                                 .get_card(card_id)
                                                 .ok()
@@ -193,12 +191,8 @@ pub fn NotesModal(
                                                         .map(|note| note.body().to_string())
                                                         .unwrap_or_default(),
                                                 );
-                                            error_message.set(None);
-                                        }
-                                        Err(error_value) => {
-                                            error_message.set(Some(user_message_for_command_error(&error_value)))
-                                        }
-                                    }
+                                        },
+                                    );
                                 },
                                 "Delete Page"
                             }
