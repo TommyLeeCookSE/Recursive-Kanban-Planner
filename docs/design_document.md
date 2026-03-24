@@ -94,6 +94,10 @@ Recent binding decisions already implemented:
 11. Unified icon-only buttons with hover tooltips for all navigation actions.
 12. Memoized board data views to ensure O(1) transient performance during UI interactions.
 13. Optimized persistence pipeline with zero-clone serialization.
+14. Dynamic map zoom constraints based on layout bounds and viewport size.
+15. Semantic CSS variable usage for SVG text to ensure cross-theme visibility.
+16. Panning constraints on the map screen to keep the layout within reachable view (clamped to layout edges with a margin).
+17. Split-header navigation: Primary bar for global actions, and a secondary ContextBar (5vh) for active item metadata (title, due date, description).
 
 
 ---

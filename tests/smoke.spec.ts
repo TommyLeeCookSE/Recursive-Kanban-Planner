@@ -18,8 +18,9 @@ test('smoke: app boots and core board actions are visible', async ({ page }) => 
   await page.getByPlaceholder('Enter title...').fill('Smoke Board');
   await page.getByTitle('Create this card').click();
 
-  await expect(page.getByText('Smoke Board')).toBeVisible();
-  await page.getByText('Smoke Board', { exact: true }).click();
+  const smokeBoardTitle = page.getByRole('heading', { name: 'Smoke Board' });
+  await expect(smokeBoardTitle).toBeVisible();
+  await smokeBoardTitle.click();
 
   const main = page.locator('main');
   await expect(main.getByRole('button', { name: 'Create Card' })).toBeVisible();
@@ -37,11 +38,11 @@ test('smoke: app boots and core board actions are visible', async ({ page }) => 
   await main.getByRole('button', { name: 'Create Card' }).click();
   await page.getByPlaceholder('Enter title...').fill('Smoke Child');
   await page.getByTitle('Create this card').click();
-  await expect(page.getByText('Smoke Child', { exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Smoke Child', exact: true })).toBeVisible();
 
   await page.getByTitle('Back to My Workspace').click();
-  await expect(page.getByText('Smoke Board', { exact: true })).toBeVisible();
-  await expect(page.getByText('Smoke Child', { exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Smoke Board', exact: true })).toBeVisible();
+  await expect(page.locator('.app-card-preview-chip').getByText('Smoke Child', { exact: true })).toBeVisible();
 
   const shell = page.locator('.app-shell');
   await expect(shell).toHaveClass(/theme-dark/);

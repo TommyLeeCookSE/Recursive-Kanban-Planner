@@ -170,6 +170,7 @@
     --app-notes-empty-min-height: 18rem;
     --app-notes-empty-radius: 1.5rem;
     --app-notes-empty-padding: 1.5rem;
+    --app-context-bar-height: 5vh;
   }
 
   .theme-dark {
@@ -735,7 +736,7 @@
   }
 
   .app-router-main {
-    @apply flex flex-1 min-h-0 flex-col overflow-hidden;
+    @apply flex flex-1 min-h-0 flex-col overflow-hidden relative;
   }
 
   .app-navbar-brand-initial {

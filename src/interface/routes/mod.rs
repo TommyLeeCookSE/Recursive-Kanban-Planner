@@ -11,24 +11,14 @@ pub mod home;
 pub mod map_screen;
 
 /// The top-level application routes used by Dioxus Router.
-///
-/// # Examples
-///
-/// ```rust
-/// use kanban_planner::interface::Route;
-///
-/// let route = Route::Home {};
-/// assert!(matches!(route, Route::Home {}));
-/// ```
 #[derive(Clone, Routable, Debug, PartialEq, Eq)]
 #[rustfmt::skip]
 pub enum Route {
     #[layout(NavbarLayout)]
-        #[route("/")]
-        Home {},
-        #[route("/board/:card_id")]
-        Board { card_id: CardId },
-    #[end_layout]
+    #[route("/", Home)]
+    Home {},
+    #[route("/board/:card_id", Board)]
+    Board { card_id: CardId },
     #[route("/map/:focus_card_id", MapScreen)]
     Map { focus_card_id: CardId },
 }

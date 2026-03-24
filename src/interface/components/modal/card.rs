@@ -1,15 +1,13 @@
-use crate::application::{Command, execute};
+use crate::application::Command;
 use crate::domain::due_date::DueDate;
 use crate::domain::id::CardId;
 use crate::domain::registry::CardRegistry;
 use crate::domain::title::MAX_TITLE_LENGTH;
-use crate::infrastructure::logging::record_diagnostic;
 use crate::interface::components::modal::Modal;
 use crate::interface::components::shared_forms::{
     build_create_card_command, inline_error, user_message_for_command_error,
 };
 use dioxus::prelude::*;
-use tracing::{Level, warn};
 
 #[component]
 pub fn CardModal(
@@ -26,20 +24,27 @@ pub fn CardModal(
             on_close: move |_| on_close.call(()),
             title: if parent_id.is_some() { "New Card" } else { "New Board" },
             div { class: "app-form-stack",
-                input {
-                    class: "app-input",
-                    placeholder: "Enter title...",
-                    value: "{input_title}",
-                    oninput: move |e| input_title.set(e.value()),
-                    maxlength: MAX_TITLE_LENGTH as i64,
-                    autofocus: true,
+                div { class: "app-form-row",
+                    label { r#for: "card-title", class: "app-form-label", "Title" }
+                    input {
+                        id: "card-title",
+                        class: "app-input",
+                        placeholder: "Enter title...",
+                        value: "{input_title}",
+                        oninput: move |e| input_title.set(e.value()),
+                        maxlength: MAX_TITLE_LENGTH as i64,
+                        autofocus: true,
+                    }
                 }
-                input {
-                    class: "app-input",
-                    placeholder: "Enter short description (optional)...",
-                    value: "{input_description}",
-                    oninput: move |e| input_description.set(e.value()),
-                    maxlength: 80,
+                div { class: "app-form-row",
+                    label { r#for: "card-description", class: "app-form-label", "Description" }
+                    input {
+                        id: "card-description",
+                        class: "app-input",
+                        placeholder: "Enter description (optional)...",
+                        value: "{input_description}",
+                        oninput: move |e| input_description.set(e.value()),
+                    }
                 }
                 if let Some(message) = error_message() {
                     {inline_error(message)}
@@ -56,44 +61,28 @@ pub fn CardModal(
                         title: "Create this card",
                         disabled: input_title().trim().is_empty(),
                         onclick: move |_| {
-                            let trimmed_title = input_title().trim().to_string();
-                            let desc_raw = input_description();
-                            let trimmed_desc = desc_raw.trim();
-                            let description = if trimmed_desc.is_empty() {
-
+                            let title = input_title().trim().to_string();
+                            let description = if input_description().trim().is_empty() {
                                 None
                             } else {
-                                Some(trimmed_desc.to_string())
+                                Some(input_description().trim().to_string())
                             };
-                            let command = match build_create_card_command(
-                                trimmed_title,
-                                description,
-                                parent_id,
-                            ) {
-                                Ok(command) => command,
-                                Err(error_value) => {
-                                    let user_message = user_message_for_command_error(&error_value);
-                                    warn!(
-                                        parent_id = ? parent_id, error = % error_value,
-                                        "Card modal rejected invalid create-card context"
-                                    );
-                                    error_message.set(Some(user_message.clone()));
-                                    record_diagnostic(Level::WARN, "ui-modal", user_message);
-                                    return;
+                            match build_create_card_command(title, description, parent_id) {
+                                Ok(command) => {
+                                    let mut reg = registry.write();
+                                    match command.apply(&mut reg) {
+                                        Ok(_) => on_close.call(()),
+                                        Err(e) => {
+                                            error_message.set(Some(user_message_for_command_error(&e)));
+                                        }
+                                    }
                                 }
-                            };
-                            let mut reg = registry.write();
-                            match execute(command, &mut reg) {
-                                Ok(()) => {
-                                    error_message.set(None);
-                                    on_close.call(());
-                                }
-                                Err(error_value) => {
-                                    error_message.set(Some(user_message_for_command_error(&error_value)))
+                                Err(e) => {
+                                    error_message.set(Some(user_message_for_command_error(&e)));
                                 }
                             }
                         },
-                        "Create Card"
+                        "Create"
                     }
                 }
             }
@@ -105,63 +94,61 @@ pub fn CardModal(
 pub fn EditCardModal(
     on_close: EventHandler<()>,
     id: CardId,
+    initial_title: String,
+    initial_description: String,
+    initial_due_date: String,
     registry: Signal<CardRegistry>,
 ) -> Element {
-    let card_snapshot = {
-        let reg = registry.read();
-        match reg.get_card(id) {
-            Ok(card) => card.clone(),
-            Err(_) => {
-                return rsx! {
-                    Modal {
-                        on_close: move |_| on_close.call(()),
-                        title: "Edit Item".to_string(),
-                        p { class: "app-error-message", "Card could not be loaded." }
-                    }
-                };
-            }
-        }
-    };
-
-    let card = card_snapshot;
-    let initial_title = card.title().to_string();
-    let initial_description = card.description().unwrap_or_default().to_string();
-    let initial_due_date = card
-        .due_date()
-        .map(|due| due.to_string())
-        .unwrap_or_default();
-    let mut input_title = use_signal(move || initial_title.clone());
-    let mut input_description = use_signal(move || initial_description.clone());
-    let mut due_date_input = use_signal(move || initial_due_date.clone());
+    let mut input_title = use_signal({
+        let it = initial_title.clone();
+        move || it.clone()
+    });
+    let mut input_description = use_signal({
+        let id = initial_description.clone();
+        move || id.clone()
+    });
+    let mut due_date_input = use_signal({
+        let idd = initial_due_date.clone();
+        move || idd.clone()
+    });
     let mut error_message = use_signal(|| None::<String>);
 
     rsx! {
         Modal { on_close: move |_| on_close.call(()), title: "Edit Card",
             div { class: "app-form-stack",
-                label { class: "app-kicker", "Title" }
-                input {
-                    class: "app-input",
-                    value: "{input_title}",
-                    oninput: move |e| input_title.set(e.value()),
-                    maxlength: MAX_TITLE_LENGTH as i64,
-                    autofocus: true,
+                div { class: "app-form-row",
+                    label { r#for: "edit-title", class: "app-form-label", "Title" }
+                    input {
+                        id: "edit-title",
+                        class: "app-input",
+                        value: "{input_title}",
+                        oninput: move |e| input_title.set(e.value()),
+                        maxlength: MAX_TITLE_LENGTH as i64,
+                        autofocus: true,
+                    }
                 }
 
-                label { class: "app-kicker", "Description" }
-                input {
-                    class: "app-input",
-                    value: "{input_description}",
-                    oninput: move |e| input_description.set(e.value()),
-                    maxlength: 80,
-                    placeholder: "Enter short description...",
+                div { class: "app-form-row",
+                    label { r#for: "edit-description", class: "app-form-label", "Description" }
+                    input {
+                        id: "edit-description",
+                        class: "app-input",
+                        value: "{input_description}",
+                        oninput: move |e| input_description.set(e.value()),
+                        maxlength: 80,
+                        placeholder: "Enter short description...",
+                    }
                 }
 
-                label { class: "app-kicker", "Due Date" }
-                input {
-                    class: "app-input",
-                    r#type: "date",
-                    value: "{due_date_input}",
-                    oninput: move |e| due_date_input.set(e.value()),
+                div { class: "app-form-row",
+                    label { r#for: "edit-due-date", class: "app-form-label", "Due Date" }
+                    input {
+                        id: "edit-due-date",
+                        class: "app-input",
+                        r#type: "date",
+                        value: "{due_date_input}",
+                        oninput: move |e| due_date_input.set(e.value()),
+                    }
                 }
 
                 if let Some(message) = error_message() {
@@ -171,78 +158,57 @@ pub fn EditCardModal(
                 div { class: "app-form-actions",
                     button {
                         class: "app-button-ghost-compact",
-                        title: "Cancel editing this card",
                         onclick: move |_| on_close.call(()),
                         "Cancel"
                     }
                     button {
-                        class: "app-button-primary-compact disabled:opacity-50",
-                        title: "Save card changes",
+                        class: "app-button-primary-compact",
                         disabled: input_title().trim().is_empty(),
-                        onclick: move |_| {
-                            let due_date_value = if due_date_input().trim().is_empty() {
-                                None
-                            } else {
-                                match DueDate::parse(due_date_input()) {
-                                    Ok(due_date) => Some(due_date),
-                                    Err(error_value) => {
-                                        error_message
-
-                                            .set(Some(user_message_for_command_error(&error_value)));
-                                        return;
+                        onclick: {
+                            let initial_title = initial_title.clone();
+                            let initial_description = initial_description.clone();
+                            let initial_due_date = initial_due_date.clone();
+                            move |_| {
+                                let title = if input_title() != initial_title {
+                                    Some(input_title().trim().to_string())
+                                } else {
+                                    None
+                                };
+                                let description = if input_description() != initial_description {
+                                    Some(if input_description().trim().is_empty() {
+                                        None
+                                    } else {
+                                        Some(input_description().trim().to_string())
+                                    })
+                                } else {
+                                    None
+                                };
+                                let due_date = if due_date_input() != initial_due_date {
+                                    Some(if due_date_input().trim().is_empty() {
+                                        None
+                                    } else {
+                                        DueDate::parse(due_date_input()).ok()
+                                    })
+                                } else {
+                                    None
+                                };
+                                if title.is_some() || description.is_some() || due_date.is_some() {
+                                    let command = Command::UpdateCardDetails {
+                                        id,
+                                        title,
+                                        description,
+                                        due_date,
+                                    };
+                                    let mut reg = registry.write();
+                                    match command.apply(&mut reg) {
+                                        Ok(_) => on_close.call(()),
+                                        Err(e) => {
+                                            error_message.set(Some(user_message_for_command_error(&e)));
+                                        }
                                     }
+                                } else {
+                                    on_close.call(());
                                 }
-                            };
-                            let mut reg = registry.write();
-                            let rename_result = execute(
-                                Command::RenameCard {
-                                    id,
-                                    title: input_title().trim().to_string(),
-                                },
-                                &mut reg,
-                            );
-                            let desc_raw = input_description();
-                            let desc_trimmed = desc_raw.trim();
-                            let description = if desc_trimmed.is_empty() {
-                                None
-                            } else {
-                                Some(desc_trimmed.to_string())
-                            };
-                            let desc_result = execute(
-                                Command::SetCardDescription {
-                                    id,
-                                    description,
-                                },
-                                &mut reg,
-                            );
-                            let due_result = match due_date_value {
-                                Some(due_date) => {
-                                    execute(
-                                        Command::SetDueDate {
-                                            card_id: id,
-                                            due_date,
-                                        },
-                                        &mut reg,
-                                    )
-                                }
-                                None => {
-                                    execute(
-                                        Command::ClearDueDate {
-                                            card_id: id,
-                                        },
-                                        &mut reg,
-                                    )
-                                }
-                            };
-                            if let Some(error_value) = rename_result
-                                .err()
-                                .or_else(|| desc_result.err())
-                                .or_else(|| due_result.err())
-                            {
-                                error_message.set(Some(user_message_for_command_error(&error_value)));
-                            } else {
-                                error_message.set(None);
-                                on_close.call(());
                             }
                         },
                         "Save Changes"

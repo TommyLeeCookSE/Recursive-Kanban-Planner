@@ -66,7 +66,7 @@ impl CardRegistry {
     /// let registry = CardRegistry::new();
     /// ```
     pub fn new() -> Self {
-        let workspace = Card::new_root("My Workspace".to_string(), None)
+        let workspace = Card::new("My Workspace".to_string(), None, None)
             .expect("workspace title should always be valid");
 
         Self {
@@ -238,17 +238,17 @@ impl CardRegistry {
         mutations::create_child_card(self, title, description, parent_id)
     }
 
+    /// Creates a new card, either in the workspace or as a child.
+    pub fn create_card(
+        &mut self,
+        title: String,
+        description: Option<String>,
+        parent_id: Option<CardId>,
+    ) -> Result<CardId, DomainError> {
+        mutations::create_card(self, title, description, parent_id)
+    }
+
     /// Renames an existing card.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use kanban_planner::domain::registry::CardRegistry;
-    ///
-    /// let mut registry = CardRegistry::new();
-    /// let id = registry.workspace_card_id().unwrap();
-    /// registry.rename_card(id, "New Name".to_string()).unwrap();
-    /// ```
     pub fn rename_card(&mut self, id: CardId, title: String) -> Result<(), DomainError> {
         mutations::rename_card(self, id, title)
     }
@@ -260,6 +260,27 @@ impl CardRegistry {
         description: Option<String>,
     ) -> Result<(), DomainError> {
         mutations::set_card_description(self, id, description)
+    }
+
+    /// Sets the due date for a card.
+    pub fn set_due_date(&mut self, card_id: CardId, due_date: DueDate) -> Result<(), DomainError> {
+        mutations::set_due_date(self, card_id, due_date)
+    }
+
+    /// Clears the due date for a card.
+    pub fn clear_due_date(&mut self, card_id: CardId) -> Result<(), DomainError> {
+        mutations::clear_due_date(self, card_id)
+    }
+
+    /// Updates various details of an existing card in a single atomic operation.
+    pub fn update_card_details(
+        &mut self,
+        id: CardId,
+        title: Option<String>,
+        description: Option<Option<String>>,
+        due_date: Option<Option<DueDate>>,
+    ) -> Result<(), DomainError> {
+        mutations::update_card_details(self, id, title, description, due_date)
     }
 
     /// Adds a new note page to a card.
@@ -341,38 +362,6 @@ impl CardRegistry {
         note_page_id: NotePageId,
     ) -> Result<(), DomainError> {
         mutations::delete_note_page(self, card_id, note_page_id)
-    }
-
-    /// Sets the due date for a card.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use kanban_planner::domain::registry::CardRegistry;
-    /// use kanban_planner::domain::due_date::DueDate;
-    ///
-    /// let mut registry = CardRegistry::new();
-    /// let card_id = registry.workspace_card_id().unwrap();
-    /// let due_date = DueDate::parse("2023-12-31").unwrap();
-    /// registry.set_due_date(card_id, due_date).unwrap();
-    /// ```
-    pub fn set_due_date(&mut self, card_id: CardId, due_date: DueDate) -> Result<(), DomainError> {
-        mutations::set_due_date(self, card_id, due_date)
-    }
-
-    /// Clears the due date for a card.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use kanban_planner::domain::registry::CardRegistry;
-    ///
-    /// let mut registry = CardRegistry::new();
-    /// let card_id = registry.workspace_card_id().unwrap();
-    /// registry.clear_due_date(card_id).unwrap();
-    /// ```
-    pub fn clear_due_date(&mut self, card_id: CardId) -> Result<(), DomainError> {
-        mutations::clear_due_date(self, card_id)
     }
 
     /// Reorders the children of a parent card.
@@ -667,7 +656,7 @@ mod tests {
     #[test]
     fn test_validate_rejects_multiple_top_level_cards() {
         let mut registry = CardRegistry::new();
-        let extra_top_level_card = Card::new_root("Extra".into(), None).unwrap();
+        let extra_top_level_card = Card::new("Extra".into(), None, None).unwrap();
         registry
             .store
             .insert(extra_top_level_card.id(), extra_top_level_card);
@@ -683,7 +672,7 @@ mod tests {
     fn test_validate_rejects_orphan_nested_card() {
         let mut registry = CardRegistry::new();
         let workspace_id = registry.workspace_card_id().unwrap();
-        let child = Card::new_child("Orphan".into(), None, workspace_id).unwrap();
+        let child = Card::new("Orphan".into(), None, Some(workspace_id)).unwrap();
         registry.store.insert(child.id(), child);
 
         assert!(matches!(

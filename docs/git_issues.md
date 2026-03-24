@@ -6,19 +6,16 @@
 **Scope:** Continue decomposing the modal system into smaller, feature-specific modules and shared helpers. Reduce the amount of code that changes when a single modal flow is updated.
 
 ## Issue #59: Repetitive Note Page Lookup (DRY)
-**Status:** OPEN
-**Description:** Methods in `src/domain/card.rs` (rename, save body, delete) manually iterate over `self.notes` to find a page by ID.
-**Recommendation:** Implement a private helper method `find_note_page_mut(&mut self, id: NotePageId) -> Result<&mut NotePage, DomainError>`.
+**Status:** CLOSED
+**Resolution:** Implemented `find_note_page_mut` helper in `src/domain/card.rs` and refactored note lifecycle methods to use it.
 
 ## Issue #60: Boilerplate Heavy Command Dispatch
-**Status:** OPEN
-**Description:** The `Command` enum requires maintaining repetitive `descriptor()` match arms and separate `apply_...` functions for every variant.
-**Recommendation:** Refactor `src/application/command.rs` to use a macro or direct matching in `apply` to reduce boilerplate.
+**Status:** CLOSED
+**Resolution:** Consolidated `Command` variants and refactored `application/command.rs` to use match-based dispatch, removing redundant descriptors.
 
 ## Issue #61: O(N^2) Child Reordering Validation
-**Status:** OPEN
-**Description:** `Card::reorder_children` uses `Vec::contains` inside a loop, leading to suboptimal performance as board sizes grow.
-**Recommendation:** Optimize the validation loop in `src/domain/card.rs` using a temporary `HashSet` to achieve O(N) complexity.
+**Status:** CLOSED
+**Resolution:** Optimized reorder validation in `src/domain/card.rs` using a `HashSet` for O(N) complexity.
 
 ## Issue #82: Dragging a card copies all text from all cards
 **Status:** OPEN
@@ -27,5 +24,9 @@
 ## Issue #83: GitHub Deployment Pipeline is Broken
 **Status:** CLOSED
 **Resolution:** Updated GitHub Actions workflow to use `dx build` with explicit output directories and resolved WASM-specific compilation errors in `src/interface/app.rs`. Verified build path consistency between local and CI environments.
+
+## Issue #84: Enhanced Map Navigation and Split-Header Layout
+**Status:** CLOSED
+**Resolution:** Implemented dynamic map zoom/panning constraints, fixed minimap night theme contrast, and introduced a 5vh `ContextBar` for card metadata (title, due date, description) and split action navigation.
 
 

@@ -6,6 +6,7 @@
 pub mod application;
 pub mod domain;
 pub mod infrastructure;
+#[macro_use]
 pub mod interface;
 
 // Binary entry point will use App from the interface layer.

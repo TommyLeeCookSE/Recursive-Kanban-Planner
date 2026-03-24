@@ -28,14 +28,14 @@ use tracing::info;
 /// ```
 #[derive(Debug)]
 pub enum Command {
-    /// Create a new card under the workspace root.
+    /// Create a new card as a direct child of the root workspace.
     CreateWorkspaceChildCard {
         /// The title of the new card.
         title: String,
         /// The optional description of the new card.
         description: Option<String>,
     },
-    /// Create a new card under a specific parent.
+    /// Create a new card as a child of the specified parent.
     CreateChildCard {
         /// The title of the new card.
         title: String,
@@ -43,6 +43,26 @@ pub enum Command {
         description: Option<String>,
         /// The ID of the parent card.
         parent_id: CardId,
+    },
+    /// Create a new card.
+    CreateCard {
+        /// The title of the new card.
+        title: String,
+        /// The optional description of the new card.
+        description: Option<String>,
+        /// The optional ID of the parent card. If None, created in workspace.
+        parent_id: Option<CardId>,
+    },
+    /// Updates various details of an existing card.
+    UpdateCardDetails {
+        /// The ID of the card to update.
+        id: CardId,
+        /// The new title, if changing.
+        title: Option<String>,
+        /// The new description, if changing (Some(None) clears it).
+        description: Option<Option<String>>,
+        /// The new due date, if changing (Some(None) clears it).
+        due_date: Option<Option<DueDate>>,
     },
     /// Rename an existing card.
     RenameCard {
@@ -53,7 +73,7 @@ pub enum Command {
     },
     /// Update the description of an existing card.
     SetCardDescription {
-        /// The ID of the card.
+        /// The ID of the card to update.
         id: CardId,
         /// The new description.
         description: Option<String>,
@@ -65,29 +85,29 @@ pub enum Command {
         /// The title of the note page.
         title: String,
     },
-    /// Rename a note page.
+    /// Rename a note page on a card.
     RenameNotePage {
-        /// The ID of the card containing the note.
+        /// The ID of the card.
         card_id: CardId,
-        /// The ID of the note page to rename.
+        /// The ID of the note page.
         note_page_id: NotePageId,
         /// The new title.
         title: String,
     },
-    /// Update the body content of a note page.
+    /// Save the body content of a note page.
     SaveNotePageBody {
-        /// The ID of the card containing the note.
+        /// The ID of the card.
         card_id: CardId,
         /// The ID of the note page.
         note_page_id: NotePageId,
         /// The new body content.
         body: String,
     },
-    /// Remove a note page from a card.
+    /// Delete a note page from a card.
     DeleteNotePage {
         /// The ID of the card.
         card_id: CardId,
-        /// The ID of the note page to delete.
+        /// The ID of the note page.
         note_page_id: NotePageId,
     },
     /// Set the due date for a card.
@@ -97,7 +117,7 @@ pub enum Command {
         /// The new due date.
         due_date: DueDate,
     },
-    /// Remove the due date from a card.
+    /// Clear the due date for a card.
     ClearDueDate {
         /// The ID of the card.
         card_id: CardId,
@@ -140,6 +160,8 @@ impl Command {
         match self {
             Command::CreateWorkspaceChildCard { .. } => "CreateWorkspaceChildCard",
             Command::CreateChildCard { .. } => "CreateChildCard",
+            Command::CreateCard { .. } => "CreateCard",
+            Command::UpdateCardDetails { .. } => "UpdateCardDetails",
             Command::RenameCard { .. } => "RenameCard",
             Command::SetCardDescription { .. } => "SetCardDescription",
             Command::AddNotePage { .. } => "AddNotePage",
@@ -176,6 +198,21 @@ impl Command {
                 parent_id,
             } => {
                 registry.create_child_card(title, description, parent_id)?;
+            }
+            Command::CreateCard {
+                title,
+                description,
+                parent_id,
+            } => {
+                registry.create_card(title, description, parent_id)?;
+            }
+            Command::UpdateCardDetails {
+                id,
+                title,
+                description,
+                due_date,
+            } => {
+                registry.update_card_details(id, title, description, due_date)?;
             }
             Command::RenameCard { id, title } => {
                 registry.rename_card(id, title)?;

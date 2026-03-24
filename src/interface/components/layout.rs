@@ -38,20 +38,6 @@ pub fn NavbarLayout() -> Element {
     let route = use_route::<Route>();
     let nav = navigator();
 
-    let active_title = match route {
-        Route::Board { card_id } => registry
-            .read()
-            .get_card(card_id)
-            .ok()
-            .map(|c| format!("Current Card: {}", c.title())),
-        _ => registry
-            .read()
-            .workspace_card()
-            .ok()
-            .map(|c| format!("Current Card: {}", c.title())),
-    }
-    .unwrap_or_else(|| "Current Card: My Workspace".to_string());
-
     let theme_title = if is_dark().0 {
         "Switch to Sunrise mode"
     } else {
@@ -59,8 +45,9 @@ pub fn NavbarLayout() -> Element {
     };
 
     rsx! {
-        div { class: "app-root-shell",
-            nav { class: "app-bar app-bar--top",
+        div { class: "app-root-shell flex flex-col h-screen",
+            // Principal Top Bar
+            nav { class: "app-bar app-bar--top sticky top-0 z-50",
                 div { class: "app-bar-left",
                     Link { to: Route::Home {}, class: "app-navbar-brand group",
                         div { class: "app-navbar-brand-mark",
@@ -70,13 +57,9 @@ pub fn NavbarLayout() -> Element {
                     }
                 }
 
-                div { class: "app-bar-center",
-                    div { class: "app-navbar-title-shell",
-                        h1 { class: "app-navbar-title", "{active_title}" }
-                    }
-                }
+                // Title moved to ContextBar below
 
-                div { class: "app-bar-right",
+                div { class: "app-bar-right ml-auto",
                     button {
                         class: "app-bar-button h-10 w-10 flex items-center justify-center rounded-full hover:bg-[var(--app-surface-soft)] transition-colors",
                         onclick: move |_| active_modal.set(Some(ModalType::Search)),
@@ -105,7 +88,69 @@ pub fn NavbarLayout() -> Element {
                 }
             }
 
-            main { class: "app-router-main", Outlet::<Route> {} }
+            // Context Bar (Secondary Bar)
+            ContextBar { route }
+
+            main { class: "app-router-main flex-1 overflow-auto",
+                Outlet::<Route> {}
+            }
+        }
+    }
+}
+
+/// A secondary navigation bar that displays details about the currently active card.
+#[component]
+pub fn ContextBar(route: Route) -> Element {
+    let registry = use_context::<Signal<crate::domain::registry::CardRegistry>>();
+    let signals = registry.read();
+
+    let active_card = match route {
+        Route::Board { card_id } => signals.get_card(card_id).ok(),
+        Route::Map { focus_card_id } => signals.get_card(focus_card_id).ok(),
+        _ => signals.workspace_card().ok(),
+    };
+
+    let (title, description, due_date) = match active_card {
+        Some(card) => (
+            card.title().to_string(),
+            card.description().map(|s| s.to_string()),
+            card.due_date().map(|d| d.to_string()),
+        ),
+        None => ("My Workspace".to_string(), None, None),
+    };
+
+    rsx! {
+        div {
+            class: "sticky top-[var(--app-bar-height)] z-40 bg-[var(--app-surface-soft)] border-b border-[var(--app-border)] backdrop-blur-md px-6 flex items-center gap-6 overflow-hidden",
+            style: "height: var(--app-context-bar-height); min-height: 48px;",
+
+            // Card Title Section
+            div { class: "flex items-center gap-3 min-w-0 flex-initial",
+                h2 { class: "text-[var(--app-text)] font-black text-lg tracking-tight truncate uppercase opacity-90",
+                    "{title}"
+                }
+            }
+
+            // Separator if needed
+            if due_date.is_some() || description.is_some() {
+                div { class: "w-px h-6 bg-[var(--app-border-strong)] opacity-20" }
+            }
+
+            // Due Date
+            if let Some(due) = due_date {
+                div { class: "flex items-center gap-2 text-[var(--app-text-muted)] text-sm whitespace-nowrap",
+                    span { class: "text-sunfire", {crate::interface::components::visuals::render_calendar_icon()} }
+                    span { "{due}" }
+                }
+            }
+
+            // Description - truncate heavily to keep it one-line
+            if let Some(desc) = description {
+                div { class: "flex items-center gap-2 text-[var(--app-text-soft)] text-sm min-w-0 max-w-xl",
+                    span { {crate::interface::components::visuals::render_note_icon()} }
+                    span { class: "truncate italic", "{desc}" }
+                }
+            }
         }
     }
 }
@@ -155,7 +200,7 @@ pub fn BottomBar(back_route: Option<Route>, back_label: String, children: Elemen
     };
 
     rsx! {
-        footer { class: "app-bar app-bar--bottom app-bar--distributed",
+        footer { class: "app-bar app-bar--bottom app-bar--distributed sticky bottom-0 z-50",
             div { class: "app-bar-left contents", {back_button} }
 
             div { class: "app-bar-right contents", {children} }

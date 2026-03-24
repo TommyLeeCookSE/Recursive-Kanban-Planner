@@ -77,7 +77,7 @@ pub fn MapScreen(focus_card_id: CardId) -> Element {
 
     rsx! {
         div {
-            class: "app-map-container absolute inset-0 overflow-hidden bg-[var(--app-surface)]",
+            class: "app-map-container relative w-full h-full overflow-hidden bg-[var(--app-surface)]",
             onmousedown: move |e| {
                 is_dragging.set(true);
                 last_mouse_pos.set(Some((e.client_coordinates().x, e.client_coordinates().y)));
@@ -100,8 +100,50 @@ pub fn MapScreen(focus_card_id: CardId) -> Element {
                         let dy = current_y - last_y;
                         let px = *pan_x.read();
                         let py = *pan_y.read();
-                        pan_x.set(px + dx);
-                        pan_y.set(py + dy);
+                        let current_scale = *scale.read();
+
+                        // Viewport for clamping
+                        let (vw, vh) = {
+                            #[cfg(target_arch = "wasm32")]
+                            {
+                                if let Some(w) = web_sys::window() {
+                                    let width = w.inner_width().ok().and_then(|v| v.as_f64()).unwrap_or(800.0);
+                                    let height = w.inner_height().ok().and_then(|v| v.as_f64()).unwrap_or(600.0);
+                                    (width, height)
+                                } else { (800.0, 600.0) }
+                            }
+                            #[cfg(not(target_arch = "wasm32"))] { (800.0, 600.0) }
+                        };
+
+                        let margin = 100.0;
+                        
+                        // New candidate positions
+                        let next_px = px + dx;
+                        let next_py = py + dy;
+
+                        // Clamping logic:
+                        // Left edge of layout (layout.min_x * scale + pan_x) should not be too far right.
+                        // Right edge of layout (layout.max_x * scale + pan_x) should not be too far left.
+                        // We always want to keep at least 'margin' pixels of layout visible.
+                        let min_pan_x = (vw - margin) - layout.max_x * current_scale;
+                        let max_pan_x = margin - layout.min_x * current_scale;
+                        let min_pan_y = (vh - margin) - layout.max_y * current_scale;
+                        let max_pan_y = margin - layout.min_y * current_scale;
+
+                        let final_px = if min_pan_x <= max_pan_x {
+                            next_px.clamp(min_pan_x, max_pan_x)
+                        } else {
+                            // Layout is smaller than viewport, keep it centered +/- margin
+                            next_px.clamp(max_pan_x, min_pan_x)
+                        };
+                        let final_py = if min_pan_y <= max_pan_y {
+                            next_py.clamp(min_pan_y, max_pan_y)
+                        } else {
+                            next_py.clamp(max_pan_y, min_pan_y)
+                        };
+
+                        pan_x.set(final_px);
+                        pan_y.set(final_py);
                     }
                     last_mouse_pos.set(Some((current_x, current_y)));
                 }
@@ -111,12 +153,6 @@ pub fn MapScreen(focus_card_id: CardId) -> Element {
 
                 let delta_y = match e.data().delta() {
                     dioxus::prelude::dioxus_elements::geometry::WheelDelta::Pixels(v) => v.y,
-
-                    // Zoom towards mouse:
-                    // 1. Calculate mouse position in SVG coordinate space
-
-                    // 2. Adjust pan to keep that SVG point under the mouse with the new scale
-
                     dioxus::prelude::dioxus_elements::geometry::WheelDelta::Lines(v) => {
                         v.y * 20.0
                     }
@@ -124,27 +160,68 @@ pub fn MapScreen(focus_card_id: CardId) -> Element {
                 };
                 let zoom_factor = if delta_y > 0.0 { 0.9 } else { 1.1 };
                 let current_scale = *scale.read();
-                let new_scale = (current_scale * zoom_factor).clamp(0.1, 3.0);
+
+                // Dynamic scale boundaries
+                let (vw, vh) = {
+                    #[cfg(target_arch = "wasm32")]
+                    {
+                        if let Some(w) = web_sys::window() {
+                            let width = w.inner_width().ok().and_then(|v| v.as_f64()).unwrap_or(800.0);
+                            let height = w.inner_height().ok().and_then(|v| v.as_f64()).unwrap_or(600.0);
+                            (width, height)
+                        } else {
+                            (800.0, 600.0)
+                        }
+                    }
+                    #[cfg(not(target_arch = "wasm32"))]
+                    {
+                        (800.0, 600.0)
+                    }
+                };
+
+                let layout_w = (layout.max_x - layout.min_x).max(100.0);
+                let layout_h = (layout.max_y - layout.min_y).max(100.0);
+
+                // Min scale: Fit the entire layout with a bit of padding
+                let min_scale = (vw / (layout_w + 120.0))
+                    .min(vh / (layout_h + 120.0))
+                    .min(1.0);
+
+                // Max scale: Zoom in until a card takes about half the screen width, or 3.0x
+                let max_scale = (vw / 400.0).clamp(1.5, 4.0);
+
+                let new_scale = (current_scale * zoom_factor).clamp(min_scale, max_scale);
+
                 if new_scale != current_scale {
-                    let mut px = *pan_x.read();
-                    let mut py = *pan_y.read();
+                    let px = *pan_x.read();
+                    let py = *pan_y.read();
                     let svg_x = (mouse_x - px) / current_scale;
                     let svg_y = (mouse_y - py) / current_scale;
-                    px = mouse_x - svg_x * new_scale;
-                    py = mouse_y - svg_y * new_scale;
+                    let next_px = mouse_x - svg_x * new_scale;
+                    let next_py = mouse_y - svg_y * new_scale;
+
+                    let margin = 100.0;
+                    let min_pan_x = (vw - margin) - layout.max_x * new_scale;
+                    let max_pan_x = margin - layout.min_x * new_scale;
+                    let min_pan_y = (vh - margin) - layout.max_y * new_scale;
+                    let max_pan_y = margin - layout.min_y * new_scale;
+
+                    let final_px = if min_pan_x <= max_pan_x {
+                        next_px.clamp(min_pan_x, max_pan_x)
+                    } else {
+                        next_px.clamp(max_pan_x, min_pan_x)
+                    };
+                    let final_py = if min_pan_y <= max_pan_y {
+                        next_py.clamp(min_pan_y, max_pan_y)
+                    } else {
+                        next_py.clamp(max_pan_y, min_pan_y)
+                    };
+
                     scale.set(new_scale);
-                    pan_x.set(px);
-                    pan_y.set(py);
+                    pan_x.set(final_px);
+                    pan_y.set(final_py);
                 }
             },
-
-            button {
-                class: "app-button-ghost-compact absolute top-4 left-4 z-10 bg-[var(--app-surface-strong)] shadow-md",
-                onclick: move |_| {
-                    navigator().go_back();
-                },
-                "Close Map"
-            }
 
             svg { class: "w-full h-full cursor-grab active:cursor-grabbing",
 
@@ -197,7 +274,7 @@ pub fn MapScreen(focus_card_id: CardId) -> Element {
                                         x: "{node_width / 2.0}",
                                         y: "{node_height / 2.0 + 5.0}",
                                         text_anchor: "middle",
-                                        fill: "var(--app-text-primary)",
+                                        fill: "var(--app-text)",
                                         font_size: "14px",
                                         font_weight: "bold",
                                         class: "pointer-events-none select-none",

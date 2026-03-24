@@ -10,6 +10,7 @@ pub mod card_item;
 pub mod layout;
 pub mod map;
 pub mod modal;
+#[macro_use]
 pub mod shared_forms;
 pub mod visuals;
 pub mod web_utilities;

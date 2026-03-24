@@ -191,14 +191,11 @@ pub fn build_create_card_command(
     description: Option<String>,
     parent_id: Option<CardId>,
 ) -> Result<Command, DomainError> {
-    match parent_id {
-        Some(parent_id) => Ok(Command::CreateChildCard {
-            title,
-            description,
-            parent_id,
-        }),
-        None => Ok(Command::CreateWorkspaceChildCard { title, description }),
-    }
+    Ok(Command::CreateCard {
+        title,
+        description,
+        parent_id,
+    })
 }
 
 /// Provides a formatted string for a `DueDate`, or an empty string if it's `None`.

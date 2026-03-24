@@ -53,7 +53,7 @@ pub(super) fn create_child_card(
 ) -> Result<CardId, DomainError> {
     registry.get_card(parent_id)?;
 
-    let child = Card::new_child(title, description, parent_id)?;
+    let child = Card::new(title, description, Some(parent_id))?;
     let child_id = child.id();
 
     registry.get_card_mut(parent_id)?.add_child(child_id);
@@ -61,166 +61,37 @@ pub(super) fn create_child_card(
     Ok(child_id)
 }
 
-/// Renames an existing card in the registry.
-///
-/// # Examples
-///
-/// ```ignore
-/// use kanban_planner::domain::registry::CardRegistry;
-/// use kanban_planner::domain::registry::mutations::rename_card;
-///
-/// let mut registry = CardRegistry::new();
-/// let id = registry.workspace_card_id().unwrap();
-/// rename_card(&mut registry, id, "New Title".into()).unwrap();
-/// ```
-pub(super) fn rename_card(
+/// Creates a new card, either in the workspace or as a child.
+pub(super) fn create_card(
     registry: &mut CardRegistry,
-    id: CardId,
     title: String,
-) -> Result<(), DomainError> {
-    registry.get_card_mut(id)?.rename(title)
-}
-
-/// Updates the description of an existing card in the registry.
-pub(super) fn set_card_description(
-    registry: &mut CardRegistry,
-    id: CardId,
     description: Option<String>,
-) -> Result<(), DomainError> {
-    registry.get_card_mut(id)?.set_description(description)
+    parent_id: Option<CardId>,
+) -> Result<CardId, DomainError> {
+    match parent_id {
+        Some(pid) => create_child_card(registry, title, description, pid),
+        None => create_workspace_child_card(registry, title, description),
+    }
 }
 
-/// Adds a new note page to a card.
-///
-/// # Examples
-///
-/// ```ignore
-/// use kanban_planner::domain::registry::CardRegistry;
-/// use kanban_planner::domain::registry::mutations::add_note_page;
-///
-/// let mut registry = CardRegistry::new();
-/// let id = registry.workspace_card_id().unwrap();
-/// let note_id = add_note_page(&mut registry, id, "Notes".into()).unwrap();
-/// ```
-pub(super) fn add_note_page(
+/// Updates various details of an existing card in a single atomic operation.
+pub(super) fn update_card_details(
     registry: &mut CardRegistry,
-    card_id: CardId,
-    title: String,
-) -> Result<NotePageId, DomainError> {
-    registry.get_card_mut(card_id)?.add_note_page(title)
-}
-
-/// Renames a note page on a card.
-///
-/// # Examples
-///
-/// ```ignore
-/// use kanban_planner::domain::registry::CardRegistry;
-/// use kanban_planner::domain::registry::mutations::{add_note_page, rename_note_page};
-///
-/// let mut registry = CardRegistry::new();
-/// let id = registry.workspace_card_id().unwrap();
-/// let note_id = add_note_page(&mut registry, id, "Notes".into()).unwrap();
-/// rename_note_page(&mut registry, id, note_id, "New Notes".into()).unwrap();
-/// ```
-pub(super) fn rename_note_page(
-    registry: &mut CardRegistry,
-    card_id: CardId,
-    note_page_id: NotePageId,
-    title: String,
+    id: CardId,
+    title: Option<String>,
+    description: Option<Option<String>>,
+    due_date: Option<Option<DueDate>>,
 ) -> Result<(), DomainError> {
-    registry
-        .get_card_mut(card_id)?
-        .rename_note_page(note_page_id, title)
-}
-
-/// Saves the body content of a note page.
-///
-/// # Examples
-///
-/// ```ignore
-/// use kanban_planner::domain::registry::CardRegistry;
-/// use kanban_planner::domain::registry::mutations::{add_note_page, save_note_page_body};
-///
-/// let mut registry = CardRegistry::new();
-/// let id = registry.workspace_card_id().unwrap();
-/// let note_id = add_note_page(&mut registry, id, "Notes".into()).unwrap();
-/// save_note_page_body(&mut registry, id, note_id, "Body content".into()).unwrap();
-/// ```
-pub(super) fn save_note_page_body(
-    registry: &mut CardRegistry,
-    card_id: CardId,
-    note_page_id: NotePageId,
-    body: String,
-) -> Result<(), DomainError> {
-    registry
-        .get_card_mut(card_id)?
-        .save_note_page_body(note_page_id, body)
-}
-
-/// Deletes a note page from a card.
-///
-/// # Examples
-///
-/// ```ignore
-/// use kanban_planner::domain::registry::CardRegistry;
-/// use kanban_planner::domain::registry::mutations::{add_note_page, delete_note_page};
-///
-/// let mut registry = CardRegistry::new();
-/// let id = registry.workspace_card_id().unwrap();
-/// let note_id = add_note_page(&mut registry, id, "Notes".into()).unwrap();
-/// delete_note_page(&mut registry, id, note_id).unwrap();
-/// ```
-pub(super) fn delete_note_page(
-    registry: &mut CardRegistry,
-    card_id: CardId,
-    note_page_id: NotePageId,
-) -> Result<(), DomainError> {
-    registry
-        .get_card_mut(card_id)?
-        .delete_note_page(note_page_id)
-}
-
-/// Sets the due date for a card.
-///
-/// # Examples
-///
-/// ```ignore
-/// use kanban_planner::domain::registry::CardRegistry;
-/// use kanban_planner::domain::registry::mutations::set_due_date;
-/// use kanban_planner::domain::due_date::DueDate;
-///
-/// let mut registry = CardRegistry::new();
-/// let id = registry.workspace_card_id().unwrap();
-/// let due = DueDate::parse("2025-01-01").unwrap();
-/// set_due_date(&mut registry, id, due).unwrap();
-/// ```
-pub(super) fn set_due_date(
-    registry: &mut CardRegistry,
-    card_id: CardId,
-    due_date: DueDate,
-) -> Result<(), DomainError> {
-    registry.get_card_mut(card_id)?.set_due_date(Some(due_date));
-    Ok(())
-}
-
-/// Clears the due date for a card.
-///
-/// # Examples
-///
-/// ```ignore
-/// use kanban_planner::domain::registry::CardRegistry;
-/// use kanban_planner::domain::registry::mutations::clear_due_date;
-///
-/// let mut registry = CardRegistry::new();
-/// let id = registry.workspace_card_id().unwrap();
-/// clear_due_date(&mut registry, id).unwrap();
-/// ```
-pub(super) fn clear_due_date(
-    registry: &mut CardRegistry,
-    card_id: CardId,
-) -> Result<(), DomainError> {
-    registry.get_card_mut(card_id)?.set_due_date(None);
+    let card = registry.get_card_mut(id)?;
+    if let Some(title) = title {
+        card.rename(title)?;
+    }
+    if let Some(description) = description {
+        card.set_description(description)?;
+    }
+    if let Some(due) = due_date {
+        card.set_due_date(due);
+    }
     Ok(())
 }
 
@@ -282,6 +153,87 @@ pub(super) fn drop_child_at_position(
     reordered_children.insert(insertion_index, card_id);
 
     reorder_children(registry, parent_id, reordered_children)
+}
+
+/// Renames an existing card.
+pub(super) fn rename_card(
+    registry: &mut CardRegistry,
+    id: CardId,
+    title: String,
+) -> Result<(), DomainError> {
+    registry.get_card_mut(id)?.rename(title)
+}
+
+/// Updates the description of an existing card.
+pub(super) fn set_card_description(
+    registry: &mut CardRegistry,
+    id: CardId,
+    description: Option<String>,
+) -> Result<(), DomainError> {
+    registry.get_card_mut(id)?.set_description(description)
+}
+
+/// Adds a new note page to a card.
+pub(super) fn add_note_page(
+    registry: &mut CardRegistry,
+    card_id: CardId,
+    title: String,
+) -> Result<NotePageId, DomainError> {
+    registry.get_card_mut(card_id)?.add_note_page(title)
+}
+
+/// Renames a note page on a card.
+pub(super) fn rename_note_page(
+    registry: &mut CardRegistry,
+    card_id: CardId,
+    note_page_id: NotePageId,
+    title: String,
+) -> Result<(), DomainError> {
+    registry
+        .get_card_mut(card_id)?
+        .rename_note_page(note_page_id, title)
+}
+
+/// Saves the body content of a note page.
+pub(super) fn save_note_page_body(
+    registry: &mut CardRegistry,
+    card_id: CardId,
+    note_page_id: NotePageId,
+    body: String,
+) -> Result<(), DomainError> {
+    registry
+        .get_card_mut(card_id)?
+        .save_note_page_body(note_page_id, body)
+}
+
+/// Deletes a note page from a card.
+pub(super) fn delete_note_page(
+    registry: &mut CardRegistry,
+    card_id: CardId,
+    note_page_id: NotePageId,
+) -> Result<(), DomainError> {
+    registry
+        .get_card_mut(card_id)?
+        .delete_note_page(note_page_id)
+}
+
+/// Sets the due date for a card.
+pub(super) fn set_due_date(
+    registry: &mut CardRegistry,
+    card_id: CardId,
+    due_date: DueDate,
+) -> Result<(), DomainError> {
+    registry.get_card_mut(card_id)?.set_due_date(Some(due_date));
+    Ok(())
+}
+
+/// Clears the due date for a card.
+pub(super) fn clear_due_date(
+    registry: &mut CardRegistry,
+    card_id: CardId,
+) -> Result<(), DomainError> {
+    registry.get_card_mut(card_id)?.set_due_date(None);
+    Ok(())
 }
 
 /// Changes the parent of a card.

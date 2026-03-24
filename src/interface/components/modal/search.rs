@@ -16,11 +16,19 @@ pub fn SearchModal(on_close: EventHandler<()>, registry: Signal<CardRegistry>) -
         }
 
         let reg = registry.read();
-        let mut matches = Vec::new();
+        let mut matches: Vec<(crate::domain::id::CardId, String, String)> = Vec::new();
 
         for card in reg.all_cards() {
             if card.title().to_lowercase().contains(&q) {
-                matches.push((card.id(), card.title().to_string(), "Board"));
+                let parent_name = match card.parent_id() {
+                    Some(parent_id) => reg
+                        .get_card(parent_id)
+                        .ok()
+                        .map(|p| p.title().to_string())
+                        .unwrap_or_else(|| "Workspace".to_string()),
+                    None => "Workspace".to_string(),
+                };
+                matches.push((card.id(), card.title().to_string(), parent_name));
             }
 
             for note in card.notes() {
@@ -30,7 +38,7 @@ pub fn SearchModal(on_close: EventHandler<()>, registry: Signal<CardRegistry>) -
                     matches.push((
                         card.id(),
                         format!("{} (Note: {})", card.title(), note.title()),
-                        "Notes",
+                        "Notes".to_string(),
                     ));
                 }
             }

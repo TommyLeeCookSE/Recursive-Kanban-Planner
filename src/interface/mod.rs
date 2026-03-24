@@ -8,6 +8,7 @@
 
 pub mod actions;
 pub mod app;
+#[macro_use]
 pub mod components;
 pub mod error_templates;
 pub mod routes;

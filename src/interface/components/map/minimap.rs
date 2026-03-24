@@ -40,7 +40,7 @@ pub fn Minimap(current_card_id: CardId) -> Element {
 
     rsx! {
         div {
-            class: "app-minimap-strip w-full h-[12vh] min-h-[80px] bg-[var(--app-surface-soft)] border-b border-[var(--app-border-strong)] overflow-hidden cursor-pointer hover:bg-[var(--app-surface-strong)] transition-all duration-300 z-10 group relative",
+            class: "app-minimap-strip w-full h-[12vh] min-h-[80px] bg-[var(--app-surface-soft)] border-b border-[var(--app-border-strong)] overflow-hidden cursor-pointer hover:bg-[var(--app-surface-strong)] transition-all duration-300 z-10 group relative shadow-[inset_0_2px_12px_rgba(0,0,0,0.1)]",
             onclick: move |_| {
                 navigator()
                     .push(Route::Map {
@@ -49,12 +49,22 @@ pub fn Minimap(current_card_id: CardId) -> Element {
             },
 
             // Label
-            div { class: "absolute top-2 left-4 text-[10px] uppercase tracking-widest text-[var(--app-text-soft)] font-bold pointer-events-none opacity-60 group-hover:opacity-100 flex items-center gap-2",
-                span { "Navigation Map" }
-                span { class: "text-[8px] bg-[var(--app-border)] px-1.5 py-0.5 rounded text-[var(--app-text-primary)]",
-                    "Click to expand"
+            div { class: "absolute top-3 left-6 z-20 flex items-center gap-3 pointer-events-none transition-all duration-300",
+                div { class: "p-1.5 bg-sunfire/10 rounded-lg text-sunfire group-hover:scale-110 group-hover:bg-sunfire/20 transition-all",
+                    {crate::interface::components::visuals::render_map_icon()}
+                }
+                div { class: "flex flex-col gap-0.5",
+                    span { class: "text-[10px] uppercase tracking-[0.2em] text-[var(--app-text)] font-black opacity-80 group-hover:opacity-100 transition-opacity",
+                        "Workspace Map"
+                    }
+                    span { class: "text-[8px] text-[var(--app-text-soft)] font-bold opacity-60 group-hover:opacity-90",
+                        "Interactive navigation • Click to expand"
+                    }
                 }
             }
+
+            // Decorative background glow
+            div { class: "absolute inset-0 bg-gradient-to-r from-[var(--app-surface-soft)] via-transparent to-[var(--app-surface-soft)] pointer-events-none opacity-40" }
 
             svg {
                 class: "w-full h-full",
@@ -121,7 +131,7 @@ pub fn Minimap(current_card_id: CardId) -> Element {
                                 x: "{node.x}",
                                 y: "{node.y + 28.0}",
                                 text_anchor: "middle",
-                                fill: if node.is_center { "var(--app-text-primary)" } else { "var(--app-text-soft)" },
+                                fill: if node.is_center { "var(--app-text)" } else { "var(--app-text-soft)" },
                                 font_size: "14px",
                                 font_weight: if node.is_center { "bold" } else { "normal" },
                                 class: "pointer-events-none select-none",

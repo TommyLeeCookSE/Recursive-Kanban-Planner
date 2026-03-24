@@ -256,3 +256,20 @@ define_icon! {
     circle { cx: "11", cy: "11", r: "8" }
     path { d: "m21 21-4.35-4.35" }
 }
+
+define_icon! {
+    /// Renders a calendar icon for due dates.
+    render_calendar_icon, "0 0 24 24", "1.8",
+    rect { x: "3", y: "4", width: "18", height: "18", rx: "2", ry: "2" }
+    path { d: "M16 2v2" }
+    path { d: "M8 2v2" }
+    path { d: "M3 10h18" }
+}
+
+define_icon! {
+    /// Renders a map icon for navigation context.
+    render_map_icon, "0 0 24 24", "1.8",
+    path { d: "M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3V6z" }
+    path { d: "M9 3v15" }
+    path { d: "M15 6v15" }
+}
