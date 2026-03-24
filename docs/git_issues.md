@@ -16,6 +16,10 @@
 **Status:** CLOSED
 **Resolution:** Optimized reorder validation in `src/domain/card.rs` using a `HashSet` for O(N) complexity.
 
+## Issue #70: Unified Action Bar & Context-Aware Navigation
+**Status:** CLOSED
+**Resolution:** Implemented a persistent 5vh Context Bar for "frozen" card metadata and unified the header/footer action systems into a single responsive `.app-bar` architecture.
+
 ## Issue #82: Dragging a card copies all text from all cards
 **Status:** CLOSED
 **Resolution:** Implemented a global `.app-is-dragging` class on the root shell that applies `user-select: none !important` to all elements during drag operations. Added `select-none` to `CardItem` for local selection prevention.
