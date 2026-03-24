@@ -93,7 +93,7 @@ This app can be hosted as a static GitHub Pages site using a custom GitHub Actio
 What makes that work:
 
 - The GitHub Pages workflow builds with `--base-path Recursive-Kanban-Planner` so the deployed app loads correctly from the repository subpath.
-- The workflow builds the web bundle, then uploads the generated `public/` directory from Dioxus as the Pages site root.
+- The workflow builds the web bundle, then uploads the generated `target/dx/kanban_planner/release/web/public/` directory as the Pages site root.
 - A copied `404.html` and optional `CNAME` file live inside that `public/` directory so the Dioxus router and custom domains keep working.
 
 To publish it:

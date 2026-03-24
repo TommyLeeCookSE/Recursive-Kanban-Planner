@@ -67,12 +67,12 @@ jobs:
           tool: dioxus-cli
 
       - name: Build web bundle
-        run: dx build --release --platform web --base-path Recursive-Kanban-Planner --out-dir dist/pages
+        run: dx build --release --platform web --base-path Recursive-Kanban-Planner
 
       - name: Prepare GitHub Pages site root
         run: |
-          cp dist/pages/index.html dist/pages/404.html
-          if [ -f CNAME ]; then cp CNAME dist/pages/CNAME; fi
+          cp target/dx/kanban_planner/release/web/public/index.html target/dx/kanban_planner/release/web/public/404.html
+          if [ -f CNAME ]; then cp CNAME target/dx/kanban_planner/release/web/public/CNAME; fi
 
       - name: Setup GitHub Pages
         uses: actions/configure-pages@v5
@@ -80,7 +80,7 @@ jobs:
       - name: Upload GitHub Pages artifact
         uses: actions/upload-pages-artifact@v4
         with:
-          path: dist/pages
+          path: target/dx/kanban_planner/release/web/public
 
   deploy:
     environment:
