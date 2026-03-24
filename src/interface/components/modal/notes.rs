@@ -1,4 +1,4 @@
-use crate::application::{Command, execute};
+use crate::application::Command;
 use crate::domain::id::CardId;
 use crate::domain::registry::CardRegistry;
 use crate::domain::title::MAX_TITLE_LENGTH;
@@ -37,7 +37,7 @@ pub fn NotesModal(
             .unwrap_or_default()
     });
     let mut new_page_title = use_signal(|| "New Page".to_string());
-    let mut error_message = use_signal(|| None::<String>);
+    let error_message = use_signal(|| None::<String>);
 
     let current_notes = {
         let reg = registry.read();

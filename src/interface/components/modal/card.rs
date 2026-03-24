@@ -4,8 +4,9 @@ use crate::domain::id::CardId;
 use crate::domain::registry::CardRegistry;
 use crate::domain::title::MAX_TITLE_LENGTH;
 use crate::interface::components::modal::Modal;
+use crate::form_row;
 use crate::interface::components::shared_forms::{
-    form_row, inline_error, modal_dispatch_command,
+    inline_error, modal_dispatch_command,
 };
 use dioxus::prelude::*;
 
@@ -17,7 +18,7 @@ pub fn CardModal(
 ) -> Element {
     let mut input_title = use_signal(String::new);
     let mut input_description = use_signal(String::new);
-    let mut error_message = use_signal(|| None::<String>);
+    let error_message = use_signal(|| None::<String>);
 
     rsx! {
         Modal {
@@ -113,7 +114,7 @@ pub fn EditCardModal(
         let idd = initial_due_date.clone();
         move || idd.clone()
     });
-    let mut error_message = use_signal(|| None::<String>);
+    let error_message = use_signal(|| None::<String>);
 
     rsx! {
         Modal { on_close: move |_| on_close.call(()), title: "Edit Card",

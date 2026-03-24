@@ -8,7 +8,6 @@
 use crate::application::Command;
 use crate::domain::due_date::DueDate;
 use crate::domain::error::DomainError;
-use crate::domain::id::CardId;
 use dioxus::prelude::*;
 
 /// A macro for generating a standard form row with a label, input, and optional error.
@@ -37,7 +36,7 @@ macro_rules! form_row {
         rsx! {
             div { class: "app-form-row",
                 label { r#for: $id, class: "app-form-label", $label }
-                $input
+                {$input}
                 $(
                     if let Some(msg) = $error {
                         p { class: "app-inline-error app-inline-error--danger", "{msg}" }
