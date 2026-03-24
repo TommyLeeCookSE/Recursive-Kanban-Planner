@@ -148,7 +148,11 @@ pub fn App() -> Element {
         } else {
             "app-shell theme-light"
         },
-        if is_dragging().0 { "app-is-dragging" } else { "" }
+        if is_dragging().0 {
+            "app-is-dragging"
+        } else {
+            ""
+        }
     );
 
     // Debounced persistence: wait 1000ms after the last registry change before saving.

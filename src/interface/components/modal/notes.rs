@@ -3,9 +3,7 @@ use crate::domain::id::CardId;
 use crate::domain::registry::CardRegistry;
 use crate::domain::title::MAX_TITLE_LENGTH;
 use crate::interface::components::modal::Modal;
-use crate::interface::components::shared_forms::{
-    inline_error, modal_dispatch_command,
-};
+use crate::interface::components::shared_forms::{inline_error, modal_dispatch_command};
 use dioxus::prelude::*;
 
 #[component]
