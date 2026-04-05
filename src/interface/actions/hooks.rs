@@ -23,7 +23,11 @@ use dioxus::prelude::*;
 ///
 /// ```ignore
 /// let execute_cmd = use_execute_command();
-/// execute_cmd(Command::CreateWorkspaceChildCard { title: "New Board".into() });
+/// execute_cmd(Command::CreateCard {
+///     title: "New Board".into(),
+///     description: None,
+///     parent_id: None,
+/// });
 /// ```
 pub fn use_execute_command() -> impl FnMut(Command) {
     let signals = use_board_signals();

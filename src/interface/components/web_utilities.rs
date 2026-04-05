@@ -13,6 +13,7 @@ use crate::infrastructure::repository::{AppPersistence, JsonRepository};
 #[cfg(target_arch = "wasm32")]
 use crate::interface::Route;
 use crate::interface::components::modal::ModalType;
+use crate::interface::components::visuals::BarButton;
 #[cfg(target_arch = "wasm32")]
 use crate::interface::components::visuals::{
     render_export_icon, render_import_icon, render_trash_icon,
@@ -36,17 +37,11 @@ pub fn render_download_logs_button(persistence_warning: Signal<Option<String>>) 
     {
         let mut persistence_warning = persistence_warning;
         return rsx! {
-            button {
-                class: "app-bar-button",
-                title: "Download current session logs as a text file",
-                "aria-label": "Download Logs",
-                onclick: move |_| {
-                    match download_logs() {
-                        Ok(()) => persistence_warning.set(None),
-                        Err(error) => persistence_warning.set(Some(error.to_string())),
-                    }
-                },
-                span { class: "app-bar-button-icon",
+            BarButton {
+                label: "Logs".to_string(),
+                title: Some("Download current session logs as a text file".to_string()),
+                aria_label: Some("Download Logs".to_string()),
+                icon: Some(rsx! {
                     svg {
                         fill: "none",
                         view_box: "0 0 24 24",
@@ -60,8 +55,13 @@ pub fn render_download_logs_button(persistence_warning: Signal<Option<String>>) 
                             d: "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z",
                         }
                     }
-                }
-                span { class: "app-bar-button-label", "Logs" }
+                }),
+                on_click: move |_| {
+                    match download_logs() {
+                        Ok(()) => persistence_warning.set(None),
+                        Err(error) => persistence_warning.set(Some(error.to_string())),
+                    }
+                },
             }
         };
     }
@@ -92,19 +92,18 @@ pub fn render_export_button(
     {
         let mut persistence_warning = persistence_warning;
         return rsx! {
-            button {
-                class: "app-bar-button",
-                title: "Download a JSON backup of your workspace",
-                "aria-label": "Export",
-                onclick: move |_| {
+            BarButton {
+                label: "Export".to_string(),
+                title: Some("Download a JSON backup of your workspace".to_string()),
+                aria_label: Some("Export".to_string()),
+                icon: Some(render_export_icon()),
+                on_click: move |_| {
                     let snapshot = registry.read().clone();
                     match export_registry_snapshot(&snapshot) {
                         Ok(()) => persistence_warning.set(None),
                         Err(error) => persistence_warning.set(Some(error.to_string())),
                     }
                 },
-                span { class: "app-bar-button-icon", {render_export_icon()} }
-                span { class: "app-bar-button-label", "Export" }
             }
         };
     }
@@ -137,15 +136,14 @@ pub fn render_import_button(
     #[cfg(target_arch = "wasm32")]
     {
         return rsx! {
-            button {
-                class: "app-bar-button",
-                title: "Replace your workspace with a validated JSON import",
-                "aria-label": "Import",
-                onclick: move |_| {
+            BarButton {
+                label: "Import".to_string(),
+                title: Some("Replace your workspace with a validated JSON import".to_string()),
+                aria_label: Some("Import".to_string()),
+                icon: Some(render_import_icon()),
+                on_click: move |_| {
                     begin_import_flow(registry, active_modal, persistence_warning, nav.clone());
                 },
-                span { class: "app-bar-button-icon", {render_import_icon()} }
-                span { class: "app-bar-button-label", "Import" }
             }
         };
     }
@@ -183,11 +181,13 @@ pub fn render_clear_cache_button(
         let mut active_modal = active_modal;
         let mut persistence_warning = persistence_warning;
         return rsx! {
-            button {
-                class: "app-bar-button app-bar-button--danger",
-                title: "Clear saved data and reset the workspace",
-                "aria-label": "Clear Cache",
-                onclick: move |_| {
+            BarButton {
+                label: "Clear Cache".to_string(),
+                title: Some("Clear saved data and reset the workspace".to_string()),
+                aria_label: Some("Clear Cache".to_string()),
+                class_name: Some("app-bar-button--danger".to_string()),
+                icon: Some(render_trash_icon()),
+                on_click: move |_| {
                     match clear_workspace_with_confirmation() {
                         Ok(true) => {
                             registry.set(CardRegistry::new());
@@ -199,8 +199,6 @@ pub fn render_clear_cache_button(
                         Err(error) => persistence_warning.set(Some(error.to_string())),
                     }
                 },
-                span { class: "app-bar-button-icon", {render_trash_icon()} }
-                span { class: "app-bar-button-label", "Clear Cache" }
             }
         };
     }
@@ -218,14 +216,16 @@ pub fn render_clear_cache_button(
 #[cfg(not(target_arch = "wasm32"))]
 fn disabled_utility_button(label: &str, title: &str) -> Element {
     rsx! {
-        button {
-            class: "app-bar-button",
-            disabled: true,
-            title: "{title}",
-            "aria-label": "{label}",
-            span { class: "app-bar-button-label", "{label}" }
+        div { class: "flex items-center gap-2",
+            BarButton {
+                label: label.to_string(),
+                title: Some(title.to_string()),
+                aria_label: Some(label.to_string()),
+                disabled: true,
+                on_click: move |_| {},
+            }
+            span { class: "app-kicker", "Soon" }
         }
-        span { class: "app-kicker", "Soon" }
     }
 }
 

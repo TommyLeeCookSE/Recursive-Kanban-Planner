@@ -369,8 +369,7 @@ fn unix_timestamp_secs() -> u64 {
     }
     #[cfg(target_arch = "wasm32")]
     {
-        // SystemTime is unavailable on wasm32; returning 0 as a placeholder.
-        0
+        (js_sys::Date::now() / 1000.0) as u64
     }
 }
 

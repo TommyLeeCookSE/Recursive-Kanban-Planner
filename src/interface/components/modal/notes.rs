@@ -2,7 +2,7 @@ use crate::application::Command;
 use crate::domain::id::CardId;
 use crate::domain::registry::CardRegistry;
 use crate::domain::title::MAX_TITLE_LENGTH;
-use crate::interface::components::modal::Modal;
+use crate::interface::components::modal::{Modal, ModalActions};
 use crate::interface::components::shared_forms::{inline_error, modal_dispatch_command};
 use dioxus::prelude::*;
 
@@ -121,7 +121,8 @@ pub fn NotesModal(
                             value: "{body_input}",
                             oninput: move |e| body_input.set(e.value()),
                         }
-                        div { class: "app-notes-toolbar",
+                        ModalActions {
+                            class_name: Some("app-notes-toolbar".to_string()),
                             button {
                                 class: "app-button-secondary-compact",
                                 title: "Save this note page",

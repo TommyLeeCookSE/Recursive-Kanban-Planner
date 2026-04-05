@@ -8,7 +8,7 @@
 
 use crate::interface::actions::interop::confirm_destructive_action;
 use crate::interface::components::visuals::{
-    render_drag_handle_icon, render_edit_icon, render_trash_icon,
+    BarButton, render_drag_handle_icon, render_edit_icon, render_trash_icon,
 };
 use dioxus::prelude::*;
 
@@ -107,27 +107,33 @@ pub fn CardItem(
                 div { class: "app-card-actions",
                     div { class: "app-card-actions-inner",
                         if let Some(delete_handler) = on_delete {
-                            button {
-                                class: "app-bar-button app-bar-button--danger app-bar-button--sm",
-                                title: "Delete this card",
+                            BarButton {
+                                label: "Delete".to_string(),
+                                title: Some("Delete this card".to_string()),
+                                aria_label: Some("Delete this card".to_string()),
+                                show_label: false,
+                                class_name: Some("app-bar-button--danger app-bar-button--sm".to_string()),
                                 draggable: false,
-                                onclick: move |_| {
+                                icon: Some(render_trash_icon()),
+                                on_click: move |_| {
                                     if confirm_destructive_action(
                                         &format!("Delete the card '{delete_title}' and all of its descendants?"),
                                     ) {
                                         delete_handler.call(());
                                     }
                                 },
-                                span { class: "app-bar-button-icon", {render_trash_icon()} }
                             }
                         }
                         if let Some(rename_handler) = on_rename {
-                            button {
-                                class: "app-bar-button app-bar-button--sm",
-                                title: "Edit this card",
+                            BarButton {
+                                label: "Edit".to_string(),
+                                title: Some("Edit this card".to_string()),
+                                aria_label: Some("Edit this card".to_string()),
+                                show_label: false,
+                                class_name: Some("app-bar-button--sm".to_string()),
                                 draggable: false,
-                                onclick: move |_| rename_handler.call(()),
-                                span { class: "app-bar-button-icon", {render_edit_icon()} }
+                                icon: Some(render_edit_icon()),
+                                on_click: move |_| rename_handler.call(()),
                             }
                         }
                     }

@@ -144,7 +144,7 @@ impl CardRegistry {
     ///
     /// let mut registry = CardRegistry::new();
     /// let workspace_id = registry.workspace_card_id().unwrap();
-    /// registry.create_child_card("Child".to_string(), None, workspace_id).unwrap();
+    /// registry.create_card("Child".to_string(), None, Some(workspace_id)).unwrap();
     ///
     /// let children = registry.get_children(workspace_id).unwrap();
     /// assert_eq!(children.len(), 1);
@@ -200,45 +200,16 @@ impl CardRegistry {
         validation::validate_registry(self)
     }
 
-    /// Creates a new card as a direct child of the root workspace.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use kanban_planner::domain::registry::CardRegistry;
-    ///
-    /// let mut registry = CardRegistry::new();
-    /// let id = registry.create_workspace_child_card("Project".to_string(), None).unwrap();
-    /// ```
-    pub fn create_workspace_child_card(
-        &mut self,
-        title: String,
-        description: Option<String>,
-    ) -> Result<CardId, DomainError> {
-        mutations::create_workspace_child_card(self, title, description)
-    }
-
-    /// Creates a new card as a child of the specified parent.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use kanban_planner::domain::registry::CardRegistry;
-    ///
-    /// let mut registry = CardRegistry::new();
-    /// let workspace_id = registry.workspace_card_id().unwrap();
-    /// let id = registry.create_child_card("Project".to_string(), None, workspace_id).unwrap();
-    /// ```
-    pub fn create_child_card(
-        &mut self,
-        title: String,
-        description: Option<String>,
-        parent_id: CardId,
-    ) -> Result<CardId, DomainError> {
-        mutations::create_child_card(self, title, description, parent_id)
-    }
-
     /// Creates a new card, either in the workspace or as a child.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use kanban_planner::domain::registry::CardRegistry;
+    ///
+    /// let mut registry = CardRegistry::new();
+    /// let id = registry.create_card("Project".to_string(), None, None).unwrap();
+    /// ```
     pub fn create_card(
         &mut self,
         title: String,
@@ -373,8 +344,8 @@ impl CardRegistry {
     ///
     /// let mut registry = CardRegistry::new();
     /// let workspace_id = registry.workspace_card_id().unwrap();
-    /// let c1 = registry.create_child_card("C1".to_string(), None, workspace_id).unwrap();
-    /// let c2 = registry.create_child_card("C2".to_string(), None, workspace_id).unwrap();
+    /// let c1 = registry.create_card("C1".to_string(), None, Some(workspace_id)).unwrap();
+    /// let c2 = registry.create_card("C2".to_string(), None, Some(workspace_id)).unwrap();
     /// registry.reorder_children(workspace_id, vec![c2, c1]).unwrap();
     /// ```
     pub fn reorder_children(
@@ -394,8 +365,8 @@ impl CardRegistry {
     ///
     /// let mut registry = CardRegistry::new();
     /// let workspace_id = registry.workspace_card_id().unwrap();
-    /// let c1 = registry.create_child_card("C1".to_string(), None, workspace_id).unwrap();
-    /// let c2 = registry.create_child_card("C2".to_string(), None, workspace_id).unwrap();
+    /// let c1 = registry.create_card("C1".to_string(), None, Some(workspace_id)).unwrap();
+    /// let c2 = registry.create_card("C2".to_string(), None, Some(workspace_id)).unwrap();
     /// registry.drop_child_at_position(workspace_id, c2, 0).unwrap();
     /// ```
     pub fn drop_child_at_position(
@@ -416,8 +387,8 @@ impl CardRegistry {
     ///
     /// let mut registry = CardRegistry::new();
     /// let workspace_id = registry.workspace_card_id().unwrap();
-    /// let p1 = registry.create_child_card("P1".to_string(), None, workspace_id).unwrap();
-    /// let c1 = registry.create_child_card("C1".to_string(), None, workspace_id).unwrap();
+    /// let p1 = registry.create_card("P1".to_string(), None, Some(workspace_id)).unwrap();
+    /// let c1 = registry.create_card("C1".to_string(), None, Some(workspace_id)).unwrap();
     /// registry.reparent_card(c1, p1).unwrap();
     /// ```
     pub fn reparent_card(
@@ -437,7 +408,7 @@ impl CardRegistry {
     ///
     /// let mut registry = CardRegistry::new();
     /// let workspace_id = registry.workspace_card_id().unwrap();
-    /// let c1 = registry.create_child_card("C1".to_string(), None, workspace_id).unwrap();
+    /// let c1 = registry.create_card("C1".to_string(), None, Some(workspace_id)).unwrap();
     /// registry.delete_card(c1, DeleteStrategy::CascadeDelete).unwrap();
     /// ```
     pub fn delete_card(
@@ -466,11 +437,11 @@ mod tests {
     }
 
     #[test]
-    fn test_create_child_card_adds_ordered_child() {
+    fn test_create_card_adds_ordered_child() {
         let mut registry = CardRegistry::new();
         let workspace_id = registry.workspace_card_id().unwrap();
         let child_id = registry
-            .create_child_card("Project".into(), None, workspace_id)
+            .create_card("Project".into(), None, Some(workspace_id))
             .unwrap();
 
         let children = registry.get_children(workspace_id).unwrap();
@@ -483,10 +454,10 @@ mod tests {
         let mut registry = CardRegistry::new();
         let workspace_id = registry.workspace_card_id().unwrap();
         let first = registry
-            .create_child_card("First".into(), None, workspace_id)
+            .create_card("First".into(), None, Some(workspace_id))
             .unwrap();
         let second = registry
-            .create_child_card("Second".into(), None, workspace_id)
+            .create_card("Second".into(), None, Some(workspace_id))
             .unwrap();
 
         registry
@@ -507,13 +478,13 @@ mod tests {
         let mut registry = CardRegistry::new();
         let workspace_id = registry.workspace_card_id().unwrap();
         let first = registry
-            .create_child_card("First".into(), None, workspace_id)
+            .create_card("First".into(), None, Some(workspace_id))
             .unwrap();
         let second = registry
-            .create_child_card("Second".into(), None, workspace_id)
+            .create_card("Second".into(), None, Some(workspace_id))
             .unwrap();
         let third = registry
-            .create_child_card("Third".into(), None, workspace_id)
+            .create_card("Third".into(), None, Some(workspace_id))
             .unwrap();
 
         registry
@@ -534,10 +505,10 @@ mod tests {
         let mut registry = CardRegistry::new();
         let workspace_id = registry.workspace_card_id().unwrap();
         let project_id = registry
-            .create_child_card("Project".into(), None, workspace_id)
+            .create_card("Project".into(), None, Some(workspace_id))
             .unwrap();
         let task_id = registry
-            .create_child_card("Task".into(), None, project_id)
+            .create_card("Task".into(), None, Some(project_id))
             .unwrap();
 
         assert!(matches!(
@@ -552,13 +523,13 @@ mod tests {
         let mut registry = CardRegistry::new();
         let workspace_id = registry.workspace_card_id().unwrap();
         let first = registry
-            .create_child_card("First".into(), None, workspace_id)
+            .create_card("First".into(), None, Some(workspace_id))
             .unwrap();
         let second = registry
-            .create_child_card("Second".into(), None, workspace_id)
+            .create_card("Second".into(), None, Some(workspace_id))
             .unwrap();
         let third = registry
-            .create_child_card("Third".into(), None, workspace_id)
+            .create_card("Third".into(), None, Some(workspace_id))
             .unwrap();
 
         registry
@@ -579,10 +550,10 @@ mod tests {
         let mut registry = CardRegistry::new();
         let workspace_id = registry.workspace_card_id().unwrap();
         let child_id = registry
-            .create_child_card("Child".into(), None, workspace_id)
+            .create_card("Child".into(), None, Some(workspace_id))
             .unwrap();
         let grandchild_id = registry
-            .create_child_card("Grandchild".into(), None, child_id)
+            .create_card("Grandchild".into(), None, Some(child_id))
             .unwrap();
 
         assert!(matches!(
@@ -596,7 +567,7 @@ mod tests {
         let mut registry = CardRegistry::new();
         let workspace_id = registry.workspace_card_id().unwrap();
         let child_id = registry
-            .create_child_card("Child".into(), None, workspace_id)
+            .create_card("Child".into(), None, Some(workspace_id))
             .unwrap();
 
         assert!(matches!(
@@ -622,10 +593,10 @@ mod tests {
         let mut registry = CardRegistry::new();
         let workspace_id = registry.workspace_card_id().unwrap();
         let parent_id = registry
-            .create_child_card("Parent".into(), None, workspace_id)
+            .create_card("Parent".into(), None, Some(workspace_id))
             .unwrap();
         let child_id = registry
-            .create_child_card("Child".into(), None, parent_id)
+            .create_card("Child".into(), None, Some(parent_id))
             .unwrap();
 
         registry

@@ -25,7 +25,7 @@ use tracing::{Level, error, info};
 /// use kanban_planner::domain::registry::CardRegistry;
 ///
 /// let mut registry = CardRegistry::new();
-/// let cmd = Command::CreateWorkspaceChildCard { title: "New Board".into(), description: None };
+/// let cmd = Command::CreateCard { title: "New Board".into(), description: None, parent_id: None };
 /// execute(cmd, &mut registry).unwrap();
 /// ```
 pub fn execute(command: Command, registry: &mut CardRegistry) -> Result<(), DomainError> {

@@ -1,25 +1,29 @@
 # Workspace Git Issues Tracking (OPEN)
 
-## Issue #100: Consolidate Toolbar Button Components (DRY)
+## Issue #104: Add Card Color Controls
 **Status:** OPEN
 **Priority:** MEDIUM
-**Observation:** Buttons in the `BottomBar`, `NavbarLayout`, and `CardItem` actions manually construct RSX with repeated CSS classes (`app-bar-button`, `app-bar-button-icon`, etc.).
-**Recommendation:** Create a reusable `BarButton` component in `src/interface/components/visuals/mod.rs` that standardizes label/icon placement and accessibility.
+**GitHub:** [#84](https://github.com/TommyLeeCookSE/Recursive-Kanban-Planner/issues/84)
+**Observation:** Cards do not currently provide a direct UI control for changing their display color.
+**Recommendation:** Add a button or action in the card controls that opens a color picker or cycles through preset card colors.
 
-## Issue #101: Consolidate 'Create Card' Command Variants
+## Issue #105: Add Closed-Card Title Strikethrough
 **Status:** OPEN
 **Priority:** LOW
-**Observation:** `Command` enum has three separate variants for card creation (`CreateWorkspaceChildCard`, `CreateChildCard`, `CreateCard`).
-**Recommendation:** Unify into a single `CreateCard` command with an `Option<CardId>` for the parent and standardized position handling.
+**GitHub:** [#85](https://github.com/TommyLeeCookSE/Recursive-Kanban-Planner/issues/85)
+**Observation:** There is no quick visual affordance for marking a card as closed/completed without changing its title state manually.
+**Recommendation:** Add a button that toggles a strikethrough style on the card title to visually resemble a closed card.
 
-## Issue #102: Accurate WASM Timestamps in Diagnostics
+## Issue #106: Support Drag-to-Reassign Parent Card
 **Status:** OPEN
-**Priority:** LOW
-**Observation:** `infrastructure/logging.rs` returns `0` for `unix_timestamp_secs` when compiled for WASM.
-**Recommendation:** Use `js_sys::Date::now()` or the `web-time` crate to provide correct timing for in-memory diagnostics on the web platform.
+**Priority:** HIGH
+**GitHub:** [#86](https://github.com/TommyLeeCookSE/Recursive-Kanban-Planner/issues/86)
+**Observation:** Cards can be reordered, but there is no direct drag-and-drop workflow for moving a card under a different parent card.
+**Recommendation:** Implement drag-and-drop reparenting so a dragged card can be reassigned to another card as its new parent.
 
-## Issue #103: Standardize Modal Action Groups
+## Issue #107: Replace Drop Zones with Live Reflow During Drag
 **Status:** OPEN
-**Priority:** MEDIUM
-**Observation:** Modal footers (Save/Cancel/Delete) are repetitive across `card.rs`, `notes.rs`, and `search.rs`.
-**Recommendation:** Extract a `ModalActions` component to manage standardized spacing and "loading/submitting" states consistently across all modals.
+**Priority:** HIGH
+**GitHub:** [#87](https://github.com/TommyLeeCookSE/Recursive-Kanban-Planner/issues/87)
+**Observation:** Showing explicit drop zones makes nested card placement harder to preview while dragging.
+**Recommendation:** Use live layout reflow during drag so nearby cards slide out of the way, letting the user see the exact destination and resulting layout in real time.

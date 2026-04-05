@@ -5,10 +5,12 @@
 //!
 //! For more on Rust's module system and documentation, see `docs/rust-for-python-devs.md`.
 
+mod buttons;
 mod icons;
 mod models;
 mod styles;
 
+pub use buttons::*;
 pub use icons::*;
 pub use models::*;
 pub use styles::*;

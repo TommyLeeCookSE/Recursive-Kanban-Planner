@@ -32,7 +32,7 @@ Stack:
 
 ## Current Implementation Status
 
-Last reconciled: 2026-03-20
+Last reconciled: 2026-04-04
 
 Canonical verification command:
 
@@ -57,7 +57,7 @@ Implemented in the current worktree:
 | `NotePage`, `DueDate` | `src/domain/note.rs`, `src/domain/due_date.rs` | Feature-specific value objects and definitions |
 | `DomainError` | `src/domain/error.rs` | Typed domain errors throughout the domain/application layers |
 | `CardRegistry` | `src/domain/registry.rs` | Cross-card invariant boundary plus ordered tree management |
-| `Command` dispatcher | `src/application/command.rs` | Refactored match-based dispatch for reduced boilerplate |
+| `Command` dispatcher | `src/application/command.rs` | Match-based dispatch with a single create-card variant |
 | `execute` wrapper | `src/application/execute.rs` | Owns command lifecycle logging and diagnostics |
 | `BoardView`, `CardPreviewView` | `src/application/projections.rs` | Read-only UI-friendly data views |
 | JSON persistence | `src/infrastructure/repository.rs` | Serialize/deserialize full registry state |
@@ -65,6 +65,8 @@ Implemented in the current worktree:
 | `AppPersistence` facade | `src/infrastructure/repository.rs` | Explicit browser-first persistence boundary |
 | Runtime logging | `src/infrastructure/logging.rs` | `tracing`, diagnostics buffer, native/web setup |
 | Dioxus shell and routing | `src/interface/` | App shell, routes, modal system, board/home views |
+| Shared toolbar buttons | `src/interface/components/visuals/` | `BarButton` primitive for consistent action buttons |
+| Shared modal actions | `src/interface/components/modal/` | `ModalActions` footer primitive for modal action rows |
 | Unified Navigation | `src/interface/tailwind.css` | Shared `.app-bar` system with responsive `clamp()` sizing |
 | Small Card Actions | `src/interface/components/card_item.rs` | Halved-size action buttons for better card ergonomics |
 | `BottomBar`, `CardItem`, modal flows | `src/interface/components/` | Create/edit card, notes, and settings UI |
@@ -160,8 +162,7 @@ impl CardRegistry {
     pub fn workspace_child_count(&self) -> usize;
     pub fn validate(&self) -> Result<(), DomainError>;
 
-    pub fn create_workspace_child_card(&mut self, title: String) -> Result<CardId, DomainError>;
-    pub fn create_child_card(&mut self, title: String, parent_id: CardId) -> Result<CardId, DomainError>;
+    pub fn create_card(&mut self, title: String, description: Option<String>, parent_id: Option<CardId>) -> Result<CardId, DomainError>;
     pub fn rename_card(&mut self, id: CardId, title: String) -> Result<(), DomainError>;
     
     pub fn add_note_page(&mut self, card_id: CardId, title: String) -> Result<NotePageId, DomainError>;
@@ -182,8 +183,7 @@ impl CardRegistry {
 
 ```rust
 pub enum Command {
-    CreateWorkspaceChildCard { title: String },
-    CreateChildCard { title: String, parent_id: CardId },
+    CreateCard { title: String, description: Option<String>, parent_id: Option<CardId> },
     RenameCard { id: CardId, title: String },
     AddNotePage { card_id: CardId, title: String },
     RenameNotePage { card_id: CardId, note_page_id: NotePageId, title: String },
@@ -220,6 +220,13 @@ pub fn build_card_preview_view(card_id: CardId, registry: &CardRegistry) -> Resu
 ---
 
 ## Invariant Ownership
+
+### Create command contract
+
+- `Command::CreateCard { title, description, parent_id }` is the single public create-command shape.
+- `parent_id: None` resolves to the workspace root inside the domain layer.
+- Creation appends the new card to the end of the chosen parent's children list.
+- Ordering changes continue to flow through `ReorderChildren` and `DropChildAtPosition`.
 
 ### `Card` owns local invariants
 
@@ -279,7 +286,7 @@ The interface layer must not invent domain identifiers.
 
 Current enforced behavior:
 
-- child-card creation without a selected parent is rejected before any command is built
+- card creation without a selected parent is rejected before any command is built
 - the modal stays open and shows inline validation feedback
 - the application layer remains the single owner of command logging
 - note-open and note-close events are routed through the shared modal dispatcher in `App`

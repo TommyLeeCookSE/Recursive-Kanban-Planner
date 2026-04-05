@@ -8,10 +8,12 @@
 use crate::domain::id::CardId;
 use dioxus::prelude::*;
 
+mod actions;
 mod card;
 mod notes;
 mod search;
 
+pub use actions::ModalActions;
 pub use card::{CardModal, EditCardModal};
 pub use notes::NotesModal;
 pub use search::SearchModal;

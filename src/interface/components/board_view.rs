@@ -19,7 +19,7 @@ use crate::interface::components::layout::BottomBar;
 use crate::interface::components::map::Minimap;
 use crate::interface::components::modal::ModalType;
 use crate::interface::components::visuals::{
-    CardDisplayData, render_note_icon, render_plus_icon, render_settings_icon,
+    BarButton, CardDisplayData, render_note_icon, render_plus_icon, render_settings_icon,
 };
 use dioxus::prelude::*;
 
@@ -61,50 +61,33 @@ pub(crate) fn render_board_screen(
             BottomBar {
                 back_route: back_route.clone(),
                 back_label: back_label_for_button,
-                button {
-                    class: "app-bar-button app-bar-button--accent",
-                    onclick: move |_| {
-                        active_modal
-                            .set(
-                                Some(ModalType::CreateCard {
-                                    parent_id: Some(board_id),
-                                }),
-                            )
+                BarButton {
+                    label: "Create Card".to_string(),
+                    title: Some("Create Card".to_string()),
+                    aria_label: Some("Create Card".to_string()),
+                    class_name: Some("app-bar-button--accent".to_string()),
+                    icon: Some(render_plus_icon()),
+                    on_click: move |_| {
+                        active_modal.set(Some(ModalType::CreateCard {
+                            parent_id: Some(board_id),
+                        }))
                     },
-                    title: "Create Card",
-                    "aria-label": "Create Card",
-                    span { class: "app-bar-button-icon", {render_plus_icon()} }
-                    span { class: "app-bar-button-label", "Create Card" }
                 }
-                button {
-                    class: "app-bar-button",
-                    onclick: move |_| {
-                        active_modal
-                            .set(
-                                Some(ModalType::CardNotes {
-                                    card_id: board_id,
-                                }),
-                            );
+                BarButton {
+                    label: "Notes".to_string(),
+                    title: Some("Open notes".to_string()),
+                    aria_label: Some("Notes".to_string()),
+                    icon: Some(render_note_icon()),
+                    on_click: move |_| {
+                        active_modal.set(Some(ModalType::CardNotes { card_id: board_id }));
                     },
-                    title: "Open notes",
-                    "aria-label": "Notes",
-                    span { class: "app-bar-button-icon", {render_note_icon()} }
-                    span { class: "app-bar-button-label", "Notes" }
                 }
-                button {
-                    class: "app-bar-button",
-                    onclick: move |_| {
-                        active_modal
-                            .set(
-                                Some(ModalType::EditCard {
-                                    id: board_id,
-                                }),
-                            );
-                    },
-                    title: "Open settings",
-                    "aria-label": "Settings",
-                    span { class: "app-bar-button-icon", {render_settings_icon()} }
-                    span { class: "app-bar-button-label", "Settings" }
+                BarButton {
+                    label: "Settings".to_string(),
+                    title: Some("Open settings".to_string()),
+                    aria_label: Some("Settings".to_string()),
+                    icon: Some(render_settings_icon()),
+                    on_click: move |_| active_modal.set(Some(ModalType::EditCard { id: board_id })),
                 }
             }
         }

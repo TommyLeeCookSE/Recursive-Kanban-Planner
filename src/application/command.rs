@@ -20,30 +20,15 @@ use tracing::info;
 /// ```
 /// use kanban_planner::application::Command;
 ///
-/// let cmd = Command::CreateWorkspaceChildCard {
+/// let cmd = Command::CreateCard {
 ///     title: "New Board".into(),
 ///     description: None,
+///     parent_id: None,
 /// };
-/// assert_eq!(cmd.name(), "CreateWorkspaceChildCard");
+/// assert_eq!(cmd.name(), "CreateCard");
 /// ```
 #[derive(Debug)]
 pub enum Command {
-    /// Create a new card as a direct child of the root workspace.
-    CreateWorkspaceChildCard {
-        /// The title of the new card.
-        title: String,
-        /// The optional description of the new card.
-        description: Option<String>,
-    },
-    /// Create a new card as a child of the specified parent.
-    CreateChildCard {
-        /// The title of the new card.
-        title: String,
-        /// The optional description of the new card.
-        description: Option<String>,
-        /// The ID of the parent card.
-        parent_id: CardId,
-    },
     /// Create a new card.
     CreateCard {
         /// The title of the new card.
@@ -158,8 +143,6 @@ impl Command {
     /// Returns the string name of the command variant.
     pub fn name(&self) -> &'static str {
         match self {
-            Command::CreateWorkspaceChildCard { .. } => "CreateWorkspaceChildCard",
-            Command::CreateChildCard { .. } => "CreateChildCard",
             Command::CreateCard { .. } => "CreateCard",
             Command::UpdateCardDetails { .. } => "UpdateCardDetails",
             Command::RenameCard { .. } => "RenameCard",
@@ -189,16 +172,6 @@ impl Command {
     /// Applies the command mutation to the provided registry.
     pub fn apply(self, registry: &mut CardRegistry) -> Result<(), DomainError> {
         match self {
-            Command::CreateWorkspaceChildCard { title, description } => {
-                registry.create_workspace_child_card(title, description)?;
-            }
-            Command::CreateChildCard {
-                title,
-                description,
-                parent_id,
-            } => {
-                registry.create_child_card(title, description, parent_id)?;
-            }
             Command::CreateCard {
                 title,
                 description,
@@ -294,9 +267,10 @@ mod tests {
     #[test]
     fn command_apply_works() {
         let mut registry = CardRegistry::new();
-        let command = Command::CreateWorkspaceChildCard {
+        let command = Command::CreateCard {
             title: "Top Level Board".into(),
             description: None,
+            parent_id: None,
         };
 
         command.apply(&mut registry).unwrap();

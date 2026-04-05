@@ -4,7 +4,7 @@ use crate::domain::id::CardId;
 use crate::domain::registry::CardRegistry;
 use crate::domain::title::MAX_TITLE_LENGTH;
 use crate::form_row;
-use crate::interface::components::modal::Modal;
+use crate::interface::components::modal::{Modal, ModalActions};
 use crate::interface::components::shared_forms::{inline_error, modal_dispatch_command};
 use dioxus::prelude::*;
 
@@ -54,7 +54,7 @@ pub fn CardModal(
                 if let Some(message) = error_message() {
                     {inline_error(message)}
                 }
-                div { class: "app-form-actions",
+                ModalActions {
                     button {
                         class: "app-button-ghost-compact",
                         title: "Cancel card creation",
@@ -165,7 +165,7 @@ pub fn EditCardModal(
                     {inline_error(message)}
                 }
 
-                div { class: "app-form-actions",
+                ModalActions {
                     button {
                         class: "app-button-ghost-compact",
                         onclick: move |_| on_close.call(()),

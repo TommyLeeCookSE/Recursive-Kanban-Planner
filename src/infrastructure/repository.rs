@@ -537,10 +537,10 @@ mod tests {
         let mut original = CardRegistry::new();
         let workspace_id = original.workspace_card_id().unwrap();
         let project_id = original
-            .create_child_card("My Project".into(), None, workspace_id)
+            .create_card("My Project".into(), None, Some(workspace_id))
             .unwrap();
         original
-            .create_child_card("My Task".into(), None, project_id)
+            .create_card("My Task".into(), None, Some(project_id))
             .unwrap();
 
         let json = JsonRepository::serialize_registry(&original).expect("Serialization failed");
@@ -555,7 +555,7 @@ mod tests {
         let mut original = CardRegistry::new();
         let workspace_id = original.workspace_card_id().unwrap();
         original
-            .create_child_card("My Project".into(), None, workspace_id)
+            .create_card("My Project".into(), None, Some(workspace_id))
             .unwrap();
 
         let json = JsonRepository::serialize_registry(&original).expect("Serialization failed");
@@ -602,7 +602,7 @@ mod tests {
         let mut original = CardRegistry::new();
         let workspace_id = original.workspace_card_id().unwrap();
         original
-            .create_child_card("Native Task".into(), None, workspace_id)
+            .create_card("Native Task".into(), None, Some(workspace_id))
             .unwrap();
 
         // Save

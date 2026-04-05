@@ -10,7 +10,7 @@ use crate::interface::Route;
 use crate::interface::app::IsDark;
 use crate::interface::components::modal::ModalType;
 use crate::interface::components::visuals::{
-    render_back_icon, render_evening_icon, render_search_icon, render_sunrise_icon,
+    BarButton, render_back_icon, render_evening_icon, render_search_icon, render_sunrise_icon,
 };
 use crate::interface::components::web_utilities::{
     render_clear_cache_button, render_download_logs_button, render_export_button,
@@ -60,11 +60,17 @@ pub fn NavbarLayout() -> Element {
                 // Title moved to ContextBar below
 
                 div { class: "app-bar-right ml-auto",
-                    button {
-                        class: "app-bar-button h-10 w-10 flex items-center justify-center rounded-full hover:bg-[var(--app-surface-soft)] transition-colors",
-                        onclick: move |_| active_modal.set(Some(ModalType::Search)),
-                        title: "Search Workspace (Ctrl+K)",
-                        span { class: "app-bar-button-icon", {render_search_icon()} }
+                    BarButton {
+                        label: "Search".to_string(),
+                        title: Some("Search Workspace (Ctrl+K)".to_string()),
+                        aria_label: Some("Search Workspace".to_string()),
+                        show_label: false,
+                        class_name: Some(
+                            "h-10 w-10 flex items-center justify-center rounded-full hover:bg-[var(--app-surface-soft)] transition-colors"
+                                .to_string(),
+                        ),
+                        icon: Some(render_search_icon()),
+                        on_click: move |_| active_modal.set(Some(ModalType::Search)),
                     }
                     {render_download_logs_button(persistence_warning)}
                     {render_export_button(registry, persistence_warning)}
@@ -175,26 +181,30 @@ pub fn ContextBar(route: Route) -> Element {
 /// A smart navigation bar that automatically collapses labels based on content width.
 #[component]
 pub fn BottomBar(back_route: Option<Route>, back_label: String, children: Element) -> Element {
+    let nav = navigator();
     let back_button = if let Some(route) = back_route {
         rsx! {
-            button {
-                class: "app-bar-button group",
-                onclick: move |_| {
-                    navigator().push(route.clone());
+            BarButton {
+                label: "Back".to_string(),
+                title: Some(format!("Back to {back_label}")),
+                aria_label: Some("Back".to_string()),
+                class_name: Some("group".to_string()),
+                icon: Some(render_back_icon()),
+                on_click: move |_| {
+                    nav.clone().push(route.clone());
                 },
-                title: "Back to {back_label}",
-                span { class: "app-bar-button-icon", {render_back_icon()} }
-                span { class: "app-bar-button-label", "Back" }
             }
         }
     } else {
         rsx! {
-            button {
-                class: "app-bar-button group",
+            BarButton {
+                label: "Back".to_string(),
+                title: Some(format!("Back to {back_label}")),
+                aria_label: Some("Back".to_string()),
                 disabled: true,
-                title: "Back to {back_label}",
-                span { class: "app-bar-button-icon", {render_back_icon()} }
-                span { class: "app-bar-button-label", "Back" }
+                class_name: Some("group".to_string()),
+                icon: Some(render_back_icon()),
+                on_click: move |_| {},
             }
         }
     };
